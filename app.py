@@ -14,7 +14,9 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 import os
-from rag_backend import RequirementsRAG, SimpleLLM
+from rag_backend import RequirementsRAG
+from llm_wrapper import LLMWrapper
+import os
 
 app = FastAPI(title="Requirements Chatbot API")
 
@@ -30,7 +32,15 @@ app.add_middleware(
 # Initialize RAG system
 print("Initializing RAG system...")
 rag_system = RequirementsRAG("graph_model_nicholas (1).xlsx")
-llm = SimpleLLM(rag_system)
+
+# Initialize LLM (try Ollama first, fallback to template)
+# Set LLM_BACKEND env var to "ollama", "openai", or "template"
+# Set LLM_MODEL env var to specify model (e.g., "llama3.2", "mistral")
+llm_backend = os.getenv("LLM_BACKEND", "ollama").lower()
+llm_model = os.getenv("LLM_MODEL", None)
+
+print(f"Initializing LLM backend: {llm_backend}...")
+llm = LLMWrapper(rag_system, backend=llm_backend, model=llm_model)
 print("RAG system ready!")
 
 

@@ -316,36 +316,73 @@ response_parts.append("Yeah, so... ")
 response_parts.append("Well, from our perspective... ")
 ```
 
-### Using a Real LLM
+### Using a Real LLM (Recommended)
 
-For more natural responses, you can integrate a real LLM:
+The system now supports real LLMs for much more natural, human-like responses. The template-based approach is limited - using a real LLM is the standard RAG approach.
 
-1. **Ollama** (recommended for local use):
-```python
-import requests
+#### Option 1: Ollama (Recommended - Free & Local)
 
-def generate_with_ollama(prompt):
-    response = requests.post('http://localhost:11434/api/generate', json={
-        'model': 'llama2',
-        'prompt': prompt,
-        'stream': False
-    })
-    return response.json()['response']
+**Ollama** is the easiest way to get high-quality, local LLM responses:
+
+1. **Install Ollama**: Download from [ollama.ai](https://ollama.ai)
+
+2. **Pull a model** (choose one):
+   ```bash
+   ollama pull llama3.2        # Fast, good quality (recommended)
+   ollama pull mistral         # Alternative option
+   ollama pull phi3            # Smaller, faster
+   ```
+
+3. **Start the server** (Ollama runs automatically):
+   ```bash
+   # Ollama should start automatically, or:
+   ollama serve
+   ```
+
+4. **Run your app** (it will auto-detect Ollama):
+   ```bash
+   python app.py
+   ```
+
+   Or specify the model:
+   ```bash
+   LLM_MODEL=llama3.2 python app.py
+   ```
+
+**Benefits:**
+- ✅ Free and runs locally (no API costs)
+- ✅ Privacy (data stays on your machine)
+- ✅ High-quality, natural responses
+- ✅ Works offline
+
+#### Option 2: OpenAI API
+
+For cloud-based LLM (requires API key):
+
+1. **Install OpenAI package**:
+   ```bash
+   pip install openai
+   ```
+
+2. **Set your API key**:
+   ```bash
+   export OPENAI_API_KEY="your-key-here"
+   ```
+
+3. **Run with OpenAI backend**:
+   ```bash
+   LLM_BACKEND=openai LLM_MODEL=gpt-3.5-turbo python app.py
+   ```
+
+#### Option 3: Template Fallback
+
+If no LLM is available, the system automatically falls back to template-based generation:
+
+```bash
+LLM_BACKEND=template python app.py
 ```
 
-2. **OpenAI API** (requires API key):
-```python
-import openai
-
-openai.api_key = "your-key"
-response = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "You are a non-technical stakeholder. Respond informally and naturally."},
-        {"role": "user", "content": query}
-    ]
-)
-```
+**Note**: Template-based responses are limited in quality and naturalness. A real LLM is strongly recommended.
 
 ### Adding More Sheets
 
@@ -377,7 +414,8 @@ Popular alternatives:
 ```
 .
 ├── app.py                 # FastAPI backend server
-├── rag_backend.py         # RAG implementation with stakeholder simulation
+├── rag_backend.py         # RAG implementation (retrieval)
+├── llm_wrapper.py        # LLM wrapper (Ollama/OpenAI/template)
 ├── index.html            # Web chat UI
 ├── requirements.txt      # Python dependencies
 ├── fix_pytree.py         # Compatibility fix for torch
@@ -424,11 +462,51 @@ Real stakeholders are often non-technical and speak informally. The system simul
 
 The informal language is intentional - it's the core challenge that makes this effective training.
 
+## LLM Integration
+
+### Why Use a Real LLM?
+
+The template-based approach has significant limitations:
+- ❌ Poor grammar and awkward phrasing
+- ❌ Limited natural language variation
+- ❌ Can't handle complex queries well
+- ❌ Feels robotic, not human-like
+
+**Using a real LLM (like Ollama) provides:**
+- ✅ Natural, human-like responses
+- ✅ Proper grammar automatically
+- ✅ Better context understanding
+- ✅ More conversational and varied responses
+- ✅ Handles edge cases better
+
+### How RAG + LLM Works
+
+1. **Retrieval**: System finds relevant context from Excel data using vector search
+2. **Augmentation**: Context is formatted into a prompt for the LLM
+3. **Generation**: LLM generates a natural, human-like response based on the context
+4. **Persona**: LLM is instructed to respond as a non-technical stakeholder
+
+This is the **standard RAG pattern** used in production systems.
+
+### Recommended Setup
+
+**For best results, use Ollama with llama3.2:**
+```bash
+# Install Ollama, then:
+ollama pull llama3.2
+python app.py  # Auto-detects Ollama
+```
+
+The system will automatically:
+- Use Ollama if available
+- Fall back to template if Ollama isn't running
+- Provide much better responses with LLM
+
 ## Limitations & Future Improvements
 
 ### Current Limitations
 
-- Template-based response generation (could use real LLM for more naturalness)
+- ~~Template-based response generation~~ ✅ **Fixed with LLM support**
 - Row-level chunking (no cross-row context)
 - Keyword-based intent detection (could use ML classification)
 - No conversation history (stateless queries)
@@ -436,7 +514,7 @@ The informal language is intentional - it's the core challenge that makes this e
 
 ### Potential Improvements
 
-- Integrate real LLM (Ollama, OpenAI, etc.) for more natural responses
+- ✅ ~~Integrate real LLM~~ **Done!** Use Ollama or OpenAI
 - Add conversation memory/context for follow-up questions
 - Implement multiple stakeholder personas with different communication styles
 - Add support for multi-turn conversations with context
@@ -444,6 +522,7 @@ The informal language is intentional - it's the core challenge that makes this e
 - Add confidence scores (internal, not shown to user)
 - Support for different training scenarios
 - Multi-language support
+- Fine-tune LLM prompts for better stakeholder persona
 
 ## License
 
