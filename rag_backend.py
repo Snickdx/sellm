@@ -14,6 +14,7 @@ from sentence_transformers import SentenceTransformer
 import os
 from typing import List, Dict
 import json
+import random
 
 class RequirementsRAG:
     def __init__(self, excel_file: str, persist_directory: str = "./chroma_db_v2"):
@@ -410,8 +411,260 @@ class SimpleLLM:
     def __init__(self, rag: RequirementsRAG):
         self.rag = rag
     
+    def _extract_natural_content(self, result: Dict) -> Dict:
+        """Extract content from result in a natural, human-readable format"""
+        document = result['document']
+        metadata = result['metadata']
+        
+        # Parse the document to extract key information
+        lines = document.split('\n')[1:]  # Skip "Sheet: X" line
+        
+        content = {}
+        for line in lines:
+            if ':' in line:
+                key, value = line.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                if not value or value.lower() in ['nan', 'none', '']:
+                    continue
+                
+                # Store important fields
+                if key.lower() in ['id', 'name', 'title', 'description', 'role', 'type', 
+                                   'stakeholder', 'client', 'goal', 'feature', 'requirement']:
+                    content[key.lower()] = value
+        
+        return content
+    
+    def _add_verb_if_needed(self, text: str, context: str = 'feature') -> str:
+        """Add appropriate verb to make text a complete sentence"""
+        text_lower = text.lower().strip()
+        
+        # Remove trailing periods
+        text_lower = text_lower.rstrip('.')
+        
+        # Check if it already starts with a verb (common verbs for features/requirements)
+        verb_starters = ['handle', 'support', 'provide', 'allow', 'enable', 'process', 
+                        'manage', 'generate', 'create', 'integrate', 'calculate', 'track',
+                        'store', 'retrieve', 'display', 'export', 'import', 'validate',
+                        'be able to', 'can', 'must', 'should', 'will']
+        
+        # If it already starts with a verb, return as is
+        for verb in verb_starters:
+            if text_lower.startswith(verb):
+                return text
+        
+        # Check if it already has a verb phrase
+        if any(phrase in text_lower for phrase in [' to ', ' be ', ' have ', ' do ', ' make ', ' can ', ' will ']):
+            return text
+        
+        # Check if it's a noun phrase that needs a verb
+        if context == 'feature':
+            # For features, add appropriate verbs based on content
+            if 'integration' in text_lower or 'integrate' in text_lower:
+                # Extract what needs to be integrated
+                rest = text_lower.replace('integration', '').replace('integrated', '').replace('integrate', '').strip()
+                rest = rest.replace('with', '').strip()
+                if rest:
+                    return f"integrate with {rest}"
+                else:
+                    return "integrate with other systems"
+            elif any(word in text_lower for word in ['customizable', 'custom', 'configurable']):
+                # Extract the noun after customizable
+                rest = text_lower.replace('customizable', '').replace('custom', '').replace('configurable', '').strip()
+                if rest:
+                    return f"have customizable {rest}"
+                else:
+                    return "have customizable options"
+            elif any(word in text_lower for word in ['payroll', 'payment', 'billing']):
+                if 'payroll' in text_lower:
+                    # Check if it mentions frequency
+                    if any(freq in text_lower for freq in ['weekly', 'monthly', 'biweekly', 'daily']):
+                        return f"process {text_lower}"
+                    else:
+                        return f"handle {text_lower}"
+                return f"handle {text_lower}"
+            elif any(word in text_lower for word in ['report', 'reporting', 'reports']):
+                return f"generate {text_lower}"
+            elif any(word in text_lower for word in ['data', 'information', 'records', 'database']):
+                return f"manage {text_lower}"
+            elif any(word in text_lower for word in ['user', 'users', 'employee', 'employees']):
+                return f"manage {text_lower}"
+            else:
+                # Default: add "support" for features
+                return f"support {text_lower}"
+        
+        elif context == 'goal':
+            # Goals might already be complete or need "to" + verb
+            if not any(word in text_lower for word in [' to ', ' be ', ' have ', ' do ', ' make ', ' can ', ' will ']):
+                # If it doesn't have a verb, add appropriate verb based on content
+                if any(word in text_lower for word in ['cost', 'costs', 'budget', 'money', 'expense']):
+                    return f"to reduce {text_lower}"
+                elif any(word in text_lower for word in ['change', 'changes', 'update', 'updates']):
+                    return f"to handle {text_lower}"
+                elif any(word in text_lower for word in ['backup', 'recovery', 'resilience']):
+                    return f"to ensure {text_lower}"
+                else:
+                    return f"to {text_lower}"
+            return text
+        
+        return text
+    
+    def _generate_informal_response(self, results: List[Dict], query: str) -> str:
+        """Generate a human-like, informal response as a non-technical stakeholder"""
+        query_lower = query.lower()
+        
+        if not results:
+            # Casual, human-like "I don't know" response
+            responses = [
+                "Hmm, I'm not sure about that. Can you ask me something else?",
+                "I don't really know much about that. What else would you like to know?",
+                "That's not something I'm familiar with. Maybe try asking about something else?",
+                "I'm not sure I can help with that. Is there something else you'd like to ask?"
+            ]
+            return random.choice(responses)
+        
+        # Extract natural content from results
+        extracted_info = []
+        for result in results[:3]:  # Limit to top 3 for natural conversation
+            info = self._extract_natural_content(result)
+            if info:
+                extracted_info.append(info)
+        
+        if not extracted_info:
+            return "I'm not really sure how to answer that. Can you rephrase your question?"
+        
+        # Generate natural, informal response based on query type
+        response_parts = []
+        
+        # Detect what they're asking about
+        if any(w in query_lower for w in ['stakeholder', 'stakeholders', 'people', 'who', 'person']):
+            response_parts.append("Oh, well, there are a few people involved in this project. ")
+            if len(extracted_info) > 1:
+                response_parts.append("Let me think... ")
+            
+            for i, info in enumerate(extracted_info):
+                name = info.get('name', info.get('stakeholder', 'Someone'))
+                role = info.get('role', info.get('type', ''))
+                desc = info.get('description', '')
+                
+                if i == 0:
+                    if role:
+                        response_parts.append(f"There's {name}, who's the {role}. ")
+                    else:
+                        response_parts.append(f"There's {name}. ")
+                else:
+                    if role:
+                        response_parts.append(f"And then there's {name}, they're the {role}. ")
+                    else:
+                        response_parts.append(f"Also {name}. ")
+                
+                if desc and len(desc) < 100:
+                    response_parts.append(f"{desc} ")
+        
+        elif any(w in query_lower for w in ['goal', 'goals', 'objective', 'objectives', 'want', 'need']):
+            response_parts.append("So, what we're really trying to do here is ")
+            
+            for i, info in enumerate(extracted_info):
+                goal = info.get('goal', info.get('description', info.get('name', '')))
+                if goal:
+                    # Ensure the goal is properly formatted
+                    goal_text = self._add_verb_if_needed(goal, context='goal')
+                    
+                    if i == 0:
+                        response_parts.append(f"{goal_text.lower()}. ")
+                    else:
+                        response_parts.append(f"We also need {goal_text.lower()}. ")
+        
+        elif any(w in query_lower for w in ['feature', 'features', 'function', 'functionality', 'do', 'can']):
+            response_parts.append("Well, the system should be able to ")
+            
+            for i, info in enumerate(extracted_info):
+                feature = info.get('feature', info.get('name', info.get('description', '')))
+                if feature:
+                    # Ensure the feature has a proper verb
+                    feature_text = self._add_verb_if_needed(feature, context='feature')
+                    feature_text_lower = feature_text.lower().strip()
+                    
+                    # Check if feature_text already starts with a verb (so we don't duplicate "be able to")
+                    verb_starters = ['handle', 'support', 'provide', 'allow', 'enable', 'process', 
+                                    'manage', 'generate', 'create', 'integrate', 'calculate', 'track',
+                                    'store', 'retrieve', 'display', 'export', 'import', 'validate',
+                                    'have', 'do', 'make']
+                    
+                    starts_with_verb = any(feature_text_lower.startswith(verb) for verb in verb_starters)
+                    
+                    if i == 0:
+                        if starts_with_verb:
+                            response_parts.append(f"{feature_text_lower}. ")
+                        else:
+                            response_parts.append(f"{feature_text_lower}. ")
+                    else:
+                        if starts_with_verb:
+                            response_parts.append(f"It should also {feature_text_lower}. ")
+                        else:
+                            response_parts.append(f"It should also be able to {feature_text_lower}. ")
+        
+        elif any(w in query_lower for w in ['budget', 'cost', 'costs', 'money', 'price', 'expensive']):
+            response_parts.append("Money-wise, ")
+            
+            for i, info in enumerate(extracted_info):
+                budget_info = info.get('budget', info.get('cost', info.get('description', '')))
+                if budget_info:
+                    # Ensure budget info is a complete thought
+                    budget_text = budget_info.lower().strip()
+                    if not budget_text.startswith(('we', 'it', 'the', 'our', 'i')):
+                        budget_text = f"we're looking at {budget_text}"
+                    response_parts.append(f"{budget_text}. ")
+        
+        elif any(w in query_lower for w in ['risk', 'risks', 'problem', 'problems', 'issue', 'concern', 'worry']):
+            response_parts.append("Yeah, there are a few things we're worried about. ")
+            
+            for i, info in enumerate(extracted_info):
+                risk = info.get('risk', info.get('description', info.get('name', '')))
+                if risk:
+                    risk_text = risk.lower().strip()
+                    # Ensure it's a complete thought
+                    if not risk_text.startswith(('we', 'it', 'the', 'our', 'there', 'that')):
+                        risk_text = f"we're concerned about {risk_text}"
+                    
+                    if i == 0:
+                        response_parts.append(f"{risk_text}. ")
+                    else:
+                        response_parts.append(f"Also, {risk_text}. ")
+        
+        else:
+            # Generic response
+            response_parts.append("So, ")
+            
+            for i, info in enumerate(extracted_info):
+                desc = info.get('description', info.get('name', ''))
+                if desc:
+                    desc_text = desc.lower().strip()
+                    # Ensure it's a complete sentence
+                    if not desc_text.startswith(('we', 'it', 'the', 'our', 'this', 'that', 'i')):
+                        desc_text = f"it's about {desc_text}"
+                    
+                    if i == 0:
+                        response_parts.append(f"{desc_text}. ")
+                    else:
+                        response_parts.append(f"Also, {desc_text}. ")
+        
+        # Add a casual follow-up
+        follow_ups = [
+            "Does that make sense?",
+            "Is that what you were looking for?",
+            "Does that help?",
+            "What else do you want to know?",
+            "Anything else you're curious about?",
+            "Hope that helps!",
+        ]
+        response_parts.append(random.choice(follow_ups))
+        
+        return "".join(response_parts)
+    
     def generate_response(self, query: str) -> str:
-        """Generate response using RAG with improved filtering and formatting"""
+        """Generate human-like, informal response as a non-technical stakeholder"""
         query_lower = query.lower()
         
         # Detect what the user is asking about
@@ -437,33 +690,8 @@ class SimpleLLM:
             
             results = filtered_results
         
-        if not results:
-            return "I couldn't find any relevant information about that. Try asking about stakeholders, features, requirements, goals, budget, or project details."
-        
-        # Format the response based on what was found (use HTML formatting)
-        formatted_context = self.rag._format_search_results(results, query, format_html=True)
-        
-        # Generate contextual intro based on detected intent
-        if any(w in query_lower for w in ['stakeholder', 'stakeholders', 'people', 'who']):
-            intro = "Based on the requirements documentation, here are the stakeholders:"
-        elif any(w in query_lower for w in ['feature', 'features', 'function', 'functionality']):
-            intro = "Based on the requirements documentation, here are the relevant features and functionality:"
-        elif any(w in query_lower for w in ['requirement', 'requirements', 'req', 'reqs']):
-            intro = "Based on the requirements documentation, here are the relevant requirements:"
-        elif any(w in query_lower for w in ['goal', 'goals', 'objective', 'objectives']):
-            intro = "Based on the requirements documentation, here are the relevant goals and objectives:"
-        elif any(w in query_lower for w in ['budget', 'cost', 'costs', 'money', 'price']):
-            intro = "Based on the requirements documentation, here's the budget and cost information:"
-        elif any(w in query_lower for w in ['risk', 'risks', 'problem', 'problems']):
-            intro = "Based on the requirements documentation, here are the risks and issues identified:"
-        else:
-            intro = "Based on the requirements documentation, here's what I found:"
-        
-        response = f"""{intro}
-
-{formatted_context}
-
-<p style='margin-top: 16px; color: #666; font-size: 14px;'>Is there anything specific you'd like to know more about?</p>"""
+        # Generate informal, human-like response
+        response = self._generate_informal_response(results, query)
         
         return response
 

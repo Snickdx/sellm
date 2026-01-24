@@ -1,15 +1,28 @@
-# Requirements Chatbot - RAG Implementation
+# Requirements Gathering Training System - RAG Implementation
 
-A minimal RAG (Retrieval-Augmented Generation) chatbot for querying software requirements from an Excel document. This implementation uses open-source tools to provide an intelligent interface for exploring requirements documentation.
+A RAG-based training system that simulates a non-technical stakeholder for requirements gathering practice. The system uses an Excel-based knowledge source to role-play as a stakeholder, providing informal, human-like responses that trainees must extract, document, and formalize into proper requirements documentation.
+
+## Purpose
+
+This system is designed for **requirements gathering training**. It simulates a non-technical stakeholder who provides information in a casual, informal manner - just like in real-world requirements gathering sessions. 
+
+**Training Objectives:**
+- Practice asking effective questions to extract requirements
+- Learn to identify key information from informal, unstructured conversations
+- Develop skills in formalizing informal stakeholder input into structured requirements
+- Practice identifying gaps and asking appropriate follow-up questions
+- Experience the challenge of working with non-technical stakeholders
+
+**Important**: The system does NOT reference the knowledge source directly. Responses are human-like and informal, as if speaking with a real non-technical stakeholder. Trainees must take notes during the conversation and then formalize the information into proper requirements documentation.
 
 ## Features
 
+- **Stakeholder Simulation**: Role-plays as a non-technical stakeholder with natural, informal language
 - **RAG System**: Uses ChromaDB for vector storage and sentence-transformers for embeddings
-- **Intelligent Query Filtering**: Automatically detects query intent and filters results by sheet type
-- **Web Chat UI**: Modern, responsive chat interface with HTML-formatted responses
+- **Intelligent Query Understanding**: Detects query intent and responds contextually
+- **Web Chat UI**: Modern, responsive chat interface for natural conversation
 - **FastAPI Backend**: Lightweight Python API server
-- **Excel Integration**: Automatically loads requirements from multiple Excel sheets
-- **Smart Result Formatting**: Properly formatted lists and structured responses
+- **Excel Knowledge Base**: Uses Excel sheets as the ground truth for stakeholder responses
 
 ## Installation
 
@@ -22,7 +35,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Make sure your Excel file `graph_model_nicholas (1).xlsx` is in the project directory.
+1. Make sure your Excel file `graph_model_nicholas (1).xlsx` is in the project directory. This file contains the stakeholder knowledge base.
 
 2. Start the server:
 ```bash
@@ -39,13 +52,24 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 http://localhost:8000
 ```
 
-4. Start asking questions about your requirements!
+4. Start practicing requirements gathering! 
+   - Ask questions as you would in a real stakeholder interview
+   - Take notes during the conversation (outside the system)
+   - After the session, formalize the informal responses into structured requirements documentation
+
+### Training Tips
+
+- **Ask open-ended questions**: "Tell me about..." or "What are your concerns about..."
+- **Follow up on vague answers**: If the stakeholder says "it should be fast", ask "What does 'fast' mean to you?"
+- **Identify gaps**: Notice when information is missing and ask clarifying questions
+- **Take comprehensive notes**: You'll need to formalize everything after the conversation
+- **Practice different question types**: Try asking about stakeholders, goals, features, constraints, risks, and budget
 
 ## Architecture
 
 ### System Overview
 
-The system follows a classic RAG (Retrieval-Augmented Generation) architecture with the following components:
+The system follows a RAG (Retrieval-Augmented Generation) architecture designed for role-playing:
 
 ```
 ┌─────────────┐
@@ -62,13 +86,20 @@ The system follows a classic RAG (Retrieval-Augmented Generation) architecture w
        ▼
 ┌─────────────┐      ┌──────────────┐
 │  SimpleLLM  │─────▶│ Requirements │
-│  (Response  │      │     RAG      │
-│  Generator) │      └──────┬───────┘
+│  (Stakeholder│      │     RAG      │
+│  Simulator) │      └──────┬───────┘
 └─────────────┘             │
                             ▼
                     ┌──────────────┐
                     │   ChromaDB   │
                     │  (Vector DB) │
+                    └──────┬───────┘
+                           │
+                           ▼
+                    ┌──────────────┐
+                    │  Excel File  │
+                    │ (Knowledge   │
+                    │    Base)     │
                     └──────────────┘
 ```
 
@@ -78,8 +109,9 @@ The system follows a classic RAG (Retrieval-Augmented Generation) architecture w
 2. **API Server (`app.py`)**: FastAPI server handling HTTP requests
 3. **RAG Backend (`rag_backend.py`)**: Core RAG implementation with:
    - `RequirementsRAG`: Handles data loading, embedding, and retrieval
-   - `SimpleLLM`: Generates responses from retrieved context
+   - `SimpleLLM`: Generates informal, human-like stakeholder responses
 4. **Vector Database**: ChromaDB for persistent vector storage
+5. **Knowledge Base**: Excel file containing stakeholder information (not directly referenced in responses)
 
 ## Data Processing & Chunking Strategy
 
@@ -100,7 +132,7 @@ The system uses a **row-based chunking strategy** optimized for structured Excel
 
 ### Supported Sheets
 
-The system processes the following sheet types:
+The system processes the following sheet types from the Excel knowledge base:
 
 - **People**: `Stakeholder`, `Client`, `Role`
 - **Requirements**: `Requirement`, `Feature`, `FunctioFFnal_Requirement`
@@ -147,13 +179,13 @@ Each chunk includes rich metadata for filtering and context:
 
 ### Query Intent Detection
 
-The system uses keyword-based intent detection to identify what the user is asking about:
+The system uses keyword-based intent detection to understand what the trainee is asking:
 
 ```python
 intent_keywords = {
     'Stakeholder': ['stakeholder', 'stakeholders', 'people', 'person', 'who'],
-    'Goal': ['goal', 'goals', 'objective', 'objectives'],
-    'Feature': ['feature', 'features', 'functionality'],
+    'Goal': ['goal', 'goals', 'objective', 'objectives', 'want', 'need'],
+    'Feature': ['feature', 'features', 'functionality', 'do', 'can'],
     # ... etc
 }
 ```
@@ -178,68 +210,115 @@ intent_keywords = {
 
 ## Response Generation
 
-### Template-Based Generation
+### Human-Like Stakeholder Simulation
 
-Currently uses a template-based approach (can be extended with real LLMs):
+The system generates informal, natural responses that mimic a non-technical stakeholder:
 
-1. **Context Retrieval**: Get top N relevant chunks
-2. **Intent-Based Intro**: Generate contextual introduction based on query
-3. **HTML Formatting**: Format results as structured HTML lists
-4. **Field Extraction**: Prioritize key fields (id, name, description, etc.)
+**Key Characteristics:**
+- **Informal language**: Uses casual phrases like "Oh, well...", "Let me think...", "Yeah, there are..."
+- **No technical jargon**: Avoids formal requirements terminology
+- **Natural flow**: Responses feel conversational, not structured
+- **Uncertainty**: Sometimes includes phrases like "I'm not sure" or "Does that make sense?"
+- **No source references**: Never mentions sheets, documents, or technical sources
 
-### Response Format
+### Response Examples
 
-Responses are formatted as HTML for better readability:
+**Query**: "Who are the stakeholders?"
 
-```html
-<strong>People - Stakeholder</strong>
-<ul>
-  <li><strong>id:</strong> S1 | <strong>name:</strong> Product Manager | role: Requirements Owner</li>
-  <li><strong>id:</strong> S2 | <strong>name:</strong> Developer | role: Implementation</li>
-</ul>
-```
+**Response**: "Oh, well, there are a few people involved in this project. Let me think... There's Sarah, who's the Product Manager. And then there's John, they're the Lead Developer. Also Mike, he's our QA lead. Does that help?"
 
-## Recent Improvements
+**Query**: "What are the main goals?"
 
-### Query Accuracy Enhancements
-
-- **Improved Sheet Detection**: Better keyword matching for query intent
-- **Strict Filtering**: Results filtered by sheet type to prevent irrelevant responses
-- **Post-Filtering**: Additional filtering layer to ensure only relevant results are shown
-- **Sheet Type Categorization**: Automatic categorization of sheets for better filtering
+**Response**: "So, what we're really trying to do here is... reduce operational costs. Also, we need to be able to handle changes in legislation quickly. And make sure we have good backup and recovery in place. Is that what you were looking for?"
 
 ### Response Formatting
 
-- **HTML Lists**: Properly formatted HTML lists instead of plain text
-- **Field Prioritization**: Key fields (id, name, description) shown prominently
-- **Better Readability**: Improved spacing, styling, and structure
-- **Frontend Rendering**: Frontend now renders HTML for rich formatting
+- **No HTML lists**: Responses are plain text paragraphs
+- **Natural language**: Uses conversational connectors
+- **Casual follow-ups**: Ends with questions like "Does that make sense?" or "What else do you want to know?"
 
-## How It Works
+## Training Workflow
 
-### Initialization Flow
+### For Trainees
 
-1. **Load Excel File**: Read all sheets using pandas/openpyxl
-2. **Chunk Data**: Convert each row to a text document
-3. **Generate Embeddings**: Create vector embeddings for all chunks
-4. **Store in ChromaDB**: Persist vectors with metadata
-5. **Ready for Queries**: System ready to answer questions
+**During the Conversation:**
+1. **Start Conversation**: Begin with an introduction or open-ended question
+2. **Ask Questions**: Use natural language to gather information - ask about stakeholders, goals, features, constraints, etc.
+3. **Follow Up**: Ask clarifying questions based on responses to fill gaps
+4. **Take Notes**: Document what you learn (outside the system) - the stakeholder speaks informally, so you need to capture and structure the information
 
-### Query Flow
+**After the Conversation:**
+5. **Formalize Requirements**: Convert the informal, unstructured responses into formal requirements documentation:
+   - Identify stakeholders and their roles
+   - Extract functional and non-functional requirements
+   - Document goals and objectives
+   - List constraints and risks
+   - Structure everything into a proper requirements document format
 
-1. **User Query**: User asks a question in the chat interface
-2. **Intent Detection**: System detects what type of information is requested
-3. **Filtered Search**: Search restricted to relevant sheets
-4. **Vector Retrieval**: Find similar documents using cosine similarity
-5. **Result Filtering**: Post-filter to ensure relevance
-6. **Response Generation**: Format results as HTML
-7. **Display**: Show formatted response in chat UI
+**Key Challenge**: The stakeholder will speak casually and may not use technical terminology. Your job is to extract the essential information and formalize it.
+
+### Example Training Session
+
+**Conversation:**
+```
+Trainee: Hi, can you tell me about the project?
+Stakeholder: Oh sure! So we're building this system to help manage our operations better. 
+            We really need something that can handle changes quickly, especially with 
+            regulations and stuff. Does that help?
+
+Trainee: Who else is involved in this project?
+Stakeholder: Let me think... There's Sarah, who's the Product Manager. And then there's 
+            John, they're the Lead Developer. Also Mike, he's our QA lead. What else 
+            do you want to know?
+
+Trainee: What are your main concerns?
+Stakeholder: Yeah, there are a few things we're worried about. The system needs to be 
+            really reliable, especially if our local infrastructure isn't super stable. 
+            Also, we need to keep costs down - hosting, staff, support, all that stuff. 
+            Hope that helps!
+```
+
+**Trainee's Formalized Requirements (created after the conversation):**
+
+```
+STAKEHOLDERS:
+- Sarah: Product Manager
+- John: Lead Developer  
+- Mike: QA Lead
+
+GOALS:
+- G1: Build a system to manage operations more effectively
+- G2: System must handle changes quickly, particularly regulatory changes
+
+NON-FUNCTIONAL REQUIREMENTS:
+- NFR1: System must be highly reliable
+- NFR2: System must function in unstable local infrastructure environments
+- NFR3: Minimize operational costs (hosting, staff, support)
+
+CONSTRAINTS:
+- C1: Local infrastructure may be unstable
+- C2: Budget constraints require cost minimization
+```
+
+**Note**: The trainee has extracted structured requirements from the informal conversation, identifying stakeholders, goals, non-functional requirements, and constraints.
 
 ## Customization
 
+### Adjusting Response Style
+
+To make responses more or less formal, edit the `_generate_informal_response` method in `rag_backend.py`:
+
+```python
+# More casual
+response_parts.append("Yeah, so... ")
+
+# More professional (but still informal)
+response_parts.append("Well, from our perspective... ")
+```
+
 ### Using a Real LLM
 
-The current implementation uses a simple template-based response. To use a real LLM:
+For more natural responses, you can integrate a real LLM:
 
 1. **Ollama** (recommended for local use):
 ```python
@@ -254,19 +333,18 @@ def generate_with_ollama(prompt):
     return response.json()['response']
 ```
 
-2. **HuggingFace Transformers**:
-```python
-from transformers import pipeline
-
-generator = pipeline('text-generation', model='gpt2')
-```
-
-3. **OpenAI API** (requires API key):
+2. **OpenAI API** (requires API key):
 ```python
 import openai
 
 openai.api_key = "your-key"
-response = openai.ChatCompletion.create(...)
+response = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "You are a non-technical stakeholder. Respond informally and naturally."},
+        {"role": "user", "content": query}
+    ]
+)
 ```
 
 ### Adding More Sheets
@@ -299,11 +377,11 @@ Popular alternatives:
 ```
 .
 ├── app.py                 # FastAPI backend server
-├── rag_backend.py         # RAG implementation
+├── rag_backend.py         # RAG implementation with stakeholder simulation
 ├── index.html            # Web chat UI
 ├── requirements.txt      # Python dependencies
 ├── fix_pytree.py         # Compatibility fix for torch
-├── graph_model_nicholas (1).xlsx  # Requirements data
+├── graph_model_nicholas (1).xlsx  # Knowledge base (stakeholder information)
 ├── chroma_db_v2/         # Vector database (created automatically)
 └── README.md             # This file
 ```
@@ -324,24 +402,47 @@ Popular alternatives:
 - **Batch Processing**: Documents processed in batches of 100
 - **Persistence**: Database persists to disk, no re-indexing needed
 
+## Design Principles
+
+### Why No Source References?
+
+The system is designed for **training**, not document querying. The training objective is to practice:
+- **Extracting information from conversation**: Real stakeholders don't provide structured documentation
+- **Identifying important information**: Learning to distinguish key requirements from casual conversation
+- **Formalizing requirements**: Converting informal input into structured, formal requirements documentation
+- **Working without documentation**: In real scenarios, requirements often come from conversations, not documents
+
+If the system showed source references, trainees would skip the critical skill of extracting and structuring information from informal conversation.
+
+### Why Informal Language?
+
+Real stakeholders are often non-technical and speak informally. The system simulates this to:
+- **Provide realistic training scenarios**: Mimics actual stakeholder conversations
+- **Challenge trainees**: Forces extraction of structured information from unstructured conversation
+- **Prepare for real-world**: Most requirements gathering happens through informal conversations
+- **Build critical skills**: Trainees learn to ask the right questions and formalize responses
+
+The informal language is intentional - it's the core challenge that makes this effective training.
+
 ## Limitations & Future Improvements
 
 ### Current Limitations
 
-- Template-based response generation (no real LLM)
+- Template-based response generation (could use real LLM for more naturalness)
 - Row-level chunking (no cross-row context)
 - Keyword-based intent detection (could use ML classification)
 - No conversation history (stateless queries)
+- Fixed response style (could vary by stakeholder personality)
 
 ### Potential Improvements
 
-- Integrate real LLM (Ollama, OpenAI, etc.)
-- Add conversation memory/context
-- Implement re-ranking for better results
-- Add support for multi-row chunks
-- Implement query expansion
-- Add confidence scores to responses
-- Support for file uploads
+- Integrate real LLM (Ollama, OpenAI, etc.) for more natural responses
+- Add conversation memory/context for follow-up questions
+- Implement multiple stakeholder personas with different communication styles
+- Add support for multi-turn conversations with context
+- Implement query expansion for better retrieval
+- Add confidence scores (internal, not shown to user)
+- Support for different training scenarios
 - Multi-language support
 
 ## License

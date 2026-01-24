@@ -69,19 +69,9 @@ async def chat(request: ChatRequest):
         # Generate intelligent response using the improved LLM
         response = llm.generate_response(request.message)
         
-        # Format sources with better structure
-        sources = []
-        for result in search_results:
-            # Clean up the document content for source display
-            content = rag_system._clean_document_content(result['document'])
-            sources.append({
-                "content": content[:150] + "..." if len(content) > 150 else content,
-                "sheet": result['metadata'].get('sheet', 'Unknown'),
-                "sheet_type": result['metadata'].get('sheet_type', 'other'),
-                "relevance": round((1 - result['distance']) * 100, 1) if result['distance'] else 100.0
-            })
-        
-        return ChatResponse(response=response, sources=sources)
+        # Don't return sources - this is a training simulation, not a document query system
+        # The user should formalize requirements from the conversation, not see source references
+        return ChatResponse(response=response, sources=None)
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

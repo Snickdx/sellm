@@ -232,21 +232,24 @@
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <h1>Requirements Chatbot</h1>
-            <p>Ask questions about your software requirements</p>
+            <h1>Requirements Gathering Training</h1>
+            <p>Practice extracting and formalizing requirements from stakeholder conversations</p>
         </div>
         
         <div class="chat-messages" id="chatMessages">
             <div class="message assistant">
                 <div class="message-content">
-                    Hello! I'm your requirements assistant. I can help you find information from your software requirements documentation. 
+                    Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.
                     
-                    <br><br><strong>Try asking about:</strong>
-                    <br>• "Who are the stakeholders?"
-                    <br>• "What are the main features?"
-                    <br>• "What are the project goals?"
-                    <br>• "What's the budget?"
-                    <br>• "What risks have been identified?"
+                    <br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.
+                    
+                    <br><br>You can ask me about:
+                    <br>• Who's involved in this project
+                    <br>• What we're trying to accomplish
+                    <br>• What the system needs to do
+                    <br>• Budget and cost concerns
+                    <br>• Any worries or risks we have
+                    <br><br><em>Remember: Take notes as we talk, then formalize my informal responses into structured requirements!</em>
                 </div>
             </div>
         </div>
@@ -257,7 +260,7 @@
                     type="text" 
                     class="chat-input" 
                     id="chatInput" 
-                    placeholder="Ask about stakeholders, features, budget, goals..."
+                    placeholder="Ask questions to gather requirements (e.g., 'Who are the stakeholders?', 'What are the main goals?')"
                     autocomplete="off"
                 />
                 <button type="submit" class="send-button" id="sendButton">
@@ -378,8 +381,8 @@
                 // Remove typing indicator
                 removeTypingIndicator();
                 
-                // Add assistant response
-                addMessage('assistant', data.response, data.sources);
+                // Add assistant response (no sources shown - this is a training simulation)
+                addMessage('assistant', data.response, null);
                 
             } catch (error) {
                 removeTypingIndicator();
