@@ -18,7 +18,8 @@ This system is designed for **requirements gathering training**. It simulates a 
 ## Features
 
 - **Stakeholder Simulation**: Role-plays as a non-technical stakeholder with natural, informal language
-- **RAG System**: Uses ChromaDB for vector storage and sentence-transformers for embeddings
+- **RAG System**: Supports both ChromaDB (vector-only) and Neo4j (hybrid vector + graph) backends
+- **Hybrid Search**: Neo4j backend combines vector similarity with graph relationship traversal
 - **Intelligent Query Understanding**: Detects query intent and responds contextually
 - **Web Chat UI**: Modern, responsive chat interface for natural conversation
 - **FastAPI Backend**: Lightweight Python API server
@@ -33,11 +34,35 @@ pip install -r requirements.txt
 
 **Note**: The project includes a compatibility fix (`fix_pytree.py`) for torch/transformers version compatibility issues. This is automatically applied when importing the RAG backend.
 
+2. **Configure environment variables** (recommended):
+```bash
+# Copy the example .env file
+cp .env.example .env
+
+# Edit .env with your settings
+# On Windows: copy .env.example .env
+```
+
+The `.env` file allows you to configure:
+- RAG backend (ChromaDB or Neo4j)
+- Neo4j connection settings
+- LLM backend (Ollama, OpenAI, or template)
+- LLM model selection
+
+See `.env.example` for all available options.
+
+**Important**: The `.env` file is git-ignored and should not be committed. It contains your personal configuration (passwords, API keys, etc.). Always use `.env.example` as a template.
+
 ## Usage
 
-1. Make sure your Excel file `graph_model_nicholas (1).xlsx` is in the project directory. This file contains the stakeholder knowledge base.
+1. Make sure your Excel file `data.xlsx` is in the project directory. This file contains the stakeholder knowledge base.
 
-2. Start the server:
+2. **Configure your environment** (optional but recommended):
+   - Copy `.env.example` to `.env`
+   - Edit `.env` with your settings (Neo4j password, LLM model, etc.)
+   - The app will automatically load these settings
+
+3. Start the server:
 ```bash
 python app.py
 ```
@@ -47,15 +72,34 @@ Or using uvicorn directly:
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-3. Open your browser and navigate to:
+4. Open your browser and navigate to:
 ```
 http://localhost:8000
 ```
 
-4. Start practicing requirements gathering! 
+5. Start practicing requirements gathering! 
    - Ask questions as you would in a real stakeholder interview
    - Take notes during the conversation (outside the system)
    - After the session, formalize the informal responses into structured requirements documentation
+
+### Environment Variables
+
+You can configure the system using environment variables (via `.env` file or system environment):
+
+**RAG Backend:**
+- `RAG_BACKEND`: `"chromadb"` (default) or `"neo4j"`
+
+**Neo4j (if using Neo4j backend):**
+- `NEO4J_URI`: Neo4j connection URI (default: `bolt://localhost:7687`)
+- `NEO4J_USER`: Neo4j username (default: `neo4j`)
+- `NEO4J_PASSWORD`: Neo4j password (default: `password`)
+
+**LLM Backend:**
+- `LLM_BACKEND`: `"ollama"` (default), `"openai"`, or `"template"`
+- `LLM_MODEL`: Model name (e.g., `llama3.2`, `mistral`, `gpt-3.5-turbo`)
+
+**OpenAI (if using OpenAI backend):**
+- `OPENAI_API_KEY`: Your OpenAI API key
 
 ### Training Tips
 
@@ -414,13 +458,16 @@ Popular alternatives:
 ```
 .
 ├── app.py                 # FastAPI backend server
-├── rag_backend.py         # RAG implementation (retrieval)
+├── rag_backend.py         # ChromaDB RAG implementation
+├── rag_backend_neo4j.py   # Neo4j hybrid RAG implementation
 ├── llm_wrapper.py        # LLM wrapper (Ollama/OpenAI/template)
 ├── index.html            # Web chat UI
 ├── requirements.txt      # Python dependencies
 ├── fix_pytree.py         # Compatibility fix for torch
-├── graph_model_nicholas (1).xlsx  # Knowledge base (stakeholder information)
-├── chroma_db_v2/         # Vector database (created automatically)
+├── .env.example          # Environment variables template
+├── .env                  # Your environment variables (create from .env.example)
+├── data.xlsx  # Knowledge base (stakeholder information)
+├── chroma_db_v2/         # ChromaDB database (created automatically)
 └── README.md             # This file
 ```
 
@@ -523,6 +570,194 @@ The system will automatically:
 - Support for different training scenarios
 - Multi-language support
 - Fine-tune LLM prompts for better stakeholder persona
+
+## Neo4j Hybrid Backend (Recommended)
+
+The system supports a **hybrid Neo4j backend** that combines vector search with graph relationships for superior context retrieval.
+
+### Why Neo4j?
+
+Your Excel file has a **Relationships sheet** with 48 explicit relationships (HAS_CONSTRAINT, SATISFIES, OWNED_BY, etc.). Neo4j leverages these relationships to provide:
+
+1. **Better Context**: When you ask about a stakeholder, it finds related requirements, goals, and constraints via graph traversal
+2. **Relationship-Aware Retrieval**: Follows graph paths to find connected information
+3. **Hybrid Search**: Combines semantic similarity (vector) with relationship queries (graph)
+
+### Setup Neo4j
+
+1. **Install Neo4j**:
+   - Download from [neo4j.com](https://neo4j.com/download/)
+   - Or use Docker: `docker run -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest`
+
+2. **Start Neo4j**:
+   ```bash
+   # Desktop: Just launch Neo4j Desktop
+   # Docker: Already running if using docker command above
+   # Default credentials: neo4j/password (change on first login)
+   ```
+
+3. **Install Python package**:
+   ```bash
+   pip install neo4j
+   ```
+
+4. **Configure .env file** (recommended):
+   ```bash
+   # Copy example file
+   cp .env.example .env
+   
+   # Edit .env and set:
+   RAG_BACKEND=neo4j
+   NEO4J_PASSWORD=your_password
+   ```
+
+5. **Run the app**:
+   ```bash
+   python app.py
+   ```
+   
+   The app will automatically load settings from `.env` file.
+
+   **Alternative: Set environment variables directly:**
+   ```bash
+   # Linux/Mac:
+   export RAG_BACKEND=neo4j
+   export NEO4J_PASSWORD=your_password
+   
+   # Windows:
+   set RAG_BACKEND=neo4j
+   set NEO4J_PASSWORD=your_password
+   
+   python app.py
+   ```
+
+### How It Works
+
+**Hybrid Search Process:**
+1. **Vector Search**: Find semantically similar nodes using cosine similarity on embeddings
+2. **Graph Traversal**: For each result, traverse relationships to find connected nodes
+3. **Enhanced Context**: Combine original results with related nodes for richer context
+
+### Current Neo4j Model Structure
+
+The current implementation in `rag_backend_neo4j.py` loads the Excel workbook into a graph with:
+
+1. **Node identity**
+   - `node_id` from each row's `id` column (required)
+   - Nodes are merged by `node_id` (`MERGE (n:{Label} {node_id: $node_id})`)
+
+2. **Node labels (sheet -> label mapping)**
+   - `Project` -> `Project`
+   - `Stakeholder` -> `Stakeholder`
+   - `Client` -> `Client`
+   - `Role` -> `Role`
+   - `Feature` -> `Feature`
+   - `Requirement` -> `Requirement`
+   - `FunctioFFnal_Requirement` -> `FunctionalRequirement`
+   - `Goal` -> `Goal`
+   - `Constraint` -> `Constraint`
+   - `Risk` -> `Risk`
+   - `Budget` -> `Budget`
+   - `Line_Item` -> `LineItem`
+   - `Timeline` -> `Timeline`
+   - `Milestone` -> `Milestone`
+   - `Task` -> `Task`
+   - `Qual_Scenario` -> `QualityScenario`
+   - Unknown sheets -> `RequirementNode`
+
+3. **Node properties**
+   - All Excel columns are copied to properties using lowercase/snake_case keys
+   - Common system properties:
+     - `node_id`
+     - `sheet`
+     - `text` (full row serialized as text)
+     - `embedding` (vector from `all-MiniLM-L6-v2`)
+
+4. **Relationships**
+   - Loaded from the `Relationships` sheet using:
+     - `start_id` (source node `node_id`)
+     - `end_id` (target node `node_id`)
+     - `type` (relationship type, uppercased and spaces replaced by `_`)
+   - Cypher pattern:
+     - `MATCH (a {node_id: $start_id})`
+     - `MATCH (b {node_id: $end_id})`
+     - `MERGE (a)-[r:REL_TYPE]->(b)`
+
+5. **Retrieval behavior**
+   - Vector retrieval computes cosine similarity over stored `embedding`
+   - Top matches are enriched with graph neighbors from one-hop traversals
+   - Returned result format: `document`, `metadata`, `distance`
+
+**Example Query Flow:**
+```
+Query: "What are Sarah's concerns?"
+
+1. Vector search → Find Stakeholder node for "Sarah"
+2. Graph traversal → Follow OWNED_BY → Requirements
+3. Graph traversal → Follow HAS_RISK → Risks  
+4. Graph traversal → Follow HAS_CONSTRAINT → Constraints
+5. Return comprehensive context about Sarah's concerns
+```
+
+### Comparison: ChromaDB vs Neo4j
+
+| Feature | ChromaDB | Neo4j |
+|---------|----------|-------|
+| Vector Search | ✅ Fast | ✅ Fast |
+| Relationship Queries | ❌ Not supported | ✅ Excellent |
+| Context Quality | ⭐⭐ Good | ⭐⭐⭐⭐ Excellent |
+| Setup Complexity | ⭐ Easy | ⭐⭐ Medium |
+| Best For | Simple semantic search | Relationship-rich data |
+
+**Recommendation**: Use Neo4j if your Excel has relationships (which it does!). The hybrid approach provides much better context for training.
+
+### Response Modes in the Chat UI
+
+The chat UI supports per-message response modes:
+
+- `vector`: Use ChromaDB vector retrieval only
+- `neo4j`: Use Neo4j structured+graph retrieval path
+- `hybrid`: Merge top retrieval results from both vector and Neo4j, then generate one synthesized response
+- `compare`: Return both vector and Neo4j responses side by side for manual comparison
+
+For easier evaluation, each assistant message now shows a small mode badge (for example, `mode: vector`, `mode: neo4j`, `mode: hybrid`, or `mode: compare`) so you can see exactly which retrieval path produced that output.
+
+Backend helpers:
+
+- `GET /api/modes`: shows which modes are available at runtime
+- `POST /api/chat` body accepts `response_mode`
+- `GET /api/config`: shows runtime configuration, key status, and tweaks file metadata
+
+### Runtime Behavior Tweaks (Feedback Loop)
+
+Behavior adjustments are stored in an external JSON file (`behavior_tweaks.json` by default), so they can be customized without code changes and loaded at runtime.
+
+- **Feature flag**: set `TWEAK_MODE_ENABLED=true` to enable tweak mode
+- **When disabled**: response tweaks are not applied and `POST /api/feedback` is blocked
+- **Tweaks file path**: controlled by `BEHAVIOR_TWEAKS_FILE` (default: `behavior_tweaks.json`)
+- **Loaded at runtime**: each response reads current tweaks, so changes apply immediately
+- **UI feedback**: each assistant response includes:
+  - `👍 Good` (logs positive feedback)
+  - `👎 Improve` (captures correction text, optional improved response)
+- **Feedback API**: `POST /api/feedback` updates the tweaks file
+
+If a corrected response is provided in feedback, it is saved as a query-specific override. Repeating the same prompt should then return the improved version.
+
+The tweak file currently supports:
+
+- `global` tweaks (replacements, blocked phrases, sentence de-dup)
+- `pattern_overrides` for repeatable behavior policies (for example, technical-definition redirection)
+- `query_overrides` for exact prompt corrections
+- `feedback_log` for audit/history of runtime changes
+
+### Migration from ChromaDB
+
+If you've been using ChromaDB, switching to Neo4j is easy:
+
+1. Install Neo4j and start it
+2. Set `RAG_BACKEND=neo4j` environment variable
+3. Restart the app - it will automatically load data into Neo4j
+4. Your ChromaDB data remains untouched (you can switch back anytime)
 
 ## License
 

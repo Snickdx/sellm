@@ -509,59 +509,6 @@ class SimpleLLM:
             return text
         
         return text
-
-    def _extract_employee_subgroups(self, extracted_info: List[Dict]) -> List[str]:
-        """Extract likely employee subgroup labels from retrieved structured fields."""
-        subgroup_terms = []
-        generic_terms = {"employee", "employees", "employer", "staff", "people", "person"}
-
-        def add_term(raw: str):
-            term = raw.strip().lower().replace("_", " ")
-            if not term:
-                return
-            # Skip single generic tokens.
-            if term in generic_terms:
-                return
-            # Keep compact natural labels.
-            if len(term) <= 2 or len(term) > 50:
-                return
-            if term not in subgroup_terms:
-                subgroup_terms.append(term)
-
-        for info in extracted_info:
-            for key in ["role", "type", "title", "name", "description"]:
-                value = info.get(key, "")
-                if not value:
-                    continue
-                text = str(value).lower()
-                # Pull likely subgroup clues from common separators.
-                for piece in text.replace(" and ", ",").replace("/", ",").split(","):
-                    piece = piece.strip(" .;:-")
-                    if not piece:
-                        continue
-                    # Keep role/category-like fragments.
-                    if any(
-                        marker in piece
-                        for marker in [
-                            "department",
-                            "payroll",
-                            "manager",
-                            "lead",
-                            "admin",
-                            "finance",
-                            "hr",
-                            "tax",
-                            "piecework",
-                            "weekly",
-                            "monthly",
-                            "contract",
-                            "full-time",
-                            "part-time",
-                        ]
-                    ):
-                        add_term(piece)
-
-        return subgroup_terms[:5]
     
     def _generate_informal_response(self, results: List[Dict], query: str) -> str:
         """Generate a human-like, informal response as a non-technical stakeholder"""
@@ -589,23 +536,19 @@ class SimpleLLM:
         
         # Generate natural, informal response based on query type
         response_parts = []
+        
         # Detect what they're asking about
         if any(w in query_lower for w in ['stakeholder', 'stakeholders', 'people', 'who', 'person']):
             response_parts.append("Oh, well, there are a few people involved in this project. ")
             if len(extracted_info) > 1:
                 response_parts.append("Let me think... ")
-            seen_people = set()
-            added_count = 0
-            for info in extracted_info:
+            
+            for i, info in enumerate(extracted_info):
                 name = info.get('name', info.get('stakeholder', 'Someone'))
                 role = info.get('role', info.get('type', ''))
                 desc = info.get('description', '')
-                person_key = f"{name}|{role}".strip().lower()
-                if person_key in seen_people:
-                    continue
-                seen_people.add(person_key)
                 
-                if added_count == 0:
+                if i == 0:
                     if role:
                         response_parts.append(f"There's {name}, who's the {role}. ")
                     else:
@@ -618,7 +561,6 @@ class SimpleLLM:
                 
                 if desc and len(desc) < 100:
                     response_parts.append(f"{desc} ")
-                added_count += 1
         
         elif any(w in query_lower for w in ['goal', 'goals', 'objective', 'objectives', 'want', 'need']):
             response_parts.append("So, what we're really trying to do here is ")
@@ -694,14 +636,11 @@ class SimpleLLM:
         else:
             # Generic response
             response_parts.append("So, ")
-            seen_desc = set()
+            
             for i, info in enumerate(extracted_info):
                 desc = info.get('description', info.get('name', ''))
                 if desc:
                     desc_text = desc.lower().strip()
-                    if desc_text in seen_desc:
-                        continue
-                    seen_desc.add(desc_text)
                     # Ensure it's a complete sentence
                     if not desc_text.startswith(('we', 'it', 'the', 'our', 'this', 'that', 'i')):
                         desc_text = f"it's about {desc_text}"
@@ -759,7 +698,7 @@ class SimpleLLM:
 
 if __name__ == "__main__":
     # Test the RAG system
-    rag = RequirementsRAG("data.xlsx")
+    rag = RequirementsRAG("graph_model_nicholas (1).xlsx")
     
     test_queries = [
         "What are the main features?",

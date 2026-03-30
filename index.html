@@ -114,12 +114,54 @@
             font-weight: 600;
         }
 
+        .mode-badge {
+            display: inline-block;
+            margin-bottom: 8px;
+            padding: 3px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            text-transform: uppercase;
+            background: #eef2ff;
+            color: #4f46e5;
+            border: 1px solid #c7d2fe;
+        }
+
         .sources {
             margin-top: 10px;
             padding: 10px;
             background: #f0f0f0;
             border-radius: 8px;
             font-size: 12px;
+        }
+
+        .feedback-row {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .feedback-btn {
+            border: 1px solid #d1d5db;
+            border-radius: 999px;
+            padding: 4px 10px;
+            background: #ffffff;
+            color: #374151;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .feedback-btn:hover {
+            border-color: #6366f1;
+            color: #4338ca;
+        }
+
+        .feedback-note {
+            font-size: 11px;
+            color: #6b7280;
         }
 
         .sources-title {
@@ -140,6 +182,28 @@
             padding: 20px;
             background: white;
             border-top: 1px solid #e0e0e0;
+        }
+
+        .mode-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .mode-label {
+            font-size: 13px;
+            color: #555;
+            font-weight: 600;
+        }
+
+        .mode-select {
+            padding: 8px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 10px;
+            background: white;
+            color: #333;
+            font-size: 13px;
         }
 
         .chat-input-form {
@@ -255,6 +319,15 @@
         </div>
         
         <div class="chat-input-container">
+            <div class="mode-row">
+                <label class="mode-label" for="responseMode">Next response mode</label>
+                <select id="responseMode" class="mode-select">
+                    <option value="vector">Vector RAG (ChromaDB)</option>
+                    <option value="neo4j">Neo4j Structured RAG</option>
+                    <option value="hybrid">Hybrid synthesis (Vector + Neo4j)</option>
+                    <option value="compare">Compare both</option>
+                </select>
+            </div>
             <form class="chat-input-form" id="chatForm">
                 <input 
                     type="text" 
@@ -275,8 +348,42 @@
         const chatForm = document.getElementById('chatForm');
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
+        const responseMode = document.getElementById('responseMode');
+        const conversationHistory = [];
+        let tweakModeEnabled = false;
 
-        function addMessage(role, content, sources = null) {
+        async function loadRuntimeConfig() {
+            try {
+                const response = await fetch('/api/config');
+                if (!response.ok) return;
+                const config = await response.json();
+                tweakModeEnabled = Boolean(config.tweak_mode_enabled);
+            } catch (error) {
+                // Keep default false if config is unavailable.
+                tweakModeEnabled = false;
+            }
+        }
+
+        async function submitFeedback(meta, feedbackText, desiredResponse = '') {
+            const payload = {
+                prompt: meta?.prompt || '',
+                response: meta?.response || '',
+                feedback: feedbackText,
+                mode_used: meta?.mode || null,
+                desired_response: desiredResponse || null
+            };
+            const response = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                throw new Error('Failed to submit feedback');
+            }
+            return response.json();
+        }
+
+        function addMessage(role, content, sources = null, modeUsed = null, meta = null) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}`;
             
@@ -284,9 +391,68 @@
             contentDiv.className = 'message-content';
             // Use innerHTML for assistant messages to render HTML formatting, textContent for user messages
             if (role === 'assistant') {
-                contentDiv.innerHTML = content;
+                if (content.includes('<')) {
+                    contentDiv.innerHTML = content;
+                } else {
+                    contentDiv.innerHTML = content.replace(/\n/g, '<br>');
+                }
             } else {
                 contentDiv.textContent = content;
+            }
+
+            if (role === 'assistant' && modeUsed) {
+                const badge = document.createElement('div');
+                badge.className = 'mode-badge';
+                badge.textContent = `mode: ${modeUsed}`;
+                contentDiv.prepend(badge);
+            }
+
+            if (role === 'assistant' && meta?.prompt && tweakModeEnabled) {
+                const feedbackRow = document.createElement('div');
+                feedbackRow.className = 'feedback-row';
+
+                const thumbsUpBtn = document.createElement('button');
+                thumbsUpBtn.className = 'feedback-btn';
+                thumbsUpBtn.type = 'button';
+                thumbsUpBtn.textContent = '👍 Good';
+                thumbsUpBtn.onclick = async () => {
+                    try {
+                        await submitFeedback(meta, 'good_response');
+                        note.textContent = 'Saved. No tweak needed.';
+                    } catch (error) {
+                        note.textContent = 'Could not save feedback.';
+                    }
+                };
+
+                const improveBtn = document.createElement('button');
+                improveBtn.className = 'feedback-btn';
+                improveBtn.type = 'button';
+                improveBtn.textContent = '👎 Improve';
+                improveBtn.onclick = async () => {
+                    const feedbackText = window.prompt(
+                        'How should this response improve? (e.g., too repetitive, too technical, not stakeholder-like)'
+                    );
+                    if (!feedbackText || !feedbackText.trim()) return;
+                    const desiredResponse = window.prompt(
+                        'Optional: Provide a better response for this exact prompt (saved as an override).'
+                    ) || '';
+                    try {
+                        const result = await submitFeedback(meta, feedbackText.trim(), desiredResponse.trim());
+                        const changes = (result.changes || []).join('; ');
+                        note.textContent = changes ? `Saved and updated: ${changes}` : 'Saved feedback.';
+                    } catch (error) {
+                        note.textContent = 'Could not save feedback.';
+                    }
+                };
+
+                const note = document.createElement('span');
+                note.className = 'feedback-note';
+                note.textContent = 'Help tune responses at runtime.';
+
+                feedbackRow.appendChild(thumbsUpBtn);
+                feedbackRow.appendChild(improveBtn);
+                feedbackRow.appendChild(note);
+                contentDiv.appendChild(feedbackRow);
             }
             
             if (sources && sources.length > 0) {
@@ -352,6 +518,7 @@
         async function sendMessage(message) {
             // Add user message
             addMessage('user', message);
+            conversationHistory.push({ role: 'user', content: message });
             
             // Clear input
             chatInput.value = '';
@@ -368,7 +535,8 @@
                     },
                     body: JSON.stringify({
                         message: message,
-                        conversation_history: []
+                        conversation_history: conversationHistory,
+                        response_mode: responseMode.value
                     })
                 });
                 
@@ -382,7 +550,18 @@
                 removeTypingIndicator();
                 
                 // Add assistant response (no sources shown - this is a training simulation)
-                addMessage('assistant', data.response, null);
+                addMessage(
+                    'assistant',
+                    data.response,
+                    null,
+                    data.mode_used || null,
+                    {
+                        prompt: message,
+                        response: data.response,
+                        mode: data.mode_used || null
+                    }
+                );
+                conversationHistory.push({ role: 'assistant', content: data.response });
                 
             } catch (error) {
                 removeTypingIndicator();
@@ -404,6 +583,7 @@
 
         // Focus input on load
         chatInput.focus();
+        loadRuntimeConfig();
     </script>
 </body>
 </html>

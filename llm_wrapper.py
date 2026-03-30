@@ -21,6 +21,10 @@ class LLMWrapper:
         self.rag = rag
         self.backend = backend.lower()
         self.model = model or self._get_default_model()
+        self.temperature = self._get_env_float("OPENAI_TEMPERATURE", 0.4)
+        self.max_tokens = self._get_env_int("OPENAI_MAX_TOKENS", 280)
+        self.rag_top_k = self._get_env_int("RAG_TOP_K", 5)
+        self.ollama_top_p = self._get_env_float("OLLAMA_TOP_P", 0.9)
         
         # Initialize backend
         if self.backend == "ollama":
@@ -32,6 +36,28 @@ class LLMWrapper:
         else:
             print(f"Unknown backend {self.backend}, falling back to template")
             self.backend = "template"
+
+    def _get_env_float(self, name: str, default: float) -> float:
+        """Read float env var with safe fallback."""
+        raw_value = os.getenv(name)
+        if raw_value is None:
+            return default
+        try:
+            return float(raw_value)
+        except ValueError:
+            print(f"Invalid {name}='{raw_value}', using default {default}")
+            return default
+
+    def _get_env_int(self, name: str, default: int) -> int:
+        """Read int env var with safe fallback."""
+        raw_value = os.getenv(name)
+        if raw_value is None:
+            return default
+        try:
+            return int(raw_value)
+        except ValueError:
+            print(f"Invalid {name}='{raw_value}', using default {default}")
+            return default
     
     def _get_default_model(self) -> str:
         """Get default model for each backend"""
@@ -71,11 +97,13 @@ class LLMWrapper:
             print("⚠ openai package not installed, falling back to template")
             self.backend = "template"
     
-    def _build_rag_prompt(self, query: str, context_results: List[Dict]) -> str:
+    def _build_rag_prompt(
+        self, query: str, context_results: List[Dict], conversation_history: Optional[List[Dict]] = None
+    ) -> str:
         """Build a prompt with RAG context for the LLM"""
         # Extract relevant information from context
         context_text = []
-        for result in context_results[:3]:  # Top 3 results
+        for result in context_results[: self.rag_top_k]:
             doc = result.get('document', '')
             # Extract key information (skip "Sheet: X" line)
             lines = doc.split('\n')[1:]
@@ -96,6 +124,22 @@ class LLMWrapper:
                 context_text.append(" | ".join(info_parts))
         
         context_str = "\n".join(context_text) if context_text else "No specific information found."
+
+        history_text = ""
+        if conversation_history:
+            recent_turns = conversation_history[-6:]
+            lines = []
+            for turn in recent_turns:
+                role = turn.get("role", "user")
+                content = turn.get("content", "")
+                if content:
+                    lines.append(f"{role}: {content}")
+            if lines:
+                history_text = "\n".join(lines)
+            else:
+                history_text = "No prior conversation."
+        else:
+            history_text = "No prior conversation."
         
         # Build the prompt
         prompt = f"""You are a non-technical stakeholder in a software project. You're being interviewed by someone gathering requirements. 
@@ -105,12 +149,17 @@ Based on the following information from the project, answer the question natural
 
 {context_str}
 
+Recent conversation:
+{history_text}
+
 Question: {query}
 
 Instructions:
-- Answer as if you're speaking in person, not writing a document
+- Answer the user's direct question first, in the first sentence
+- Be specific and avoid generic restatements
 - Use casual language: "Oh, well...", "Let me think...", "Yeah, there are..."
 - Don't mention sheets, documents, or technical sources
+- Do not invent details not supported by context; ask one concise clarifying question if needed
 - If you don't know something, say so casually
 - Keep it natural and human-like
 - Use proper grammar but stay informal
@@ -130,8 +179,8 @@ Your response:"""
                     "prompt": prompt,
                     "stream": False,
                     "options": {
-                        "temperature": 0.7,  # More creative/conversational
-                        "top_p": 0.9,
+                        "temperature": self.temperature,
+                        "top_p": self.ollama_top_p,
                     }
                 },
                 timeout=30
@@ -160,8 +209,8 @@ Your response:"""
                         "content": prompt
                     }
                 ],
-                temperature=0.7,
-                max_tokens=300
+                temperature=self.temperature,
+                max_tokens=self.max_tokens
             )
             
             return response.choices[0].message.content.strip()
@@ -179,47 +228,42 @@ Your response:"""
         except ImportError:
             # Ultimate fallback
             return "I'm not sure how to answer that. Can you rephrase your question?"
-    
-    def generate_response(self, query: str) -> str:
-        """Generate human-like response using RAG + LLM"""
-        # Get relevant context
-        results = self.rag.search(query, n_results=5, filter_by_sheet_type=True)
-        
-        if not results:
-            # No context found
+
+    def generate_response_from_results(
+        self, query: str, context_results: List[Dict], conversation_history: Optional[List[Dict]] = None
+    ) -> str:
+        """Generate response from precomputed retrieval results."""
+        if not context_results:
             no_context_responses = [
                 "Hmm, I'm not sure about that. Can you ask me something else?",
                 "I don't really know much about that. What else would you like to know?",
                 "That's not something I'm familiar with. Maybe try asking about something else?",
             ]
             return random.choice(no_context_responses)
-        
-        # Build prompt with RAG context
-        prompt = self._build_rag_prompt(query, results)
-        
-        # Generate response based on backend
+
+        prompt = self._build_rag_prompt(query, context_results, conversation_history=conversation_history)
+
         try:
             if self.backend == "ollama":
                 response = self._generate_with_ollama(prompt)
             elif self.backend == "openai":
                 response = self._generate_with_openai(prompt)
             else:
-                # Template fallback
-                response = self._generate_with_template(query, results)
-            
-            # Clean up response (remove any unwanted formatting)
+                response = self._generate_with_template(query, context_results)
+
             response = response.strip()
-            
-            # Ensure it ends with a question or casual phrase
             if not response.endswith(('?', '!', '.')):
                 response += "."
-            
             return response
-            
         except Exception as e:
             print(f"Error generating response with {self.backend}: {e}")
-            # Fallback to template
             if self.backend != "template":
                 print("Falling back to template-based generation")
-                return self._generate_with_template(query, results)
+                return self._generate_with_template(query, context_results)
             raise
+    
+    def generate_response(self, query: str, conversation_history: Optional[List[Dict]] = None) -> str:
+        """Generate human-like response using RAG + LLM"""
+        # Get relevant context
+        results = self.rag.search(query, n_results=self.rag_top_k, filter_by_sheet_type=True)
+        return self.generate_response_from_results(query, results, conversation_history=conversation_history)
