@@ -32,7 +32,7 @@ This system is designed for **requirements gathering training**. It simulates a 
 pip install -r requirements.txt
 ```
 
-**Note**: The project includes a compatibility fix (`fix_pytree.py`) for torch/transformers version compatibility issues. This is automatically applied when importing the RAG backend.
+**Note**: The project includes a compatibility fix in `app/fix_pytree.py` for torch/transformers version compatibility issues. It is applied automatically when importing the RAG modules.
 
 2. **Configure environment variables** (recommended):
 ```bash
@@ -64,7 +64,7 @@ See `.env.example` for all available options.
 
 3. Start the server:
 ```bash
-python app.py
+python -m app.main
 ```
 
 Or using uvicorn directly:
@@ -149,9 +149,9 @@ The system follows a RAG (Retrieval-Augmented Generation) architecture designed 
 
 ### Components
 
-1. **Frontend (`index.html`)**: Single-page web application with chat interface
-2. **API Server (`app.py`)**: FastAPI server handling HTTP requests
-3. **RAG Backend (`rag_backend.py`)**: Core RAG implementation with:
+1. **Frontend (`app/web/templates/index.html` + `app/web/static/components/chat.js`)**: Jinja-rendered web UI and chat client logic
+2. **API Server (`app/api/app.py`)**: FastAPI server handling HTTP requests and template/static routing
+3. **RAG Backend (`app/rag_backend.py`)**: Core RAG implementation with:
    - `RequirementsRAG`: Handles data loading, embedding, and retrieval
    - `SimpleLLM`: Generates informal, human-like stakeholder responses
 4. **Vector Database**: ChromaDB for persistent vector storage
@@ -350,7 +350,7 @@ CONSTRAINTS:
 
 ### Adjusting Response Style
 
-To make responses more or less formal, edit the `_generate_informal_response` method in `rag_backend.py`:
+To make responses more or less formal, edit the `_generate_informal_response` method in `app/rag_backend.py`:
 
 ```python
 # More casual
@@ -385,12 +385,12 @@ The system now supports real LLMs for much more natural, human-like responses. T
 
 4. **Run your app** (it will auto-detect Ollama):
    ```bash
-   python app.py
+   python -m app.main
    ```
 
    Or specify the model:
    ```bash
-   LLM_MODEL=llama3.2 python app.py
+   LLM_MODEL=llama3.2 python -m app.main
    ```
 
 **Benefits:**
@@ -415,7 +415,7 @@ For cloud-based LLM (requires API key):
 
 3. **Run with OpenAI backend**:
    ```bash
-   LLM_BACKEND=openai LLM_MODEL=gpt-3.5-turbo python app.py
+   LLM_BACKEND=openai LLM_MODEL=gpt-3.5-turbo python -m app.main
    ```
 
 #### Option 3: Template Fallback
@@ -423,14 +423,14 @@ For cloud-based LLM (requires API key):
 If no LLM is available, the system automatically falls back to template-based generation:
 
 ```bash
-LLM_BACKEND=template python app.py
+LLM_BACKEND=template python -m app.main
 ```
 
 **Note**: Template-based responses are limited in quality and naturalness. A real LLM is strongly recommended.
 
 ### Adding More Sheets
 
-Edit `rag_backend.py` and modify the `key_sheets` list in the `_load_requirements` method:
+Edit `app/rag_backend.py` and modify the `key_sheets` list in the `_load_requirements` method:
 
 ```python
 key_sheets = [
@@ -457,18 +457,52 @@ Popular alternatives:
 
 ```
 .
-├── app.py                 # FastAPI backend server
-├── rag_backend.py         # ChromaDB RAG implementation
-├── rag_backend_neo4j.py   # Neo4j hybrid RAG implementation
-├── llm_wrapper.py        # LLM wrapper (Ollama/OpenAI/template)
-├── index.html            # Web chat UI
-├── requirements.txt      # Python dependencies
-├── fix_pytree.py         # Compatibility fix for torch
-├── .env.example          # Environment variables template
-├── .env                  # Your environment variables (create from .env.example)
-├── data.xlsx  # Knowledge base (stakeholder information)
-├── chroma_db_v2/         # ChromaDB database (created automatically)
-└── README.md             # This file
+├── app/
+│   ├── main.py              # Entrypoint module (python -m app.main)
+│   ├── fix_pytree.py        # Torch/pytree compatibility shim
+│   ├── llm_wrapper.py       # LLM wrapper (Ollama/OpenAI/template)
+│   ├── rag_backend.py       # ChromaDB RAG implementation
+│   ├── rag_backend_neo4j.py # Neo4j hybrid RAG
+│   ├── api/
+│   │   ├── app.py           # FastAPI app and routes
+│   │   └── schemas.py       # API request/response models
+│   ├── storage/
+│   │   └── conversation_store.py # SQLModel + SQLite persistence
+│   ├── tweaks/
+│   │   └── behavior_tweaks.py # Runtime tweak store logic
+│   ├── web/
+│   │   ├── templates/
+│   │   │   └── index.html   # Jinja2 template for chat UI
+│   │   └── static/
+│   │       └── components/
+│   │           └── chat.js  # Web chat component logic
+│   └── scripts/
+│       ├── create_neo4j_impl.py # App script entrypoint
+│       └── update_excel_env.py  # App script entrypoint
+├── config/
+│   └── behavior/
+│       └── behavior_tweaks.json # External behavior tweak data
+├── setup/
+│   ├── chroma/
+│   │   └── init_chroma.py   # Chroma setup/warmup script
+│   ├── neo4j/
+│   │   └── load_graph.py    # Neo4j graph load script
+│   └── scripts/
+│       └── update_excel_env.py # Misc setup utilities
+├── scripts/
+│   ├── start.bat            # Start script entrypoint
+│   ├── create_neo4j_impl.py # Neo4j loader entrypoint
+│   └── update_excel_env.py  # EXCEL_FILE env helper entrypoint
+├── docs/
+│   └── SETUP_LLM.md         # LLM setup guide
+├── requirements.txt         # Python dependencies
+├── .env.example             # Environment variables template
+├── .env                     # Your environment variables (create from .env.example)
+├── data.xlsx                # Knowledge base (stakeholder information)
+├── storage/
+│   ├── chroma_db_v2/        # ChromaDB database (gitignored)
+│   └── conversations.db     # SQLite chat history (gitignored)
+└── README.md                # This file
 ```
 
 ## Technologies Used
@@ -541,7 +575,7 @@ This is the **standard RAG pattern** used in production systems.
 ```bash
 # Install Ollama, then:
 ollama pull llama3.2
-python app.py  # Auto-detects Ollama
+python -m app.main  # Auto-detects Ollama
 ```
 
 The system will automatically:
@@ -613,7 +647,7 @@ Your Excel file has a **Relationships sheet** with 48 explicit relationships (HA
 
 5. **Run the app**:
    ```bash
-   python app.py
+   python -m app.main
    ```
    
    The app will automatically load settings from `.env` file.
@@ -628,7 +662,7 @@ Your Excel file has a **Relationships sheet** with 48 explicit relationships (HA
    set RAG_BACKEND=neo4j
    set NEO4J_PASSWORD=your_password
    
-   python app.py
+   python -m app.main
    ```
 
 ### How It Works
@@ -640,7 +674,7 @@ Your Excel file has a **Relationships sheet** with 48 explicit relationships (HA
 
 ### Current Neo4j Model Structure
 
-The current implementation in `rag_backend_neo4j.py` loads the Excel workbook into a graph with:
+The current implementation in `app/rag_backend_neo4j.py` loads the Excel workbook into a graph with:
 
 1. **Node identity**
    - `node_id` from each row's `id` column (required)
@@ -727,14 +761,16 @@ Backend helpers:
 - `GET /api/modes`: shows which modes are available at runtime
 - `POST /api/chat` body accepts `response_mode`
 - `GET /api/config`: shows runtime configuration, key status, and tweaks file metadata
+- `GET /api/conversations`: lists saved conversations
+- `GET /api/conversations/{conversation_id}`: loads a conversation with messages
 
 ### Runtime Behavior Tweaks (Feedback Loop)
 
-Behavior adjustments are stored in an external JSON file (`behavior_tweaks.json` by default), so they can be customized without code changes and loaded at runtime.
+Behavior adjustments are stored in an external JSON file (`config/behavior/behavior_tweaks.json` by default), so they can be customized without code changes and loaded at runtime.
 
 - **Feature flag**: set `TWEAK_MODE_ENABLED=true` to enable tweak mode
 - **When disabled**: response tweaks are not applied and `POST /api/feedback` is blocked
-- **Tweaks file path**: controlled by `BEHAVIOR_TWEAKS_FILE` (default: `behavior_tweaks.json`)
+- **Tweaks file path**: controlled by `BEHAVIOR_TWEAKS_FILE` (default: `config/behavior/behavior_tweaks.json`)
 - **Loaded at runtime**: each response reads current tweaks, so changes apply immediately
 - **UI feedback**: each assistant response includes:
   - `👍 Good` (logs positive feedback)
@@ -749,6 +785,22 @@ The tweak file currently supports:
 - `pattern_overrides` for repeatable behavior policies (for example, technical-definition redirection)
 - `query_overrides` for exact prompt corrections
 - `feedback_log` for audit/history of runtime changes
+
+### Conversation Persistence (SQLModel + SQLite)
+
+Conversation history is now persisted so users can view and continue prior sessions.
+
+- **Storage**: SQLite via SQLModel (`CONVERSATION_DB_URL`, default `sqlite:///./storage/conversations.db`)
+- **Continue chat**: send `conversation_id` in `POST /api/chat`
+- **New chat**: omit `conversation_id` and the app creates one automatically
+- **UI support**: conversation selector in the chat UI loads previous conversations
+
+### Setup Scripts
+
+- Initialize Chroma store: `python setup/chroma/init_chroma.py`
+- Load Neo4j graph: `python scripts/create_neo4j_impl.py`
+- EXCEL_FILE env helper: `python scripts/update_excel_env.py`
+- Start app: `scripts\start.bat` (or root `start.bat` wrapper)
 
 ### Migration from ChromaDB
 
