@@ -1,0 +1,13 @@
+.git
+.gitignore
+.dockerignore
+**/__pycache__
+**/*.py[cod]
+.env
+.env.*
+!.app/.env.example
+storage
+.cursor
+*.dump
+**/.pytest_cache
+**/.ruff_cache

@@ -6,16 +6,114 @@
     <title>Requirements Chatbot</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
-        .chat-container { width: 100%; max-width: 800px; height: 90vh; background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; overflow: hidden; }
-        .chat-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
-        .chat-header h1 { font-size: 24px; font-weight: 600; }
-        .chat-header p { font-size: 14px; opacity: 0.9; margin-top: 5px; }
-        .chat-messages { flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        .shell {
+            width: min(1200px, 96vw);
+            height: min(900px, 92vh);
+        }
+        .master-detail {
+            display: grid;
+            grid-template-columns: 1fr 5fr;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        .conversations-pane {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+        }
+        .conversations-pane-header {
+            padding: 16px 14px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #f1f5f9 0%, #f8fafc 100%);
+        }
+        .conversations-pane-header h2 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 10px;
+        }
+        .new-chat-btn {
+            width: 100%;
+            border: 1px solid #c7d2fe;
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: #eef2ff;
+            color: #3730a3;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .new-chat-btn:hover { border-color: #6366f1; background: #e0e7ff; }
+        .conversation-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+        .conversation-item {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            padding: 10px 12px 10px 14px;
+            border: none;
+            border-bottom: 1px solid #e2e8f0;
+            border-left: 3px solid transparent;
+            background: transparent;
+            cursor: pointer;
+            text-align: left;
+            font: inherit;
+            color: #334155;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .conversation-item:hover { background: #f1f5f9; }
+        .conversation-item.active {
+            background: #eef2ff;
+            border-left-color: #6366f1;
+            color: #1e1b4b;
+        }
+        .conversation-title {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.35;
+            word-break: break-word;
+            width: 100%;
+        }
+        .conversation-meta {
+            font-size: 11px;
+            color: #64748b;
+        }
+        .chat-pane {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+        }
+        .chat-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 18px 20px; text-align: center; flex-shrink: 0; }
+        .chat-header h1 { font-size: 22px; font-weight: 600; }
+        .chat-header p { font-size: 13px; opacity: 0.9; margin-top: 6px; max-width: 42em; margin-left: auto; margin-right: auto; }
+        .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; background: #f8f9fa; }
         .message { margin-bottom: 15px; display: flex; animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .message.user { justify-content: flex-end; }
-        .message-content { max-width: 70%; padding: 12px 16px; border-radius: 18px; word-wrap: break-word; }
+        .message-content { max-width: 72%; padding: 12px 16px; border-radius: 18px; word-wrap: break-word; }
         .message.user .message-content { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-bottom-right-radius: 4px; }
         .message.assistant .message-content { background: white; color: #333; border: 1px solid #e0e0e0; border-bottom-left-radius: 4px; }
         .message.assistant .message-content strong { color: #667eea; font-weight: 600; }
@@ -24,70 +122,138 @@
         .feedback-btn { border: 1px solid #d1d5db; border-radius: 999px; padding: 4px 10px; background: #ffffff; color: #374151; font-size: 12px; cursor: pointer; }
         .feedback-btn:hover { border-color: #6366f1; color: #4338ca; }
         .feedback-note { font-size: 11px; color: #6b7280; }
-        .chat-input-container { padding: 20px; background: white; border-top: 1px solid #e0e0e0; }
-        .conversation-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .conversation-select { flex: 1; padding: 8px 12px; border: 1px solid #d0d0d0; border-radius: 10px; background: white; color: #333; font-size: 13px; }
-        .new-chat-btn { border: 1px solid #d1d5db; border-radius: 10px; padding: 8px 12px; background: #fff; color: #374151; font-size: 12px; cursor: pointer; }
-        .mode-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .chat-input-container { padding: 16px 20px 20px; background: white; border-top: 1px solid #e0e0e0; flex-shrink: 0; }
+        .reflection-row { display: none; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .reflect-btn { border: 1px solid #c7d2fe; border-radius: 10px; padding: 8px 12px; background: #eef2ff; color: #3730a3; font-size: 12px; cursor: pointer; font-weight: 600; }
+        .reflect-btn:hover:not(:disabled) { border-color: #6366f1; }
+        .reflect-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .reflect-btn-secondary { background: #fff; color: #4338ca; }
+        .reflect-btn-secondary:hover:not(:disabled) { background: #f5f3ff; }
+        .reflection-busy-hint { font-size: 12px; color: #4338ca; font-weight: 600; min-height: 1.2em; }
+        .reflection-send-btn:disabled { opacity: 0.65; cursor: wait; }
+        .mode-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
         .mode-label { font-size: 13px; color: #555; font-weight: 600; }
-        .mode-select { padding: 8px 12px; border: 1px solid #d0d0d0; border-radius: 10px; background: white; color: #333; font-size: 13px; }
+        .mode-select { flex: 1; min-width: 160px; padding: 8px 12px; border: 1px solid #d0d0d0; border-radius: 10px; background: white; color: #333; font-size: 13px; }
         .chat-input-form { display: flex; gap: 10px; }
-        .chat-input { flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 14px; outline: none; transition: border-color 0.3s; }
+        .chat-input { flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 14px; outline: none; transition: border-color 0.3s; min-width: 0; }
         .chat-input:focus { border-color: #667eea; }
-        .send-button { padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 14px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; }
+        .send-button { padding: 12px 22px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 14px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; flex-shrink: 0; }
         .send-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
         .send-button:disabled { opacity: 0.6; cursor: not-allowed; }
+        .reflection-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+        .reflection-backdrop.visible { display: flex; }
+        .reflection-modal { background: #fff; border-radius: 16px; max-width: 980px; width: 100%; max-height: 90vh; overflow: auto; padding: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
+        .reflection-modal h3 { margin-bottom: 12px; font-size: 18px; color: #1f2937; }
+        .reflection-notes { font-size: 14px; color: #374151; margin-bottom: 12px; line-height: 1.5; white-space: pre-wrap; }
+        .reflection-modal label { display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 6px; }
+        .reflection-modal textarea { width: 100%; font-family: ui-monospace, Consolas, monospace; font-size: 11px; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; margin-bottom: 12px; box-sizing: border-box; min-height: 200px; }
+        .reflection-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .reflection-actions button { border-radius: 10px; padding: 8px 16px; font-size: 13px; cursor: pointer; border: 1px solid #d1d5db; background: #fff; color: #374151; }
+        .reflection-actions .reflect-apply { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; font-weight: 600; }
+        .reflection-workspace { display: grid; grid-template-columns: 220px 1fr; gap: 12px; min-height: 420px; }
+        .reflection-threads { border: 1px solid #e5e7eb; border-radius: 10px; overflow: auto; max-height: 520px; }
+        .reflection-thread-item { width: 100%; border: 0; border-bottom: 1px solid #e5e7eb; background: #fff; text-align: left; padding: 9px 10px; cursor: pointer; font-size: 12px; color: #374151; }
+        .reflection-thread-item.active { background: #eef2ff; color: #312e81; font-weight: 600; }
+        .reflection-main { display: grid; grid-template-rows: 1fr auto auto; gap: 10px; min-height: 0; }
+        .reflection-chat-messages { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px; overflow-y: auto; min-height: 220px; background: #f9fafb; }
+        .reflection-chat-msg { margin-bottom: 8px; font-size: 12px; line-height: 1.4; }
+        .reflection-chat-msg strong { color: #4338ca; }
+        .reflection-chat-input-row { display: flex; gap: 8px; }
+        .reflection-chat-input { flex: 1; border: 1px solid #d1d5db; border-radius: 10px; padding: 10px; font-size: 13px; }
+        .reflection-send-btn { border: 1px solid #c7d2fe; border-radius: 10px; padding: 10px 14px; background: #eef2ff; color: #3730a3; font-weight: 600; cursor: pointer; }
         .typing-indicator { display: flex; gap: 5px; padding: 12px 16px; }
         .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: #999; animation: typing 1.4s infinite; }
         .typing-dot:nth-child(2) { animation-delay: 0.2s; }
         .typing-dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes typing { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-10px); } }
+        @media (max-width: 720px) {
+            .master-detail { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .conversations-pane { max-height: 38vh; border-right: none; border-bottom: 1px solid #e2e8f0; }
+        }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="chat-header">
-            <h1>Requirements Gathering Training</h1>
-            <p>Practice extracting and formalizing requirements from stakeholder conversations</p>
+    <div class="shell">
+        <div class="master-detail chat-container">
+            <aside class="conversations-pane" aria-label="Conversations">
+                <div class="conversations-pane-header">
+                    <h2>Conversations</h2>
+                    <button type="button" id="newConversationBtn" class="new-chat-btn">+ New chat</button>
+                </div>
+                <div id="conversationList" class="conversation-list" role="list"></div>
+            </aside>
+            <main class="chat-pane">
+                <div class="chat-header">
+                    <h1>Requirements Gathering Training</h1>
+                    <p>Practice extracting and formalizing requirements from stakeholder conversations</p>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message assistant">
+                        <div class="message-content">
+                            Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.
+                            <br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.
+                            <br><br>You can ask me about:
+                            <br>• Who's involved in this project
+                            <br>• What we're trying to accomplish
+                            <br>• What the system needs to do
+                            <br>• Budget and cost concerns
+                            <br>• Any worries or risks we have
+                            <br><br><em>Remember: Take notes as we talk, then formalize my informal responses into structured requirements!</em>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <div class="reflection-row" id="reflectionRow">
+                        <button type="button" id="reflectBtn" class="reflect-btn" title="Send this session to the LLM for meta-review and proposed tweak updates">Reflect on session</button>
+                        <button type="button" id="viewReflectionThreadsBtn" class="reflect-btn reflect-btn-secondary" title="Open saved reflection threads for this conversation">Open reflections</button>
+                        <span id="reflectionBusyHint" class="reflection-busy-hint" hidden aria-live="polite"></span>
+                        <span class="feedback-note">Meta-review → proposed tweak updates (confirm before save).</span>
+                    </div>
+                    <div class="mode-row">
+                        <label class="mode-label" for="responseMode">Next response mode</label>
+                        <select id="responseMode" class="mode-select">
+                            <option value="vector">Vector RAG (ChromaDB)</option>
+                            <option value="neo4j">Neo4j Structured RAG</option>
+                            <option value="hybrid">Hybrid synthesis (Vector + Neo4j)</option>
+                            <option value="compare">Compare both</option>
+                        </select>
+                    </div>
+                    <form class="chat-input-form" id="chatForm">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="Ask questions to gather requirements…" autocomplete="off" />
+                        <button type="submit" class="send-button" id="sendButton">Send</button>
+                    </form>
+                </div>
+            </main>
         </div>
-        <div class="chat-messages" id="chatMessages">
-            <div class="message assistant">
-                <div class="message-content">
-                    Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.
-                    <br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.
-                    <br><br>You can ask me about:
-                    <br>• Who's involved in this project
-                    <br>• What we're trying to accomplish
-                    <br>• What the system needs to do
-                    <br>• Budget and cost concerns
-                    <br>• Any worries or risks we have
-                    <br><br><em>Remember: Take notes as we talk, then formalize my informal responses into structured requirements!</em>
+    </div>
+    <div id="reflectionBackdrop" class="reflection-backdrop" aria-hidden="true">
+        <div class="reflection-modal" role="dialog" aria-labelledby="reflectionTitle">
+            <h3 id="reflectionTitle">Session reflection</h3>
+            <div class="reflection-workspace">
+                <div>
+                    <label>Reflection threads</label>
+                    <div id="reflectionThreadList" class="reflection-threads"></div>
+                </div>
+                <div class="reflection-main">
+                    <div id="reflectionChatMessages" class="reflection-chat-messages"></div>
+                    <div class="reflection-chat-input-row">
+                        <input id="reflectionChatInput" class="reflection-chat-input" type="text" placeholder="Ask to modify the draft, e.g. 'remove blocked phrase system shall'" />
+                        <button type="button" id="reflectionSendBtn" class="reflection-send-btn">Send</button>
+                    </div>
+                    <div>
+                        <div id="reflectionNotes" class="reflection-notes"></div>
+                        <label for="reflectionJson">Current tweak draft (editable JSON)</label>
+                        <textarea id="reflectionJson" spellcheck="false"></textarea>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="chat-input-container">
-            <div class="conversation-row">
-                <select id="conversationSelect" class="conversation-select">
-                    <option value="">New conversation</option>
-                </select>
-                <button type="button" id="newConversationBtn" class="new-chat-btn">New chat</button>
+            <div class="reflection-actions">
+                <button type="button" id="reflectionApply" class="reflect-apply">Apply to tweak file</button>
+                <button type="button" id="reflectionCancel">Close</button>
             </div>
-            <div class="mode-row">
-                <label class="mode-label" for="responseMode">Next response mode</label>
-                <select id="responseMode" class="mode-select">
-                    <option value="vector">Vector RAG (ChromaDB)</option>
-                    <option value="neo4j">Neo4j Structured RAG</option>
-                    <option value="hybrid">Hybrid synthesis (Vector + Neo4j)</option>
-                    <option value="compare">Compare both</option>
-                </select>
-            </div>
-            <form class="chat-input-form" id="chatForm">
-                <input type="text" class="chat-input" id="chatInput" placeholder="Ask questions to gather requirements (e.g., 'Who are the stakeholders?', 'What are the main goals?')" autocomplete="off" />
-                <button type="submit" class="send-button" id="sendButton">Send</button>
-            </form>
+            <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
     <script src="/static/components/chat.js"></script>
 </body>
 </html>
-

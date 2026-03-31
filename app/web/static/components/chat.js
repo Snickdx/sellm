@@ -4,11 +4,62 @@
   const chatInput = document.getElementById("chatInput");
   const sendButton = document.getElementById("sendButton");
   const responseMode = document.getElementById("responseMode");
-  const conversationSelect = document.getElementById("conversationSelect");
+  const conversationList = document.getElementById("conversationList");
   const newConversationBtn = document.getElementById("newConversationBtn");
+  const reflectionRow = document.getElementById("reflectionRow");
+  const reflectBtn = document.getElementById("reflectBtn");
+  const viewReflectionThreadsBtn = document.getElementById("viewReflectionThreadsBtn");
+  const reflectionBusyHint = document.getElementById("reflectionBusyHint");
+  const reflectionBackdrop = document.getElementById("reflectionBackdrop");
+  const reflectionNotes = document.getElementById("reflectionNotes");
+  const reflectionJson = document.getElementById("reflectionJson");
+  const reflectionApply = document.getElementById("reflectionApply");
+  const reflectionCancel = document.getElementById("reflectionCancel");
+  const reflectionStatus = document.getElementById("reflectionStatus");
+  const reflectionThreadList = document.getElementById("reflectionThreadList");
+  const reflectionChatMessages = document.getElementById("reflectionChatMessages");
+  const reflectionChatInput = document.getElementById("reflectionChatInput");
+  const reflectionSendBtn = document.getElementById("reflectionSendBtn");
   const conversationHistory = [];
   let currentConversationId = null;
   let tweakModeEnabled = false;
+  let currentReflectionThreadId = null;
+  let reflectionThreads = [];
+  const REFLECT_BTN_LABEL = "Reflect on session";
+  const REFLECT_SEND_LABEL = "Send";
+
+  function lockReflectionWorkspace() {
+    if (reflectionChatInput) reflectionChatInput.disabled = true;
+    if (reflectionSendBtn) reflectionSendBtn.disabled = true;
+    if (reflectionApply) reflectionApply.disabled = true;
+  }
+
+  function unlockReflectionWorkspace() {
+    if (reflectionChatInput) reflectionChatInput.disabled = false;
+    if (reflectionSendBtn) {
+      reflectionSendBtn.disabled = false;
+      reflectionSendBtn.textContent = REFLECT_SEND_LABEL;
+    }
+    if (reflectionApply) reflectionApply.disabled = false;
+  }
+
+  function setReflectRowBusy(isBusy, hintText = "") {
+    if (reflectBtn) {
+      reflectBtn.disabled = isBusy;
+      if (isBusy) {
+        reflectBtn.textContent = "Starting…";
+        reflectBtn.setAttribute("aria-busy", "true");
+      } else {
+        reflectBtn.textContent = REFLECT_BTN_LABEL;
+        reflectBtn.removeAttribute("aria-busy");
+      }
+    }
+    if (viewReflectionThreadsBtn) viewReflectionThreadsBtn.disabled = isBusy;
+    if (reflectionBusyHint) {
+      reflectionBusyHint.hidden = !isBusy;
+      reflectionBusyHint.textContent = isBusy ? hintText : "";
+    }
+  }
 
   async function loadRuntimeConfig() {
     try {
@@ -16,8 +67,335 @@
       if (!response.ok) return;
       const config = await response.json();
       tweakModeEnabled = Boolean(config.tweak_mode_enabled);
+      if (reflectionRow) {
+        reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
+      }
     } catch {
       tweakModeEnabled = false;
+      if (reflectionRow) reflectionRow.style.display = "none";
+    }
+  }
+
+  function openReflectionModal(data = {}) {
+    if (!reflectionBackdrop || !reflectionNotes || !reflectionJson) return;
+    if (data.loading) {
+      reflectionNotes.textContent =
+        data.loadingMessage ||
+        "Starting reflection. The meta-LLM is analyzing your conversation — this can take up to a minute.";
+      reflectionJson.value = "";
+      if (reflectionStatus) {
+        reflectionStatus.textContent =
+          data.statusHint ||
+          "In progress — please wait. You cannot start another reflection until this one finishes.";
+      }
+      renderReflectionMessages(
+        data.prepMessages || [
+          {
+            role: "assistant",
+            content:
+              "Working… Do not click “Reflect on session” again until this completes. You can close this dialog; the request will still run in the background.",
+          },
+        ]
+      );
+    } else if (data.reflection) {
+      reflectionNotes.textContent = data.reflection?.performance_notes || "(no notes)";
+      reflectionJson.value = JSON.stringify(data.reflection || {}, null, 2);
+    }
+    if (!data.loading) {
+      const meta = data.mode_used ? `Proposed via LLM mode: ${data.mode_used}.` : "";
+      if (reflectionStatus) reflectionStatus.textContent = meta;
+    }
+    reflectionBackdrop.classList.add("visible");
+    reflectionBackdrop.setAttribute("aria-hidden", "false");
+  }
+
+  function closeReflectionModal() {
+    if (!reflectionBackdrop) return;
+    reflectionBackdrop.classList.remove("visible");
+    reflectionBackdrop.setAttribute("aria-hidden", "true");
+    if (reflectionJson) reflectionJson.value = "";
+    if (reflectionStatus) reflectionStatus.textContent = "";
+    if (reflectionChatInput) reflectionChatInput.value = "";
+    unlockReflectionWorkspace();
+  }
+
+  function renderReflectionMessages(messages = []) {
+    if (!reflectionChatMessages) return;
+    reflectionChatMessages.innerHTML = "";
+    messages.forEach((m) => {
+      const row = document.createElement("div");
+      row.className = "reflection-chat-msg";
+      const role = m.role === "assistant" ? "Assistant" : "You";
+      row.innerHTML = `<strong>${role}:</strong> ${String(m.content || "").replace(/\n/g, "<br>")}`;
+      reflectionChatMessages.appendChild(row);
+    });
+    reflectionChatMessages.scrollTop = reflectionChatMessages.scrollHeight;
+  }
+
+  function renderReflectionThreadList() {
+    if (!reflectionThreadList) return;
+    reflectionThreadList.innerHTML = "";
+    reflectionThreads.forEach((t) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "reflection-thread-item";
+      if (t.id === currentReflectionThreadId) btn.classList.add("active");
+      btn.dataset.threadId = t.id;
+      btn.textContent = t.title || t.id;
+      reflectionThreadList.appendChild(btn);
+    });
+  }
+
+  async function loadReflectionThreadsForConversation(conversationId) {
+    if (!conversationId || !tweakModeEnabled) {
+      reflectionThreads = [];
+      currentReflectionThreadId = null;
+      renderReflectionThreadList();
+      return;
+    }
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/reflections`);
+      if (!response.ok) return;
+      reflectionThreads = await response.json();
+      renderReflectionThreadList();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function openReflectionThread(threadId) {
+    if (!threadId) return;
+    try {
+      const response = await fetch(`/api/reflections/${threadId}`);
+      if (!response.ok) throw new Error("Could not load reflection thread");
+      const data = await response.json();
+      currentReflectionThreadId = data.id;
+      unlockReflectionWorkspace();
+      renderReflectionThreadList();
+      renderReflectionMessages(data.messages || []);
+      reflectionJson.value = data.latest_draft_json || "{}";
+      reflectionNotes.textContent = "Refine this draft in the thread chat, then apply.";
+      openReflectionModal();
+    } catch (e) {
+      console.error(e);
+      window.alert("Could not load reflection thread.");
+    }
+  }
+
+  async function openReflectionsForCurrentConversation() {
+    if (!tweakModeEnabled) return;
+    if (!currentConversationId) {
+      window.alert("Select a conversation from the list first (including older chats).");
+      return;
+    }
+    if (viewReflectionThreadsBtn) viewReflectionThreadsBtn.disabled = true;
+    try {
+      await loadReflectionThreadsForConversation(currentConversationId);
+      if (reflectionThreads.length === 0) {
+        currentReflectionThreadId = null;
+        renderReflectionThreadList();
+        renderReflectionMessages([]);
+        reflectionNotes.textContent =
+          "No reflection threads for this conversation yet. Use “Reflect on session” after you have at least one exchange.";
+        reflectionJson.value = "{}";
+        if (reflectionStatus) reflectionStatus.textContent = "";
+        unlockReflectionWorkspace();
+        openReflectionModal({});
+      } else {
+        await openReflectionThread(reflectionThreads[0].id);
+      }
+    } catch (e) {
+      console.error(e);
+      window.alert("Could not load reflection threads.");
+    } finally {
+      if (viewReflectionThreadsBtn) viewReflectionThreadsBtn.disabled = false;
+    }
+  }
+
+  async function runReflection() {
+    if (!reflectBtn) return;
+    if (!currentConversationId) {
+      window.alert("Open a saved conversation first so reflection can be linked.");
+      return;
+    }
+    if (conversationHistory.length < 2) {
+      window.alert("Have at least one full exchange (your question and the stakeholder reply) before reflecting.");
+      return;
+    }
+    setReflectRowBusy(true, "Reflection in progress — please wait.");
+    lockReflectionWorkspace();
+    openReflectionModal({
+      loading: true,
+      loadingMessage:
+        "Starting reflection. The meta-LLM is analyzing your conversation — this can take up to a minute. Please do not start another reflection until this finishes.",
+    });
+    try {
+      const response = await fetch(`/api/conversations/${currentConversationId}/reflections/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+      if (!response.ok) {
+        const msg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || "Reflection failed");
+        closeReflectionModal();
+        window.alert(msg);
+        return;
+      }
+      currentReflectionThreadId = data.thread?.id || null;
+      await loadReflectionThreadsForConversation(currentConversationId);
+      unlockReflectionWorkspace();
+      renderReflectionMessages(data.thread?.messages || []);
+      reflectionJson.value = JSON.stringify(data.reflection || {}, null, 2);
+      reflectionNotes.textContent = "Initial draft generated. Continue this reflection in the thread chat.";
+      openReflectionModal(data);
+    } catch (e) {
+      console.error(e);
+      closeReflectionModal();
+      window.alert("Reflection request failed.");
+    } finally {
+      setReflectRowBusy(false);
+      unlockReflectionWorkspace();
+    }
+  }
+
+  async function applyReflection() {
+    if (!reflectionJson || !reflectionApply) return;
+    let reflection;
+    try {
+      reflection = JSON.parse(reflectionJson.value);
+    } catch {
+      if (reflectionStatus) reflectionStatus.textContent = "Invalid JSON — fix before applying.";
+      return;
+    }
+    reflectionApply.disabled = true;
+    const prevApplyLabel = reflectionApply.textContent;
+    reflectionApply.textContent = "Applying…";
+    try {
+      if (!currentReflectionThreadId) {
+        reflectionStatus.textContent = "No reflection thread selected.";
+        return;
+      }
+      const response = await fetch(`/api/reflections/${currentReflectionThreadId}/apply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reflection }),
+      });
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        data = {};
+      }
+      if (!response.ok) {
+        const msg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || "Apply failed");
+        reflectionStatus.textContent = msg;
+        return;
+      }
+      const changes = data.changes || [];
+      reflectionStatus.textContent = changes.length
+        ? `Saved: ${changes.join("; ")}`
+        : "Saved (no new tweak entries — file may still be updated).";
+      if (data.thread?.messages) renderReflectionMessages(data.thread.messages);
+    } catch (e) {
+      console.error(e);
+      reflectionStatus.textContent = "Apply request failed.";
+    } finally {
+      reflectionApply.disabled = false;
+      reflectionApply.textContent = prevApplyLabel;
+    }
+  }
+
+  async function sendReflectionMessage() {
+    if (!currentReflectionThreadId || !reflectionChatInput || !reflectionSendBtn) return;
+    const message = reflectionChatInput.value.trim();
+    if (!message) return;
+    reflectionSendBtn.disabled = true;
+    reflectionSendBtn.textContent = "Sending…";
+    if (reflectionStatus) reflectionStatus.textContent = "Waiting for meta-LLM response…";
+    try {
+      let draft = {};
+      try {
+        draft = JSON.parse(reflectionJson.value || "{}");
+      } catch {
+        draft = {};
+      }
+      const response = await fetch(`/api/reflections/${currentReflectionThreadId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message, reflection: draft }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        const msg = typeof data.detail === "string" ? data.detail : "Reflection chat failed";
+        reflectionStatus.textContent = msg;
+        return;
+      }
+      if (data.thread?.messages) renderReflectionMessages(data.thread.messages);
+      reflectionNotes.textContent = data.reflection?.performance_notes || "Draft updated.";
+      reflectionJson.value = JSON.stringify(data.reflection || {}, null, 2);
+      reflectionChatInput.value = "";
+      if (reflectionStatus) reflectionStatus.textContent = data.mode_used ? `Updated (mode: ${data.mode_used}).` : "";
+    } catch (e) {
+      console.error(e);
+      reflectionStatus.textContent = "Reflection chat request failed.";
+    } finally {
+      reflectionSendBtn.disabled = false;
+      reflectionSendBtn.textContent = REFLECT_SEND_LABEL;
+      reflectionChatInput.focus();
+    }
+  }
+
+  function formatConversationMeta(c) {
+    const raw = c.updated_at || c.created_at;
+    if (!raw) return "";
+    try {
+      const d = new Date(raw);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "";
+    }
+  }
+
+  function syncListSelection() {
+    if (!conversationList) return;
+    conversationList.querySelectorAll(".conversation-item").forEach((el) => {
+      const match = Boolean(currentConversationId && el.dataset.conversationId === currentConversationId);
+      el.classList.toggle("active", match);
+    });
+  }
+
+  async function loadConversations() {
+    try {
+      const response = await fetch("/api/conversations");
+      if (!response.ok) return;
+      const conversations = await response.json();
+      if (!conversationList) return;
+      conversationList.innerHTML = "";
+      conversations.forEach((c) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "conversation-item";
+        btn.dataset.conversationId = c.id;
+        btn.setAttribute("role", "listitem");
+        const titleEl = document.createElement("span");
+        titleEl.className = "conversation-title";
+        titleEl.textContent = c.title || c.id;
+        const metaEl = document.createElement("span");
+        metaEl.className = "conversation-meta";
+        metaEl.textContent = formatConversationMeta(c);
+        btn.appendChild(titleEl);
+        btn.appendChild(metaEl);
+        conversationList.appendChild(btn);
+      });
+      syncListSelection();
+    } catch (error) {
+      console.error("Could not load conversations:", error);
     }
   }
 
@@ -39,24 +417,8 @@
         </div>
       </div>
     `;
-  }
-
-  async function loadConversations() {
-    try {
-      const response = await fetch("/api/conversations");
-      if (!response.ok) return;
-      const conversations = await response.json();
-      conversationSelect.innerHTML = '<option value="">New conversation</option>';
-      conversations.forEach((c) => {
-        const option = document.createElement("option");
-        option.value = c.id;
-        option.textContent = c.title || c.id;
-        conversationSelect.appendChild(option);
-      });
-      if (currentConversationId) conversationSelect.value = currentConversationId;
-    } catch (error) {
-      console.error("Could not load conversations:", error);
-    }
+    syncListSelection();
+    loadReflectionThreadsForConversation(currentConversationId);
   }
 
   async function openConversation(conversationId) {
@@ -75,6 +437,8 @@
         addMessage(m.role, m.content, null, null, null);
         conversationHistory.push({ role: m.role, content: m.content });
       });
+      syncListSelection();
+      await loadReflectionThreadsForConversation(currentConversationId);
     } catch (error) {
       console.error(error);
     }
@@ -208,7 +572,7 @@
       if (data.conversation_id) {
         currentConversationId = data.conversation_id;
         await loadConversations();
-        conversationSelect.value = currentConversationId;
+        await loadReflectionThreadsForConversation(currentConversationId);
       }
     } catch (error) {
       removeTypingIndicator();
@@ -225,11 +589,45 @@
     const message = chatInput.value.trim();
     if (message) sendMessage(message);
   });
-  conversationSelect.addEventListener("change", async (e) => openConversation(e.target.value || null));
-  newConversationBtn.addEventListener("click", () => {
-    conversationSelect.value = "";
-    resetConversationUi();
-  });
+  if (conversationList) {
+    conversationList.addEventListener("click", (e) => {
+      const item = e.target.closest(".conversation-item");
+      if (!item || !item.dataset.conversationId) return;
+      openConversation(item.dataset.conversationId);
+    });
+  }
+  if (newConversationBtn) {
+    newConversationBtn.addEventListener("click", () => {
+      resetConversationUi();
+    });
+  }
+
+  if (reflectBtn) reflectBtn.addEventListener("click", () => runReflection());
+  if (viewReflectionThreadsBtn)
+    viewReflectionThreadsBtn.addEventListener("click", () => openReflectionsForCurrentConversation());
+  if (reflectionCancel) reflectionCancel.addEventListener("click", () => closeReflectionModal());
+  if (reflectionApply) reflectionApply.addEventListener("click", () => applyReflection());
+  if (reflectionBackdrop) {
+    reflectionBackdrop.addEventListener("click", (e) => {
+      if (e.target === reflectionBackdrop) closeReflectionModal();
+    });
+  }
+  if (reflectionSendBtn) reflectionSendBtn.addEventListener("click", () => sendReflectionMessage());
+  if (reflectionChatInput) {
+    reflectionChatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sendReflectionMessage();
+      }
+    });
+  }
+  if (reflectionThreadList) {
+    reflectionThreadList.addEventListener("click", (e) => {
+      const item = e.target.closest(".reflection-thread-item");
+      if (!item || !item.dataset.threadId) return;
+      openReflectionThread(item.dataset.threadId);
+    });
+  }
 
   chatInput.focus();
   loadRuntimeConfig();

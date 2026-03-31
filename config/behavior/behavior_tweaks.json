@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-03-30T15:23:43.711469+00:00",
+  "last_updated": "2026-03-30T19:41:03.402254+00:00",
   "global": {
     "dedupe_sentences": true,
     "replacements": {
@@ -10,14 +10,16 @@
       "The system shall": "We need the system to"
     },
     "blocked_phrases": [
-      "system shall"
+      "system shall",
+      "less stable"
     ]
   },
   "query_overrides": [
     {
       "query": "are there any subgroups within employees?",
-      "response": "We usually group employees by payroll type and department, like weekly payroll, monthly payroll, and tax administration support.",
-      "created_at": "2026-03-30T15:23:43.711469+00:00"
+      "response": "Yes, there are several subgroups.",
+      "created_at": "2026-03-30T15:23:43.711469+00:00",
+      "updated_at": "2026-03-30T17:07:30.936076+00:00"
     }
   ],
   "pattern_overrides": [
@@ -49,6 +51,12 @@
         "categories of employees"
       ],
       "response": "I don't have a clean subgroup list in front of me, but we usually break people down by role, department, and payroll type. If you want, we can define the exact subgroup categories together."
+    },
+    {
+      "match_any": [
+        "backup and recovery"
+      ],
+      "response": "The system must follow privacy laws."
     }
   ],
   "feedback_log": [
@@ -64,5 +72,14 @@
         "Added stakeholder-tone guard phrase block"
       ]
     }
-  ]
+  ],
+  "reflection_log": [
+    {
+      "time": "2026-03-30T17:07:30.936076+00:00",
+      "notes": "Consider adding more subgroups for Employees query."
+    }
+  ],
+  "prompt": {
+    "system_suffix": ""
+  }
 }

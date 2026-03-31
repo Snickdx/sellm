@@ -8,6 +8,15 @@ try:
 except ImportError:
     pass
 
+import warnings
+
+warnings.filterwarnings(
+    "ignore",
+    message=r".*resume_download.*",
+    category=FutureWarning,
+    module=r"huggingface_hub\.file_download",
+)
+
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict

@@ -7,6 +7,7 @@ A RAG-based training system that simulates a non-technical stakeholder for requi
 This system is designed for **requirements gathering training**. It simulates a non-technical stakeholder who provides information in a casual, informal manner - just like in real-world requirements gathering sessions. 
 
 **Training Objectives:**
+
 - Practice asking effective questions to extract requirements
 - Learn to identify key information from informal, unstructured conversations
 - Develop skills in formalizing informal stakeholder input into structured requirements
@@ -28,13 +29,15 @@ This system is designed for **requirements gathering training**. It simulates a 
 ## Installation
 
 1. Install Python dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 **Note**: The project includes a compatibility fix in `app/fix_pytree.py` for torch/transformers version compatibility issues. It is applied automatically when importing the RAG modules.
 
-2. **Configure environment variables** (recommended):
+1. **Configure environment variables** (recommended):
+
 ```bash
 # Copy the example .env file
 cp .env.example .env
@@ -44,6 +47,7 @@ cp .env.example .env
 ```
 
 The `.env` file allows you to configure:
+
 - RAG backend (ChromaDB or Neo4j)
 - Neo4j connection settings
 - LLM backend (Ollama, OpenAI, or template)
@@ -56,49 +60,54 @@ See `.env.example` for all available options.
 ## Usage
 
 1. Make sure your Excel file `data.xlsx` is in the project directory. This file contains the stakeholder knowledge base.
-
 2. **Configure your environment** (optional but recommended):
-   - Copy `.env.example` to `.env`
-   - Edit `.env` with your settings (Neo4j password, LLM model, etc.)
-   - The app will automatically load these settings
-
+  - Copy `.env.example` to `.env`
+  - Edit `.env` with your settings (Neo4j password, LLM model, etc.)
+  - The app will automatically load these settings
 3. Start the server:
+
 ```bash
 python -m app.main
 ```
 
 Or using uvicorn directly:
+
 ```bash
 uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-4. Open your browser and navigate to:
+1. Open your browser and navigate to:
+
 ```
 http://localhost:8000
 ```
 
-5. Start practicing requirements gathering! 
-   - Ask questions as you would in a real stakeholder interview
-   - Take notes during the conversation (outside the system)
-   - After the session, formalize the informal responses into structured requirements documentation
+1. Start practicing requirements gathering!
+  - Ask questions as you would in a real stakeholder interview
+  - Take notes during the conversation (outside the system)
+  - After the session, formalize the informal responses into structured requirements documentation
 
 ### Environment Variables
 
 You can configure the system using environment variables (via `.env` file or system environment):
 
 **RAG Backend:**
+
 - `RAG_BACKEND`: `"chromadb"` (default) or `"neo4j"`
 
 **Neo4j (if using Neo4j backend):**
+
 - `NEO4J_URI`: Neo4j connection URI (default: `bolt://localhost:7687`)
 - `NEO4J_USER`: Neo4j username (default: `neo4j`)
 - `NEO4J_PASSWORD`: Neo4j password (default: `password`)
 
 **LLM Backend:**
+
 - `LLM_BACKEND`: `"ollama"` (default), `"openai"`, or `"template"`
 - `LLM_MODEL`: Model name (e.g., `llama3.2`, `mistral`, `gpt-3.5-turbo`)
 
 **OpenAI (if using OpenAI backend):**
+
 - `OPENAI_API_KEY`: Your OpenAI API key
 
 ### Training Tips
@@ -152,8 +161,8 @@ The system follows a RAG (Retrieval-Augmented Generation) architecture designed 
 1. **Frontend (`app/web/templates/index.html` + `app/web/static/components/chat.js`)**: Jinja-rendered web UI and chat client logic
 2. **API Server (`app/api/app.py`)**: FastAPI server handling HTTP requests and template/static routing
 3. **RAG Backend (`app/rag_backend.py`)**: Core RAG implementation with:
-   - `RequirementsRAG`: Handles data loading, embedding, and retrieval
-   - `SimpleLLM`: Generates informal, human-like stakeholder responses
+  - `RequirementsRAG`: Handles data loading, embedding, and retrieval
+  - `SimpleLLM`: Generates informal, human-like stakeholder responses
 4. **Vector Database**: ChromaDB for persistent vector storage
 5. **Knowledge Base**: Excel file containing stakeholder information (not directly referenced in responses)
 
@@ -166,13 +175,13 @@ The system uses a **row-based chunking strategy** optimized for structured Excel
 1. **Sheet Processing**: Each Excel sheet is processed independently
 2. **Row-Level Chunks**: Each row becomes a single document chunk
 3. **Text Representation**: All columns in a row are combined into a structured text format:
-   ```
+  ```
    Sheet: Stakeholder
    id: S1
    name: Product Manager
    role: Requirements Owner
    description: Responsible for defining product requirements
-   ```
+  ```
 
 ### Supported Sheets
 
@@ -259,6 +268,7 @@ intent_keywords = {
 The system generates informal, natural responses that mimic a non-technical stakeholder:
 
 **Key Characteristics:**
+
 - **Informal language**: Uses casual phrases like "Oh, well...", "Let me think...", "Yeah, there are..."
 - **No technical jargon**: Avoids formal requirements terminology
 - **Natural flow**: Responses feel conversational, not structured
@@ -286,6 +296,7 @@ The system generates informal, natural responses that mimic a non-technical stak
 ### For Trainees
 
 **During the Conversation:**
+
 1. **Start Conversation**: Begin with an introduction or open-ended question
 2. **Ask Questions**: Use natural language to gather information - ask about stakeholders, goals, features, constraints, etc.
 3. **Follow Up**: Ask clarifying questions based on responses to fill gaps
@@ -293,17 +304,19 @@ The system generates informal, natural responses that mimic a non-technical stak
 
 **After the Conversation:**
 5. **Formalize Requirements**: Convert the informal, unstructured responses into formal requirements documentation:
-   - Identify stakeholders and their roles
-   - Extract functional and non-functional requirements
-   - Document goals and objectives
-   - List constraints and risks
-   - Structure everything into a proper requirements document format
+
+- Identify stakeholders and their roles
+- Extract functional and non-functional requirements
+- Document goals and objectives
+- List constraints and risks
+- Structure everything into a proper requirements document format
 
 **Key Challenge**: The stakeholder will speak casually and may not use technical terminology. Your job is to extract the essential information and formalize it.
 
 ### Example Training Session
 
 **Conversation:**
+
 ```
 Trainee: Hi, can you tell me about the project?
 Stakeholder: Oh sure! So we're building this system to help manage our operations better. 
@@ -369,31 +382,25 @@ The system now supports real LLMs for much more natural, human-like responses. T
 **Ollama** is the easiest way to get high-quality, local LLM responses:
 
 1. **Install Ollama**: Download from [ollama.ai](https://ollama.ai)
-
 2. **Pull a model** (choose one):
-   ```bash
+  ```bash
    ollama pull llama3.2        # Fast, good quality (recommended)
    ollama pull mistral         # Alternative option
    ollama pull phi3            # Smaller, faster
-   ```
-
+  ```
 3. **Start the server** (Ollama runs automatically):
-   ```bash
+  ```bash
    # Ollama should start automatically, or:
    ollama serve
-   ```
-
+  ```
 4. **Run your app** (it will auto-detect Ollama):
-   ```bash
+  ```bash
    python -m app.main
-   ```
-
+  ```
    Or specify the model:
-   ```bash
-   LLM_MODEL=llama3.2 python -m app.main
-   ```
 
 **Benefits:**
+
 - ✅ Free and runs locally (no API costs)
 - ✅ Privacy (data stays on your machine)
 - ✅ High-quality, natural responses
@@ -404,19 +411,17 @@ The system now supports real LLMs for much more natural, human-like responses. T
 For cloud-based LLM (requires API key):
 
 1. **Install OpenAI package**:
-   ```bash
+  ```bash
    pip install openai
-   ```
-
+  ```
 2. **Set your API key**:
-   ```bash
+  ```bash
    export OPENAI_API_KEY="your-key-here"
-   ```
-
+  ```
 3. **Run with OpenAI backend**:
-   ```bash
+  ```bash
    LLM_BACKEND=openai LLM_MODEL=gpt-3.5-turbo python -m app.main
-   ```
+  ```
 
 #### Option 3: Template Fallback
 
@@ -449,6 +454,7 @@ self.embedding_model = SentenceTransformer('your-model-name')
 ```
 
 Popular alternatives:
+
 - `all-mpnet-base-v2`: Better quality, slower
 - `paraphrase-MiniLM-L6-v2`: Similar to current, optimized for paraphrasing
 - `multi-qa-MiniLM-L6-cos-v1`: Optimized for Q&A tasks
@@ -526,6 +532,7 @@ Popular alternatives:
 ### Why No Source References?
 
 The system is designed for **training**, not document querying. The training objective is to practice:
+
 - **Extracting information from conversation**: Real stakeholders don't provide structured documentation
 - **Identifying important information**: Learning to distinguish key requirements from casual conversation
 - **Formalizing requirements**: Converting informal input into structured, formal requirements documentation
@@ -536,6 +543,7 @@ If the system showed source references, trainees would skip the critical skill o
 ### Why Informal Language?
 
 Real stakeholders are often non-technical and speak informally. The system simulates this to:
+
 - **Provide realistic training scenarios**: Mimics actual stakeholder conversations
 - **Challenge trainees**: Forces extraction of structured information from unstructured conversation
 - **Prepare for real-world**: Most requirements gathering happens through informal conversations
@@ -548,12 +556,14 @@ The informal language is intentional - it's the core challenge that makes this e
 ### Why Use a Real LLM?
 
 The template-based approach has significant limitations:
+
 - ❌ Poor grammar and awkward phrasing
 - ❌ Limited natural language variation
 - ❌ Can't handle complex queries well
 - ❌ Feels robotic, not human-like
 
 **Using a real LLM (like Ollama) provides:**
+
 - ✅ Natural, human-like responses
 - ✅ Proper grammar automatically
 - ✅ Better context understanding
@@ -572,6 +582,7 @@ This is the **standard RAG pattern** used in production systems.
 ### Recommended Setup
 
 **For best results, use Ollama with llama3.2:**
+
 ```bash
 # Install Ollama, then:
 ollama pull llama3.2
@@ -579,6 +590,7 @@ python -m app.main  # Auto-detects Ollama
 ```
 
 The system will automatically:
+
 - Use Ollama if available
 - Fall back to template if Ollama isn't running
 - Provide much better responses with LLM
@@ -620,54 +632,38 @@ Your Excel file has a **Relationships sheet** with 48 explicit relationships (HA
 ### Setup Neo4j
 
 1. **Install Neo4j**:
-   - Download from [neo4j.com](https://neo4j.com/download/)
-   - Or use Docker: `docker run -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest`
-
+  - Download from [neo4j.com](https://neo4j.com/download/)
+  - Or use Docker: `docker run -p 7474:7474 -p 7687:7687 -e NEO4J_AUTH=neo4j/password neo4j:latest`
 2. **Start Neo4j**:
-   ```bash
+  ```bash
    # Desktop: Just launch Neo4j Desktop
    # Docker: Already running if using docker command above
    # Default credentials: neo4j/password (change on first login)
-   ```
-
+  ```
 3. **Install Python package**:
-   ```bash
+  ```bash
    pip install neo4j
-   ```
-
+  ```
 4. **Configure .env file** (recommended):
-   ```bash
+  ```bash
    # Copy example file
    cp .env.example .env
-   
+
    # Edit .env and set:
    RAG_BACKEND=neo4j
    NEO4J_PASSWORD=your_password
-   ```
-
+  ```
 5. **Run the app**:
-   ```bash
+  ```bash
    python -m app.main
-   ```
-   
+  ```
    The app will automatically load settings from `.env` file.
-
    **Alternative: Set environment variables directly:**
-   ```bash
-   # Linux/Mac:
-   export RAG_BACKEND=neo4j
-   export NEO4J_PASSWORD=your_password
-   
-   # Windows:
-   set RAG_BACKEND=neo4j
-   set NEO4J_PASSWORD=your_password
-   
-   python -m app.main
-   ```
 
 ### How It Works
 
 **Hybrid Search Process:**
+
 1. **Vector Search**: Find semantically similar nodes using cosine similarity on embeddings
 2. **Graph Traversal**: For each result, traverse relationships to find connected nodes
 3. **Enhanced Context**: Combine original results with related nodes for richer context
@@ -677,52 +673,49 @@ Your Excel file has a **Relationships sheet** with 48 explicit relationships (HA
 The current implementation in `app/rag_backend_neo4j.py` loads the Excel workbook into a graph with:
 
 1. **Node identity**
-   - `node_id` from each row's `id` column (required)
-   - Nodes are merged by `node_id` (`MERGE (n:{Label} {node_id: $node_id})`)
-
+  - `node_id` from each row's `id` column (required)
+  - Nodes are merged by `node_id` (`MERGE (n:{Label} {node_id: $node_id})`)
 2. **Node labels (sheet -> label mapping)**
-   - `Project` -> `Project`
-   - `Stakeholder` -> `Stakeholder`
-   - `Client` -> `Client`
-   - `Role` -> `Role`
-   - `Feature` -> `Feature`
-   - `Requirement` -> `Requirement`
-   - `FunctioFFnal_Requirement` -> `FunctionalRequirement`
-   - `Goal` -> `Goal`
-   - `Constraint` -> `Constraint`
-   - `Risk` -> `Risk`
-   - `Budget` -> `Budget`
-   - `Line_Item` -> `LineItem`
-   - `Timeline` -> `Timeline`
-   - `Milestone` -> `Milestone`
-   - `Task` -> `Task`
-   - `Qual_Scenario` -> `QualityScenario`
-   - Unknown sheets -> `RequirementNode`
-
+  - `Project` -> `Project`
+  - `Stakeholder` -> `Stakeholder`
+  - `Client` -> `Client`
+  - `Role` -> `Role`
+  - `Feature` -> `Feature`
+  - `Requirement` -> `Requirement`
+  - `FunctioFFnal_Requirement` -> `FunctionalRequirement`
+  - `Goal` -> `Goal`
+  - `Constraint` -> `Constraint`
+  - `Risk` -> `Risk`
+  - `Budget` -> `Budget`
+  - `Line_Item` -> `LineItem`
+  - `Timeline` -> `Timeline`
+  - `Milestone` -> `Milestone`
+  - `Task` -> `Task`
+  - `Qual_Scenario` -> `QualityScenario`
+  - Unknown sheets -> `RequirementNode`
 3. **Node properties**
-   - All Excel columns are copied to properties using lowercase/snake_case keys
-   - Common system properties:
-     - `node_id`
-     - `sheet`
-     - `text` (full row serialized as text)
-     - `embedding` (vector from `all-MiniLM-L6-v2`)
-
+  - All Excel columns are copied to properties using lowercase/snake_case keys
+  - Common system properties:
+    - `node_id`
+    - `sheet`
+    - `text` (full row serialized as text)
+    - `embedding` (vector from `all-MiniLM-L6-v2`)
 4. **Relationships**
-   - Loaded from the `Relationships` sheet using:
-     - `start_id` (source node `node_id`)
-     - `end_id` (target node `node_id`)
-     - `type` (relationship type, uppercased and spaces replaced by `_`)
-   - Cypher pattern:
-     - `MATCH (a {node_id: $start_id})`
-     - `MATCH (b {node_id: $end_id})`
-     - `MERGE (a)-[r:REL_TYPE]->(b)`
-
+  - Loaded from the `Relationships` sheet using:
+    - `start_id` (source node `node_id`)
+    - `end_id` (target node `node_id`)
+    - `type` (relationship type, uppercased and spaces replaced by `_`)
+  - Cypher pattern:
+    - `MATCH (a {node_id: $start_id})`
+    - `MATCH (b {node_id: $end_id})`
+    - `MERGE (a)-[r:REL_TYPE]->(b)`
 5. **Retrieval behavior**
-   - Vector retrieval computes cosine similarity over stored `embedding`
-   - Top matches are enriched with graph neighbors from one-hop traversals
-   - Returned result format: `document`, `metadata`, `distance`
+  - Vector retrieval computes cosine similarity over stored `embedding`
+  - Top matches are enriched with graph neighbors from one-hop traversals
+  - Returned result format: `document`, `metadata`, `distance`
 
 **Example Query Flow:**
+
 ```
 Query: "What are Sarah's concerns?"
 
@@ -735,13 +728,15 @@ Query: "What are Sarah's concerns?"
 
 ### Comparison: ChromaDB vs Neo4j
 
-| Feature | ChromaDB | Neo4j |
-|---------|----------|-------|
-| Vector Search | ✅ Fast | ✅ Fast |
-| Relationship Queries | ❌ Not supported | ✅ Excellent |
-| Context Quality | ⭐⭐ Good | ⭐⭐⭐⭐ Excellent |
-| Setup Complexity | ⭐ Easy | ⭐⭐ Medium |
-| Best For | Simple semantic search | Relationship-rich data |
+
+| Feature              | ChromaDB               | Neo4j                  |
+| -------------------- | ---------------------- | ---------------------- |
+| Vector Search        | ✅ Fast                 | ✅ Fast                 |
+| Relationship Queries | ❌ Not supported        | ✅ Excellent            |
+| Context Quality      | ⭐⭐ Good                | ⭐⭐⭐⭐ Excellent         |
+| Setup Complexity     | ⭐ Easy                 | ⭐⭐ Medium              |
+| Best For             | Simple semantic search | Relationship-rich data |
+
 
 **Recommendation**: Use Neo4j if your Excel has relationships (which it does!). The hybrid approach provides much better context for training.
 

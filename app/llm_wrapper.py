@@ -98,7 +98,11 @@ class LLMWrapper:
             self.backend = "template"
     
     def _build_rag_prompt(
-        self, query: str, context_results: List[Dict], conversation_history: Optional[List[Dict]] = None
+        self,
+        query: str,
+        context_results: List[Dict],
+        conversation_history: Optional[List[Dict]] = None,
+        behavior_suffix: str = "",
     ) -> str:
         """Build a prompt with RAG context for the LLM"""
         # Extract relevant information from context
@@ -140,7 +144,14 @@ class LLMWrapper:
                 history_text = "No prior conversation."
         else:
             history_text = "No prior conversation."
-        
+
+        suffix_block = ""
+        if (behavior_suffix or "").strip():
+            suffix_block = (
+                "\n\nAdditional behavior instructions from training config (follow these in addition to the above):\n"
+                f"{behavior_suffix.strip()}\n"
+            )
+
         # Build the prompt
         prompt = f"""You are a non-technical stakeholder in a software project. You're being interviewed by someone gathering requirements. 
 You speak casually and informally - like a real person, not a formal document. You don't use technical jargon.
@@ -164,7 +175,7 @@ Instructions:
 - Keep it natural and human-like
 - Use proper grammar but stay informal
 - End with a casual follow-up question like "Does that help?" or "What else do you want to know?"
-
+{suffix_block}
 Your response:"""
         
         return prompt
@@ -194,15 +205,24 @@ Your response:"""
             print(f"Error calling Ollama: {e}")
             raise
     
-    def _generate_with_openai(self, prompt: str) -> str:
+    def _generate_with_openai(self, prompt: str, behavior_suffix: str = "") -> str:
         """Generate response using OpenAI"""
         try:
+            system_content = (
+                "You are a non-technical stakeholder. Respond informally and naturally, like you're speaking in person."
+            )
+            if (behavior_suffix or "").strip():
+                system_content = (
+                    f"{system_content}\n\n"
+                    "Additional behavior instructions from training config:\n"
+                    f"{behavior_suffix.strip()}"
+                )
             response = self.openai.ChatCompletion.create(
                 model=self.model,
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a non-technical stakeholder. Respond informally and naturally, like you're speaking in person."
+                        "content": system_content,
                     },
                     {
                         "role": "user",
@@ -217,6 +237,58 @@ Your response:"""
         except Exception as e:
             print(f"Error calling OpenAI: {e}")
             raise
+
+    def generate_raw(self, system: str, user: str) -> str:
+        """
+        One-shot LLM call for meta tasks (no RAG). Used for session reflection / tweak proposals.
+        Does not pass output token caps so the provider/model sets the completion limit.
+        """
+        system = (system or "").strip()
+        user = (user or "").strip()
+        temp = min(0.5, self.temperature)
+
+        if self.backend == "ollama":
+            prompt = f"{system}\n\n---\n\n{user}" if system else user
+            try:
+                response = self.requests.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": self.model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": temp,
+                            "top_p": self.ollama_top_p,
+                        },
+                    },
+                    timeout=120,
+                )
+                if response.status_code == 200:
+                    return response.json().get("response", "").strip()
+                raise Exception(f"Ollama API error: {response.status_code}")
+            except Exception as e:
+                print(f"Error generating reflection (Ollama): {e}")
+                raise
+
+        if self.backend == "openai":
+            try:
+                response = self.openai.ChatCompletion.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system or "You are a precise assistant."},
+                        {"role": "user", "content": user},
+                    ],
+                    temperature=temp,
+                )
+                return response.choices[0].message.content.strip()
+            except Exception as e:
+                print(f"Error generating reflection (OpenAI): {e}")
+                raise
+
+        return (
+            '{"performance_notes":"Template backend cannot run reflection. Use ollama or openai.",'
+            '"patch":{"global":{},"query_overrides_add":[],"pattern_overrides_add":[]}}'
+        )
     
     def _generate_with_template(self, query: str, context_results: List[Dict]) -> str:
         """Fallback template-based generation (original SimpleLLM logic)"""
@@ -230,9 +302,14 @@ Your response:"""
             return "I'm not sure how to answer that. Can you rephrase your question?"
 
     def generate_response_from_results(
-        self, query: str, context_results: List[Dict], conversation_history: Optional[List[Dict]] = None
+        self,
+        query: str,
+        context_results: List[Dict],
+        conversation_history: Optional[List[Dict]] = None,
+        behavior_system_suffix: Optional[str] = None,
     ) -> str:
         """Generate response from precomputed retrieval results."""
+        suffix = (behavior_system_suffix or "").strip()
         if not context_results:
             no_context_responses = [
                 "Hmm, I'm not sure about that. Can you ask me something else?",
@@ -241,13 +318,15 @@ Your response:"""
             ]
             return random.choice(no_context_responses)
 
-        prompt = self._build_rag_prompt(query, context_results, conversation_history=conversation_history)
+        prompt = self._build_rag_prompt(
+            query, context_results, conversation_history=conversation_history, behavior_suffix=suffix
+        )
 
         try:
             if self.backend == "ollama":
                 response = self._generate_with_ollama(prompt)
             elif self.backend == "openai":
-                response = self._generate_with_openai(prompt)
+                response = self._generate_with_openai(prompt, behavior_suffix=suffix)
             else:
                 response = self._generate_with_template(query, context_results)
 
@@ -262,8 +341,18 @@ Your response:"""
                 return self._generate_with_template(query, context_results)
             raise
     
-    def generate_response(self, query: str, conversation_history: Optional[List[Dict]] = None) -> str:
+    def generate_response(
+        self,
+        query: str,
+        conversation_history: Optional[List[Dict]] = None,
+        behavior_system_suffix: Optional[str] = None,
+    ) -> str:
         """Generate human-like response using RAG + LLM"""
         # Get relevant context
         results = self.rag.search(query, n_results=self.rag_top_k, filter_by_sheet_type=True)
-        return self.generate_response_from_results(query, results, conversation_history=conversation_history)
+        return self.generate_response_from_results(
+            query,
+            results,
+            conversation_history=conversation_history,
+            behavior_system_suffix=behavior_system_suffix,
+        )

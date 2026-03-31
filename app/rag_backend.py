@@ -7,6 +7,16 @@ try:
 except ImportError:
     pass
 
+import warnings
+
+# huggingface_hub: resume_download deprecation (pulled in via sentence-transformers)
+warnings.filterwarnings(
+    "ignore",
+    message=r".*resume_download.*",
+    category=FutureWarning,
+    module=r"huggingface_hub\.file_download",
+)
+
 import pandas as pd
 import chromadb
 from chromadb.config import Settings
@@ -27,7 +37,10 @@ class RequirementsRAG:
         
         # Initialize ChromaDB
         print("Initializing vector database...")
-        self.client = chromadb.PersistentClient(path=persist_directory)
+        self.client = chromadb.PersistentClient(
+            path=persist_directory,
+            settings=Settings(anonymized_telemetry=False),
+        )
         
         # Get or create collection
         self.collection = self.client.get_or_create_collection(
