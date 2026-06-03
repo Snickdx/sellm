@@ -1,0 +1,272 @@
+"""Discover configured LLM providers/models and cache LLMWrapper instances."""
+
+from __future__ import annotations
+
+import os
+from typing import Any, Dict, List, Optional, Tuple
+
+from app.llm_wrapper import LLMWrapper
+
+OPENAI_DEFAULT_MODELS = [
+    "gpt-4o-mini",
+    "gpt-4o",
+    "gpt-4-turbo",
+    "gpt-4",
+    "gpt-3.5-turbo",
+    "o1-mini",
+]
+
+OLLAMA_FALLBACK_MODELS = ["llama3.2", "mistral", "phi3", "gemma2", "llama3.1"]
+
+_wrapper_cache: Dict[Tuple[int, str, str], LLMWrapper] = {}
+
+
+def _parse_csv_env(name: str) -> List[str]:
+    raw = (os.getenv(name) or "").strip()
+    if not raw:
+        return []
+    return [part.strip() for part in raw.split(",") if part.strip()]
+
+
+def ollama_host() -> str:
+    return (os.getenv("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
+
+
+def fetch_ollama_tags() -> List[str]:
+    """Full model tags from Ollama (e.g. llama3.2:latest)."""
+    try:
+        import requests
+
+        response = requests.get(f"{ollama_host()}/api/tags", timeout=2)
+        if response.status_code != 200:
+            return []
+        names: List[str] = []
+        for item in response.json().get("models", []):
+            raw = (item.get("name") or "").strip()
+            if raw:
+                names.append(raw)
+        return names
+    except Exception:
+        return []
+
+
+def fetch_ollama_model_names() -> List[str]:
+    """Base model names for UI labels (llama3.2, gemma4, …)."""
+    bases = []
+    for tag in fetch_ollama_tags():
+        base = tag.split(":")[0]
+        if base and base not in bases:
+            bases.append(base)
+    return sorted(bases)
+
+
+def _pick_ollama_tag(tags: List[str], base_hint: Optional[str] = None) -> str:
+    """Choose best installed tag using env/default preferences."""
+    hints: List[str] = []
+    if base_hint:
+        hints.append(base_hint.split(":")[0])
+    env_model = (os.getenv("LLM_MODEL") or "").strip()
+    if env_model:
+        hints.append(env_model.split(":")[0])
+    hints.extend(["llama3.2", "llama3.1", "gemma4", "mistral", "phi3", "llama2"])
+    seen: set[str] = set()
+    for base in hints:
+        if not base or base in seen:
+            continue
+        seen.add(base)
+        for tag in tags:
+            if tag.split(":")[0] == base:
+                return tag
+    return tags[0]
+
+
+def resolve_ollama_model(requested: Optional[str]) -> Optional[str]:
+    """Map config/UI name to an installed Ollama tag; avoids 404 on missing models."""
+    tags = fetch_ollama_tags()
+    if not tags:
+        return (requested or "").strip() or None
+    if not requested:
+        return _pick_ollama_tag(tags)
+    req = requested.strip()
+    if req in tags:
+        return req
+    base = req.split(":")[0]
+    for tag in tags:
+        if tag.split(":")[0] == base:
+            return tag
+    return _pick_ollama_tag(tags, base_hint=base)
+
+
+def ollama_reachable() -> bool:
+    return bool(fetch_ollama_tags())
+
+
+def openai_configured() -> bool:
+    return bool((os.getenv("OPENAI_API_KEY") or "").strip())
+
+
+def anthropic_configured() -> bool:
+    return bool((os.getenv("ANTHROPIC_API_KEY") or "").strip())
+
+
+def choice_id(backend: str, model: str) -> str:
+    return f"{backend.lower()}:{model}"
+
+
+def parse_choice_id(choice_id: Optional[str]) -> Tuple[Optional[str], Optional[str]]:
+    if not choice_id or ":" not in choice_id:
+        return None, None
+    backend, model = choice_id.split(":", 1)
+    return backend.lower().strip(), model.strip()
+
+
+def default_choice_id() -> str:
+    backend = (os.getenv("LLM_BACKEND") or "ollama").lower()
+    model = (os.getenv("LLM_MODEL") or "").strip()
+
+    if backend == "openai" and openai_configured():
+        return choice_id("openai", model or "gpt-4o-mini")
+    if backend == "anthropic" and anthropic_configured():
+        return choice_id("anthropic", model or "claude-3-5-sonnet-20241022")
+    if backend == "ollama":
+        tags = fetch_ollama_tags()
+        if tags:
+            tag = _pick_ollama_tag(tags, base_hint=model or None)
+            return choice_id("ollama", tag.split(":")[0])
+        pick = model or OLLAMA_FALLBACK_MODELS[0]
+        return choice_id("ollama", pick)
+    if backend == "template":
+        return choice_id("template", "builtin")
+    if openai_configured():
+        return choice_id("openai", model or "gpt-4o-mini")
+    if ollama_reachable():
+        tags = fetch_ollama_tags()
+        if tags:
+            tag = _pick_ollama_tag(tags, base_hint=model or None)
+            return choice_id("ollama", tag.split(":")[0])
+    return choice_id("template", "builtin")
+
+
+def list_llm_choices() -> List[Dict[str, Any]]:
+    """Options for the chat model dropdown."""
+    choices: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+    env_backend = (os.getenv("LLM_BACKEND") or "").lower()
+    env_model = (os.getenv("LLM_MODEL") or "").strip()
+
+    def add(backend: str, model: str, label: str, provider: str, available: bool) -> None:
+        cid = choice_id(backend, model)
+        if cid in seen:
+            return
+        seen.add(cid)
+        choices.append(
+            {
+                "id": cid,
+                "backend": backend,
+                "model": model,
+                "label": label,
+                "provider": provider,
+                "available": available,
+            }
+        )
+
+    if openai_configured():
+        models = list(
+            dict.fromkeys(
+                ([env_model] if env_backend == "openai" and env_model else [])
+                + _parse_csv_env("LLM_OPENAI_MODELS")
+                + OPENAI_DEFAULT_MODELS
+            )
+        )
+        base = (os.getenv("OPENAI_API_BASE") or "").strip()
+        prefix = "OpenAI"
+        if base and "openai.com" not in base.lower():
+            prefix = "OpenAI-compatible"
+        for model in models:
+            add("openai", model, f"{prefix} · {model}", "openai", True)
+
+    if anthropic_configured():
+        models = list(
+            dict.fromkeys(
+                ([env_model] if env_backend == "anthropic" and env_model else [])
+                + _parse_csv_env("LLM_ANTHROPIC_MODELS")
+                + [
+                    "claude-3-5-sonnet-20241022",
+                    "claude-3-5-haiku-20241022",
+                    "claude-3-opus-20240229",
+                ]
+            )
+        )
+        for model in models:
+            add("anthropic", model, f"Anthropic · {model}", "anthropic", True)
+
+    installed_ollama = fetch_ollama_model_names()
+    ollama_models = list(
+        dict.fromkeys(
+            installed_ollama
+            + _parse_csv_env("LLM_OLLAMA_MODELS")
+            + ([env_model] if env_backend == "ollama" and env_model else [])
+            + (OLLAMA_FALLBACK_MODELS if not installed_ollama else [])
+        )
+    )
+    if ollama_models and (installed_ollama or _parse_csv_env("LLM_OLLAMA_MODELS") or env_backend == "ollama"):
+        for model in ollama_models:
+            available = model in installed_ollama
+            add(
+                "ollama",
+                model,
+                f"Ollama · {model}" + ("" if available else " (not installed)"),
+                "ollama",
+                available,
+            )
+
+    if not any(c["provider"] != "template" for c in choices):
+        add("template", "builtin", "Template (offline fallback)", "template", True)
+    return choices
+
+
+def selectable_choices() -> List[Dict[str, Any]]:
+    """Choices worth showing in the UI (more than template-only)."""
+    all_choices = list_llm_choices()
+    non_template = [c for c in all_choices if c["provider"] != "template"]
+    if not non_template:
+        return all_choices
+    return [c for c in all_choices if c["provider"] == "template" or c.get("available")]
+
+
+def validate_choice_id(choice_id: Optional[str]) -> Optional[str]:
+    if not choice_id:
+        return default_choice_id()
+    choices = list_llm_choices()
+    by_id = {c["id"]: c for c in choices}
+    if choice_id in by_id and by_id[choice_id].get("available", True):
+        return choice_id
+    return default_choice_id()
+
+
+def get_llm_wrapper(rag: Any, backend: str, model: str) -> LLMWrapper:
+    model_key = model or "builtin"
+    cache_key = (id(rag), backend.lower(), model_key)
+    if cache_key not in _wrapper_cache:
+        wrapper_model = None if model_key in ("builtin", "template") else model_key
+        _wrapper_cache[cache_key] = LLMWrapper(rag, backend=backend, model=wrapper_model)
+    return _wrapper_cache[cache_key]
+
+
+def resolve_llm_wrapper(rag: Any, choice_id: Optional[str]) -> LLMWrapper:
+    resolved = validate_choice_id(choice_id)
+    backend, model = parse_choice_id(resolved)
+    if not backend:
+        backend = "template"
+        model = "builtin"
+    if backend == "template":
+        model = "builtin"
+    return get_llm_wrapper(rag, backend, model)
+
+
+def choice_label(choice_id: str) -> str:
+    for item in list_llm_choices():
+        if item["id"] == choice_id:
+            return str(item["label"])
+    backend, model = parse_choice_id(choice_id)
+    return f"{backend or 'llm'} · {model or 'default'}"

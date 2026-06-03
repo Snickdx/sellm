@@ -50,7 +50,7 @@ TWEAK_MODE_ENABLED=false
 - `CONVERSATION_DB_URL` **or** `DATABASE_URL` — EasyPanel Postgres often exposes `postgres://...`; the app normalizes that to `postgresql+psycopg2://...`.
 - Use the **internal** DB hostname from EasyPanel (e.g. service name), not `localhost`.
 
-See [`.env.example`](../.env.example) and [`app/.env.example`](../app/.env.example) for all options.
+See [`.env.example`](../.env.example) for all options (commented `/app` paths for containers).
 
 ### 4. Persistent storage (required)
 
@@ -95,7 +95,7 @@ sellm/
 ├── app/
 │   ├── api/app.py          # FastAPI app + env loading
 │   ├── main.py             # python -m app.main (local)
-│   └── .env.example        # local dev template
+│   └── .env                # local only (from repo-root .env.example)
 ├── setup/                  # one-off init (Chroma, Neo4j)
 │   ├── chroma/init_chroma.py
 │   └── neo4j/load_graph.py

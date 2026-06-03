@@ -15,6 +15,7 @@ class ChatRequest(BaseModel):
     conversation_history: Optional[List[ChatMessage]] = []
     response_mode: Optional[str] = "vector"
     conversation_id: Optional[str] = None
+    llm_choice: Optional[str] = None  # e.g. openai:gpt-4o-mini, ollama:llama3.2
 
 
 class ChatResponse(BaseModel):
@@ -23,6 +24,7 @@ class ChatResponse(BaseModel):
     mode_used: Optional[str] = None
     conversation_id: Optional[str] = None
     routing: Optional[Dict[str, Any]] = None
+    llm_used: Optional[Dict[str, Any]] = None
 
 
 class FeedbackRequest(BaseModel):

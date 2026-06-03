@@ -25,13 +25,13 @@ try:
     load_dotenv(dotenv_path=_root_env)
     load_dotenv()
     if _app_env.is_file():
-        print(f"✓ Loaded environment variables from {_app_env}")
+        print(f"[ok] Loaded environment variables from {_app_env}")
     elif _root_env.is_file():
-        print(f"✓ Loaded environment variables from {_root_env}")
+        print(f"[ok] Loaded environment variables from {_root_env}")
     else:
-        print(f"⚠ No {_app_env} or {_root_env} — using OS env and cwd .env if any")
+        print(f"[warn] No {_app_env} or {_root_env} — using OS env and cwd .env if any")
 except ImportError:
-    print("⚠ python-dotenv not installed. Install with: pip install python-dotenv")
+    print("[warn] python-dotenv not installed. Install with: pip install python-dotenv")
     print("  Continuing without .env file support...")
 from typing import Any, Dict, List, Optional
 
@@ -39,6 +39,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+import jinja2
 from fastapi.templating import Jinja2Templates
 
 from app.api.schemas import (
@@ -62,6 +63,17 @@ from app.api.schemas import (
 from app.storage.conversation_store import ConversationStore, User
 from app.tweaks.behavior_tweaks import BehaviorTweaksStore
 from app.llm_wrapper import LLMWrapper
+from app.llm_registry import (
+    choice_label,
+    default_choice_id,
+    list_llm_choices,
+    openai_configured,
+    ollama_reachable,
+    parse_choice_id,
+    resolve_llm_wrapper,
+    validate_choice_id,
+    anthropic_configured,
+)
 from app.rag_backend import RequirementsRAG
 from app.rag_backend_neo4j import RequirementsRAGNeo4j
 from app.mcp.hybrid import HybridKnowledgeService
@@ -115,7 +127,13 @@ app = FastAPI(title="Requirements Chatbot API", lifespan=_app_lifespan)
 WEB_DIR = APP_DIR / "web"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+# cache_size=0 avoids Jinja2 3.1 + Starlette template cache TypeError on Windows
+_jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
+    autoescape=jinja2.select_autoescape(["html", "xml"]),
+    cache_size=0,
+)
+templates = Jinja2Templates(env=_jinja_env)
 conversation_store = ConversationStore(
     os.getenv("CONVERSATION_DB_URL")
     or os.getenv("DATABASE_URL")
@@ -211,18 +229,56 @@ def _user_api_overrides(user: Optional[User]) -> dict:
         }
     return {}
 
-def _generate_mode_response(mode: str, message: str, history: List[Dict], user: Optional[User] = None) -> str:
-    llm = llm_by_mode.get(mode)
-    if not llm:
+
+def _rag_for_mode(mode: str):
+    if mode == "neo4j":
+        return rag_systems.get("neo4j")
+    return rag_systems.get("vector")
+
+
+def _llm_used_payload(choice_id: str) -> Dict[str, str]:
+    backend, model = parse_choice_id(choice_id)
+    return {
+        "id": choice_id,
+        "backend": backend or "",
+        "model": model or "",
+        "label": choice_label(choice_id),
+    }
+
+
+def _generate_mode_response(
+    mode: str,
+    message: str,
+    history: List[Dict],
+    *,
+    user: Optional[User] = None,
+    force_coach: bool = False,
+    llm_choice: Optional[str] = None,
+) -> tuple[str, str, str]:
+    """Returns (response_text, mode_used label, resolved llm_choice id)."""
+    rag = _rag_for_mode(mode)
+    if not rag:
         status = engine_status.get(mode, "unavailable")
         raise ValueError(f"Mode '{mode}' is unavailable ({status})")
+    resolved_choice = validate_choice_id(llm_choice)
+    llm = resolve_llm_wrapper(rag, resolved_choice)
     overrides = _user_api_overrides(user)
-    return llm.generate_response(
+    response, style = llm.generate_response(
         message,
         conversation_history=history,
         behavior_system_suffix=_behavior_system_suffix(),
+        force_coach=force_coach,
         **overrides,
     )
+    if force_coach or style == "coach":
+        return response, "coach", resolved_choice
+    return response, mode, resolved_choice
+
+
+def _finalize_response(query: str, response: str, mode_label: str) -> str:
+    if mode_label == "coach" or mode_label.endswith(":coach"):
+        return response
+    return _apply_runtime_tweaks(query, response)
 
 
 def _apply_runtime_tweaks(query: str, response: str) -> str:
@@ -287,11 +343,14 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     user = _get_current_user(request)
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "authenticated": user is not None,
-        "username": user.username if user else None,
-    })
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "authenticated": user is not None,
+            "username": user.username if user else None,
+        },
+    )
 
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -315,11 +374,25 @@ async def chat(request: ChatRequest, req: Request):
         stored_messages = conversation_store.get_messages(conversation_id)
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
         mode = (request.response_mode or "vector").lower()
-        overrides = _user_api_overrides(user)
+        llm_choice = validate_choice_id(request.llm_choice)
 
         if mode == "compare":
-            vector_response = _apply_runtime_tweaks(request.message, _generate_mode_response("vector", request.message, history, user=user))
-            neo4j_response = _apply_runtime_tweaks(request.message, _generate_mode_response("neo4j", request.message, history, user=user))
+            vector_response, _, choice_v = _generate_mode_response(
+                "vector",
+                request.message,
+                history,
+                user=user,
+                llm_choice=llm_choice,
+            )
+            neo4j_response, _, choice_n = _generate_mode_response(
+                "neo4j",
+                request.message,
+                history,
+                user=user,
+                llm_choice=llm_choice,
+            )
+            vector_response = _finalize_response(request.message, vector_response, "vector")
+            neo4j_response = _finalize_response(request.message, neo4j_response, "neo4j")
             combined = (
                 "<strong>Vector RAG (Embeddings + ChromaDB)</strong><br>"
                 f"{vector_response}<br><br>"
@@ -327,26 +400,34 @@ async def chat(request: ChatRequest, req: Request):
                 f"{neo4j_response}"
             )
             conversation_store.add_message(conversation_id=conversation_id, role="assistant", content=combined, mode_used="compare")
-            return ChatResponse(response=combined, sources=None, mode_used="compare", conversation_id=conversation_id)
+            return ChatResponse(
+                response=combined,
+                sources=None,
+                mode_used="compare",
+                conversation_id=conversation_id,
+                llm_used=_llm_used_payload(choice_v or choice_n or llm_choice),
+            )
 
         if mode == "hybrid":
             if not hybrid_service:
                 raise ValueError("Hybrid service is not initialized")
             if not rag_systems["vector"] and not rag_systems["neo4j"]:
                 raise ValueError("Hybrid mode requires at least one of vector or neo4j engines")
-            base_llm = llm_by_mode.get("vector") or llm_by_mode.get("neo4j")
-            if not base_llm:
-                raise ValueError("Hybrid mode is unavailable because no LLM wrapper is ready")
+            rag = rag_systems["vector"] or rag_systems["neo4j"]
+            llm = resolve_llm_wrapper(rag, llm_choice)
             handoff = hybrid_service.retrieve(request.message, top_k=hybrid_top_k)
-            response = base_llm.generate_response_from_results(
+            response, style = llm.generate_response_from_results(
                 request.message,
                 handoff.results,
                 conversation_history=history,
                 behavior_system_suffix=_behavior_system_suffix(),
-                **overrides,
+                **_user_api_overrides(user),
             )
-            response = _apply_runtime_tweaks(request.message, response)
-            mode_label = f"hybrid:{handoff.route}"
+            if style == "coach":
+                mode_label = "coach"
+            else:
+                mode_label = f"hybrid:{handoff.route}"
+            response = _finalize_response(request.message, response, mode_label)
             routing_payload = {
                 **handoff.routing,
                 "backends_used": handoff.backends_used,
@@ -363,14 +444,59 @@ async def chat(request: ChatRequest, req: Request):
                 mode_used=mode_label,
                 conversation_id=conversation_id,
                 routing=routing_payload,
+                llm_used=_llm_used_payload(llm_choice),
+            )
+
+        if mode == "coach":
+            if not rag_systems.get("vector"):
+                raise ValueError("Coach mode requires vector RAG (ChromaDB)")
+            response, mode_label, resolved = _generate_mode_response(
+                "vector",
+                request.message,
+                history,
+                user=user,
+                force_coach=True,
+                llm_choice=llm_choice,
+            )
+            response = _finalize_response(request.message, response, mode_label)
+            conversation_store.add_message(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=response,
+                mode_used=mode_label,
+            )
+            return ChatResponse(
+                response=response,
+                sources=None,
+                mode_used=mode_label,
+                conversation_id=conversation_id,
+                llm_used=_llm_used_payload(resolved),
             )
 
         if mode not in ("vector", "neo4j"):
-            raise ValueError("Invalid response_mode. Use: vector, neo4j, hybrid, or compare")
+            raise ValueError("Invalid response_mode. Use: vector, neo4j, hybrid, compare, or coach")
 
-        response = _apply_runtime_tweaks(request.message, _generate_mode_response(mode, request.message, history, user=user))
-        conversation_store.add_message(conversation_id=conversation_id, role="assistant", content=response, mode_used=mode)
-        return ChatResponse(response=response, sources=None, mode_used=mode, conversation_id=conversation_id)
+        response, mode_label, resolved = _generate_mode_response(
+            mode,
+            request.message,
+            history,
+            user=user,
+            llm_choice=llm_choice,
+        )
+        response = _finalize_response(request.message, response, mode_label)
+        conversation_store.add_message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=response,
+            mode_used=mode_label,
+        )
+        return ChatResponse(
+            response=response,
+            sources=None,
+            mode_used=mode_label,
+            conversation_id=conversation_id,
+            llm_used=_llm_used_payload(resolved),
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -402,9 +528,11 @@ async def modes():
                 and (llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None)
             ),
             "compare": (llm_by_mode["vector"] is not None and llm_by_mode["neo4j"] is not None),
+            "coach": llm_by_mode["vector"] is not None,
         },
         "engine_status": engine_status,
         "hybrid_routing": "neo4j | chroma | blend per query",
+        "coach_hint": "define / explain / what is … questions auto-use domain coach in any mode",
     }
 
 
@@ -474,15 +602,29 @@ async def config():
         }
         for mode, wrapper in active_wrappers.items()
     }
+    choices = list_llm_choices()
+    switcher_on = (
+        openai_configured()
+        or anthropic_configured()
+        or ollama_reachable()
+        or len([c for c in choices if c["provider"] != "template"]) > 0
+    )
     return {
         "excel_file": excel_file,
         "neo4j_uri": neo4j_uri,
         "engines": engine_status,
         "llm_backend_env": llm_backend,
         "llm_model_env": llm_model,
+        "llm_default_choice": default_choice_id(),
+        "llm_choices": choices,
+        "llm_model_switcher_enabled": switcher_on and len(choices) > 1,
+        "llm_providers": {
+            "openai": openai_configured(),
+            "anthropic": anthropic_configured(),
+            "ollama": ollama_reachable(),
+        },
         "hybrid_top_k": hybrid_top_k,
         "hybrid_route_margin": hybrid_route_margin,
-        "hybrid_top_k": hybrid_top_k,
         "tweak_mode_enabled": tweak_mode_enabled,
         "tweak_mode_env_set": bool(_tweak_raw.strip()),
         "env_app_dir": str(APP_DIR),

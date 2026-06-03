@@ -262,24 +262,62 @@ class ConversationStore:
 
     # ── User / Auth / API key methods ──────────────────────────
 
-    def seed_users(self) -> None:
-        """Seed the three default users if they don't exist."""
-        users = [
-            ("nick", "badPassword1"),
-            ("wayne", "badPassword1"),
-            ("claudine", "badPassword1"),
-        ]
+    DEFAULT_USERS: tuple[tuple[str, str], ...] = (
+        ("nick", "badPassword1"),
+        ("wayne", "badPassword1"),
+        ("claudine", "badPassword1"),
+        ("snick", "badPassword1"),
+    )
+
+    def create_user(self, username: str, password: str) -> User:
+        """Create a user or update password if username already exists."""
+        username = username.strip().lower()
+        if not username:
+            raise ValueError("Username is required")
+        if not password:
+            raise ValueError("Password is required")
+        with Session(self.engine) as session:
+            existing = session.exec(
+                select(User).where(User.username == username)
+            ).first()
+            if existing:
+                existing.password_hash = hash_password(password)
+                session.add(existing)
+                session.commit()
+                session.refresh(existing)
+                return existing
+            user = User(username=username, password_hash=hash_password(password))
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            return user
+
+    def list_users(self) -> List[User]:
+        with Session(self.engine) as session:
+            return list(session.exec(select(User).order_by(User.username)).all())
+
+    def seed_users(self, extra: Optional[List[tuple[str, str]]] = None) -> List[str]:
+        """Seed default training users if they don't exist. Returns usernames created."""
+        users = list(self.DEFAULT_USERS)
+        if extra:
+            users.extend(extra)
+        created: List[str] = []
         with Session(self.engine) as session:
             for username, password in users:
+                uname = username.strip().lower()
                 existing = session.exec(
-                    select(User).where(User.username == username)
+                    select(User).where(User.username == uname)
                 ).first()
                 if not existing:
-                    session.add(User(
-                        username=username,
-                        password_hash=hash_password(password),
-                    ))
+                    session.add(
+                        User(
+                            username=uname,
+                            password_hash=hash_password(password),
+                        )
+                    )
+                    created.append(uname)
             session.commit()
+        return created
 
     def get_user_by_credentials(self, username: str, password: str) -> Optional[User]:
         with Session(self.engine) as session:

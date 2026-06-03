@@ -3,8 +3,11 @@ LLM wrapper for generating human-like stakeholder responses
 Supports multiple backends: Ollama (recommended), OpenAI, or template fallback
 """
 import os
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import random
+
+from app.coach import format_coach_context, is_coach_query
+from app.stakeholder_tone import STAKEHOLDER_PROMPT_RULES, apply_plain_language
 
 class LLMWrapper:
     """Wrapper for different LLM backends with RAG context"""
@@ -15,8 +18,8 @@ class LLMWrapper:
         
         Args:
             rag: RequirementsRAG instance
-            backend: "ollama", "openai", or "template" (fallback)
-            model: Model name (e.g., "llama3.2", "gpt-3.5-turbo")
+            backend: "ollama", "openai", "anthropic", or "template" (fallback)
+            model: Model name (e.g., "llama3.2", "gpt-4o-mini", "claude-3-5-sonnet-20241022")
         """
         self.rag = rag
         self.backend = backend.lower()
@@ -31,6 +34,8 @@ class LLMWrapper:
             self._init_ollama()
         elif self.backend == "openai":
             self._init_openai()
+        elif self.backend == "anthropic":
+            self._init_anthropic()
         elif self.backend == "template":
             print("Using template-based fallback (limited quality)")
         else:
@@ -64,17 +69,31 @@ class LLMWrapper:
         if self.backend == "ollama":
             return "llama3.2"  # or "mistral", "phi3", etc.
         elif self.backend == "openai":
-            return "gpt-3.5-turbo"
+            return "gpt-4o-mini"
+        elif self.backend == "anthropic":
+            return "claude-3-5-sonnet-20241022"
         return "template"
+
+    def _ollama_host(self) -> str:
+        return (os.getenv("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
     
     def _init_ollama(self):
         """Initialize Ollama client"""
         try:
             import requests
+            from app.llm_registry import resolve_ollama_model
+
             self.requests = requests
-            # Test connection
-            response = requests.get("http://localhost:11434/api/tags", timeout=2)
+            self.ollama_host = self._ollama_host()
+            response = requests.get(f"{self.ollama_host}/api/tags", timeout=2)
             if response.status_code == 200:
+                resolved = resolve_ollama_model(self.model)
+                if resolved:
+                    if resolved != self.model:
+                        print(
+                            f"✓ Ollama connected; resolved model {self.model!r} -> {resolved!r}"
+                        )
+                    self.model = resolved
                 print(f"✓ Ollama connected, using model: {self.model}")
             else:
                 print("⚠ Ollama not responding, falling back to template")
@@ -92,9 +111,26 @@ class LLMWrapper:
                 print("⚠ OPENAI_API_KEY not set, falling back to template")
                 self.backend = "template"
             else:
+                api_base = (os.getenv("OPENAI_API_BASE") or "").strip()
+                if api_base:
+                    openai.api_base = api_base.rstrip("/")
                 print(f"✓ OpenAI initialized, using model: {self.model}")
         except ImportError:
             print("⚠ openai package not installed, falling back to template")
+            self.backend = "template"
+
+    def _init_anthropic(self):
+        """Initialize Anthropic (Messages API via httpx)."""
+        try:
+            import httpx
+            self.httpx = httpx
+            if not os.getenv("ANTHROPIC_API_KEY"):
+                print("⚠ ANTHROPIC_API_KEY not set, falling back to template")
+                self.backend = "template"
+            else:
+                print(f"✓ Anthropic initialized, using model: {self.model}")
+        except ImportError:
+            print("⚠ httpx not installed, falling back to template")
             self.backend = "template"
     
     def _build_rag_prompt(
@@ -156,6 +192,8 @@ class LLMWrapper:
         prompt = f"""You are a non-technical stakeholder in a software project. You're being interviewed by someone gathering requirements. 
 You speak casually and informally - like a real person, not a formal document. You don't use technical jargon.
 
+{STAKEHOLDER_PROMPT_RULES}
+
 Below is the project information available about this specific project. Use it as the ground truth for project-specific facts (goals, features, stakeholders, budget, etc.). You can also draw on your general knowledge to explain basic concepts, define terms, or give context — real stakeholders know things beyond just what's written down.
 
 Project information:
@@ -167,57 +205,210 @@ Recent conversation:
 Question: {query}
 
 Instructions:
+- Stay in character as the stakeholder only — never mention the interview, the interviewer, or that you are being asked questions
 - Answer the user's direct question first, in the first sentence
-- Be specific and avoid generic restatements
+- Be specific using the project information; do not say you are unsure when the notes already name people, goals, or user types
+- User types in this project include Admin, HR, Employee, and external parties (e.g. Courts, Tax, NI, Employer) — Employees are people paid through the system, not a "department"
+- Do not cite internal goal codes like "Goal G3"; describe goals in plain business language
 - Use casual language: "Oh, well...", "Let me think...", "Yeah, there are..."
 - Don't mention sheets, documents, or technical sources
-- Use project info for specifics, but feel free to use general knowledge to explain or elaborate naturally
-- If the project info doesn't cover something, say so casually or draw on what you know
-- Keep it natural and human-like
-- Use proper grammar but stay informal
-- End with a casual follow-up question like "Does that help?" or "What else do you want to know?"
+- For processes (sign-up, onboarding, approvals): only describe steps that appear in the project information; otherwise say you are not sure of every step rather than inventing emails, portals, or training
+- Avoid repeating the same list of departments or user types you already gave earlier in the conversation unless the question needs more detail
+- If asked about worries, risks, or concerns, answer with your top concerns (cost, compliance, deadlines, etc.) — do not recite the project background or company introduction
+- Keep it natural and human-like; use proper grammar but stay informal
+- End with a short casual line — vary it (e.g. "What else do you want to know?", "Happy to go deeper on any of that.") — do not use "Does that help?" every time
 {suffix_block}
 Your response:"""
         
         return prompt
-    
+
+    def _build_coach_prompt(
+        self,
+        query: str,
+        context_results: List[Dict],
+        conversation_history: Optional[List[Dict]] = None,
+    ) -> str:
+        """Prompt for interviewer domain coaching (not stakeholder role-play)."""
+        context_str = format_coach_context(context_results, max_items=self.rag_top_k)
+
+        history_text = ""
+        if conversation_history:
+            recent_turns = conversation_history[-4:]
+            lines = []
+            for turn in recent_turns:
+                role = turn.get("role", "user")
+                content = turn.get("content", "")
+                if content:
+                    lines.append(f"{role}: {content}")
+            if lines:
+                history_text = "\n".join(lines)
+
+        history_block = (
+            f"\nRecent conversation:\n{history_text}\n" if history_text else ""
+        )
+
+        return f"""You are a domain coach helping someone prepare to interview stakeholders on a software project.
+
+The user is learning the domain — they are NOT practicing the interview right now. Use ONLY the project knowledge below.
+
+Project knowledge (from requirements workbook):
+{context_str}
+{history_block}
+Question: {query}
+
+Instructions:
+- Start with a clear, plain-language definition or explanation (2–4 sentences).
+- Explain how this concept shows up in THIS project using facts from the knowledge above.
+- Add a short bullet list (3–5 items) of what a good interviewer should clarify with a real stakeholder.
+- Write as a helpful coach, not as the stakeholder. Do NOT use openings like "So, it's about..." or "Oh, well...".
+- Do not invent facts not supported by the knowledge; say what is unclear if needed.
+- Stay concise (under ~200 words unless the topic needs more).
+
+Your answer:"""
+
+    def _generate_coach_with_openai(self, prompt: str) -> str:
+        system_content = (
+            "You are a domain coach for requirements-interview training. "
+            "Explain concepts clearly to interviewers using only the project facts provided. "
+            "Never role-play as the stakeholder."
+        )
+        response = self.openai.ChatCompletion.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=min(0.5, self.temperature),
+            max_tokens=max(self.max_tokens, 400),
+        )
+        return response.choices[0].message.content.strip()
+
+    def _generate_coach_with_anthropic(self, prompt: str) -> str:
+        return self._generate_with_anthropic(
+            prompt,
+            system=(
+                "You are a domain coach for requirements-interview training. "
+                "Explain concepts clearly to interviewers using only the project facts provided. "
+                "Never role-play as the stakeholder."
+            ),
+        )
+
+    def _generate_coach_with_template(self, query: str, context_results: List[Dict]) -> str:
+        """Structured coach fallback when no LLM API is available."""
+        context_str = format_coach_context(context_results, max_items=5)
+        if not context_str or context_str == "No matching project knowledge found.":
+            return (
+                "I don't have enough about that in the project knowledge base. "
+                "Try rephrasing or ask the stakeholder directly in practice mode."
+            )
+
+        term = query.strip().rstrip("?.!")
+        lines = [f"**Domain note** (from project materials)\n"]
+        lines.append(
+            f"Here is what the workbook says that relates to *{term}* — use this to shape interview questions, "
+            "not as a final definition:\n"
+        )
+        for block in context_str.split("\n---\n")[:4]:
+            snippet = " ".join(block.split())
+            if len(snippet) > 320:
+                snippet = snippet[:317] + "..."
+            lines.append(f"- {snippet}")
+        lines.append(
+            "\n**As an interviewer**, ask the stakeholder: what it means in their words, who it affects, "
+            "rules/exceptions, and any constraints or audit needs."
+        )
+        return "\n".join(lines)
+
+    def _generate_with_anthropic(self, prompt: str, *, system: str) -> str:
+        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+        response = self.httpx.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={
+                "model": self.model,
+                "max_tokens": max(self.max_tokens, 400),
+                "temperature": min(1.0, self.temperature),
+                "system": system,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        data = response.json()
+        parts = data.get("content") or []
+        text = "".join(p.get("text", "") for p in parts if p.get("type") == "text")
+        return text.strip()
+
+    def _ollama_generate_payload(self, prompt: str, model: str) -> dict:
+        return {
+            "model": model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": self.temperature,
+                "top_p": self.ollama_top_p,
+            },
+        }
+
     def _generate_with_ollama(self, prompt: str) -> str:
         """Generate response using Ollama"""
         try:
+            from app.llm_registry import resolve_ollama_model
+
+            model = resolve_ollama_model(self.model) or self.model
             response = self.requests.post(
-                "http://localhost:11434/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": self.temperature,
-                        "top_p": self.ollama_top_p,
-                    }
-                },
-                timeout=30
+                f"{self.ollama_host}/api/generate",
+                json=self._ollama_generate_payload(prompt, model),
+                timeout=120,
             )
-            
+
+            if response.status_code == 404:
+                resolved = resolve_ollama_model(self.model)
+                if resolved and resolved != model:
+                    self.model = resolved
+                    response = self.requests.post(
+                        f"{self.ollama_host}/api/generate",
+                        json=self._ollama_generate_payload(prompt, resolved),
+                        timeout=120,
+                    )
+                    model = resolved
+
             if response.status_code == 200:
+                self.model = model
                 return response.json().get("response", "").strip()
-            else:
-                raise Exception(f"Ollama API error: {response.status_code}")
+
+            detail = (response.text or "").strip()[:200]
+            base = (model or "model").split(":")[0]
+            raise Exception(
+                f"Ollama API error {response.status_code} for model '{model}'. "
+                f"{detail} "
+                f"Install with: ollama pull {base}"
+            )
         except Exception as e:
             print(f"Error calling Ollama: {e}")
             raise
     
+    def _stakeholder_system_content(self, behavior_suffix: str = "") -> str:
+        system_content = (
+            "You are a non-technical stakeholder. Respond informally and naturally, like you're speaking in person.\n\n"
+            f"{STAKEHOLDER_PROMPT_RULES}"
+        )
+        if (behavior_suffix or "").strip():
+            system_content = (
+                f"{system_content}\n\n"
+                "Additional behavior instructions from training config:\n"
+                f"{behavior_suffix.strip()}"
+            )
+        return system_content
+
     def _generate_with_openai(self, prompt: str, behavior_suffix: str = "") -> str:
         """Generate response using OpenAI"""
         try:
-            system_content = (
-                "You are a non-technical stakeholder. Respond informally and naturally, like you're speaking in person."
-            )
-            if (behavior_suffix or "").strip():
-                system_content = (
-                    f"{system_content}\n\n"
-                    "Additional behavior instructions from training config:\n"
-                    f"{behavior_suffix.strip()}"
-                )
+            system_content = self._stakeholder_system_content(behavior_suffix)
             response = self.openai.ChatCompletion.create(
                 model=self.model,
                 messages=[
@@ -251,8 +442,9 @@ Your response:"""
         if self.backend == "ollama":
             prompt = f"{system}\n\n---\n\n{user}" if system else user
             try:
+                host = getattr(self, "ollama_host", self._ollama_host())
                 response = self.requests.post(
-                    "http://localhost:11434/api/generate",
+                    f"{host}/api/generate",
                     json={
                         "model": self.model,
                         "prompt": prompt,
@@ -269,6 +461,16 @@ Your response:"""
                 raise Exception(f"Ollama API error: {response.status_code}")
             except Exception as e:
                 print(f"Error generating reflection (Ollama): {e}")
+                raise
+
+        if self.backend == "anthropic":
+            try:
+                return self._generate_with_anthropic(
+                    user,
+                    system=system or "You are a precise assistant.",
+                )
+            except Exception as e:
+                print(f"Error generating reflection (Anthropic): {e}")
                 raise
 
         if self.backend == "openai":
@@ -297,7 +499,7 @@ Your response:"""
         try:
             from app.rag_backend import SimpleLLM
             simple_llm = SimpleLLM(self.rag)
-            return simple_llm.generate_response(query)
+            return apply_plain_language(simple_llm.generate_response(query))
         except ImportError:
             # Ultimate fallback
             return "I'm not sure how to answer that. Can you rephrase your question?"
@@ -352,19 +554,51 @@ Your response:"""
         context_results: List[Dict],
         conversation_history: Optional[List[Dict]] = None,
         behavior_system_suffix: Optional[str] = None,
+        force_coach: bool = False,
         provider_override: Optional[str] = None,
         api_key_override: Optional[str] = None,
         base_url_override: Optional[str] = None,
-    ) -> str:
-        """Generate response from precomputed retrieval results."""
-        suffix = (behavior_system_suffix or "").strip()
+    ) -> Tuple[str, Optional[str]]:
+        """Generate response from precomputed retrieval results.
+
+        Returns (text, style) where style is ``coach`` for domain-coach answers, else None.
+        """
+        use_coach = is_coach_query(query, force=force_coach)
+        suffix = "" if use_coach else (behavior_system_suffix or "").strip()
         if not context_results:
+            if use_coach:
+                return (
+                    "I couldn't find that topic in the project knowledge base. "
+                    "Try a different term or switch to stakeholder practice mode and ask directly.",
+                    "coach",
+                )
             no_context_responses = [
                 "Hmm, I'm not sure about that. Can you ask me something else?",
                 "I don't really know much about that. What else would you like to know?",
                 "That's not something I'm familiar with. Maybe try asking about something else?",
             ]
-            return random.choice(no_context_responses)
+            return random.choice(no_context_responses), None
+
+        if use_coach:
+            prompt = self._build_coach_prompt(
+                query, context_results, conversation_history=conversation_history
+            )
+            try:
+                if self.backend == "ollama":
+                    response = self._generate_with_ollama(prompt)
+                elif self.backend == "openai":
+                    response = self._generate_coach_with_openai(prompt)
+                elif self.backend == "anthropic":
+                    response = self._generate_coach_with_anthropic(prompt)
+                else:
+                    response = self._generate_coach_with_template(query, context_results)
+            except Exception as e:
+                print(f"Error generating coach response with {self.backend}: {e}")
+                response = self._generate_coach_with_template(query, context_results)
+            response = response.strip()
+            if not response.endswith(("?", "!", ".")):
+                response += "."
+            return response, "coach"
 
         prompt = self._build_rag_prompt(
             query, context_results, conversation_history=conversation_history, behavior_suffix=suffix
@@ -389,7 +623,7 @@ Your response:"""
                 response = response.strip()
                 if not response.endswith(('?', '!', '.')):
                     response += "."
-                return response
+                return apply_plain_language(response), None
             except Exception as e:
                 print(f"Error with user-provided API ({provider_override}): {e}")
                 print("Falling back to system default backend")
@@ -399,18 +633,24 @@ Your response:"""
                 response = self._generate_with_ollama(prompt)
             elif self.backend == "openai":
                 response = self._generate_with_openai(prompt, behavior_suffix=suffix)
+            elif self.backend == "anthropic":
+                response = self._generate_with_anthropic(
+                    prompt,
+                    system=self._stakeholder_system_content(suffix),
+                )
             else:
                 response = self._generate_with_template(query, context_results)
 
-            response = response.strip()
+            response = apply_plain_language(response.strip())
             if not response.endswith(('?', '!', '.')):
                 response += "."
-            return response
+            return response, None
         except Exception as e:
             print(f"Error generating response with {self.backend}: {e}")
             if self.backend != "template":
                 print("Falling back to template-based generation")
-                return self._generate_with_template(query, context_results)
+                tpl = self._generate_with_template(query, context_results)
+                return apply_plain_language(tpl), None
             raise
     
     def generate_response(
@@ -418,10 +658,11 @@ Your response:"""
         query: str,
         conversation_history: Optional[List[Dict]] = None,
         behavior_system_suffix: Optional[str] = None,
+        force_coach: bool = False,
         provider_override: Optional[str] = None,
         api_key_override: Optional[str] = None,
         base_url_override: Optional[str] = None,
-    ) -> str:
+    ) -> Tuple[str, Optional[str]]:
         """Generate human-like response using RAG + LLM"""
         results = self.rag.search(query, n_results=self.rag_top_k, filter_by_sheet_type=True)
         return self.generate_response_from_results(
@@ -429,6 +670,7 @@ Your response:"""
             results,
             conversation_history=conversation_history,
             behavior_system_suffix=behavior_system_suffix,
+            force_coach=force_coach,
             provider_override=provider_override,
             api_key_override=api_key_override,
             base_url_override=base_url_override,

@@ -25,7 +25,7 @@ sudo bash scripts/update
 | 1 | System deps | Python 3, Java 17, nginx, curl, gpg |
 | 2 | Python venv | Creates `/opt/sellm/venv`, installs requirements |
 | 3 | Neo4j | Installs from apt, sets password, starts on `:7687` |
-| 4 | Env config | Copies `app/.env.example` → `app/.env`, sets template LLM |
+| 4 | Env config | Copies `.env.example` → `app/.env`, sets template LLM |
 | 5 | ChromaDB | Builds vector index from `data.xlsx` |
 | 6 | Systemd | Registers `sellm.service` (FastAPI on `127.0.0.1:8000`) |
 | 7 | nginx | Reverse proxy to the app (if domain supplied) |
@@ -68,7 +68,7 @@ Verify: `echo "RETURN 1" | cypher-shell -u neo4j -p password`
 ### 4. Environment
 
 ```bash
-cp app/.env.example app/.env
+cp .env.example app/.env
 # Edit app/.env — at minimum set LLM_BACKEND=template (no API key needed)
 ```
 

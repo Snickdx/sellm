@@ -42,6 +42,11 @@
   const chatInput = document.getElementById("chatInput");
   const sendButton = document.getElementById("sendButton");
   const responseMode = document.getElementById("responseMode");
+  const llmModelRow = document.getElementById("llmModelRow");
+  const llmModelSelect = document.getElementById("llmModelSelect");
+  const llmModelHint = document.getElementById("llmModelHint");
+  const LLM_CHOICE_STORAGE_KEY = "sellm_llm_choice";
+  let selectedLlmChoice = null;
   const conversationList = document.getElementById("conversationList");
   const newConversationBtn = document.getElementById("newConversationBtn");
   const settingsBtn = document.getElementById("settingsBtn");
@@ -224,7 +229,81 @@
       else reflectBtn.removeAttribute("aria-busy");
     }
     if (viewReflectionThreadsBtn) viewReflectionThreadsBtn.disabled = isBusy;
-    if (reflectionBusyHint) { reflectionBusyHint.hidden = !isBusy; reflectionBusyHint.textContent = isBusy ? hintText : ""; }
+    if (reflectionBusyHint) {
+      reflectionBusyHint.hidden = !isBusy;
+      reflectionBusyHint.textContent = isBusy ? hintText : "";
+    }
+  }
+
+  function populateLlmModelSelect(config) {
+    if (!llmModelSelect || !llmModelRow) return;
+    const choices = Array.isArray(config.llm_choices) ? config.llm_choices : [];
+    const enabled = Boolean(config.llm_model_switcher_enabled);
+    llmModelRow.classList.toggle("hidden", !enabled);
+    if (!enabled) {
+      selectedLlmChoice = config.llm_default_choice || null;
+      return;
+    }
+    const saved = localStorage.getItem(LLM_CHOICE_STORAGE_KEY);
+    const defaultId = config.llm_default_choice || choices.find((c) => c.available !== false)?.id || choices[0]?.id;
+    const validIds = new Set(choices.map((c) => c.id));
+    const byId = Object.fromEntries(choices.map((c) => [c.id, c]));
+    let pick = saved && validIds.has(saved) ? saved : defaultId;
+    if (!validIds.has(pick) || byId[pick]?.available === false) {
+      pick = defaultId;
+      if (byId[pick]?.available === false) {
+        pick = choices.find((c) => c.available !== false)?.id || defaultId;
+      }
+      try {
+        localStorage.setItem(LLM_CHOICE_STORAGE_KEY, pick);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    llmModelSelect.innerHTML = "";
+    choices.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.label + (c.available === false ? " (unavailable)" : "");
+      opt.disabled = c.available === false;
+      llmModelSelect.appendChild(opt);
+    });
+    llmModelSelect.value = pick;
+    selectedLlmChoice = pick;
+    const providers = config.llm_providers || {};
+    const hints = [];
+    if (providers.openai) hints.push("OpenAI");
+    if (providers.anthropic) hints.push("Anthropic");
+    if (providers.ollama) hints.push("Ollama");
+    if (llmModelHint) {
+      llmModelHint.textContent = hints.length
+        ? `Configured: ${hints.join(", ")}. Choice applies to the next message.`
+        : "";
+    }
+  }
+
+  async function loadRuntimeConfig() {
+    try {
+      const response = await fetch("/api/config");
+      if (!response.ok) return;
+      const config = await response.json();
+      tweakModeEnabled = Boolean(config.tweak_mode_enabled);
+      if (reflectionRow) {
+        reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
+      }
+      populateLlmModelSelect(config);
+    } catch {
+      tweakModeEnabled = false;
+      if (reflectionRow) reflectionRow.style.display = "none";
+      if (llmModelRow) llmModelRow.classList.add("hidden");
+    }
+  }
+
+  if (llmModelSelect) {
+    llmModelSelect.addEventListener("change", () => {
+      selectedLlmChoice = llmModelSelect.value;
+      localStorage.setItem(LLM_CHOICE_STORAGE_KEY, selectedLlmChoice);
+    });
   }
 
   function openReflectionModal(data = {}) {
@@ -495,10 +574,17 @@
     return fetch("/api/feedback", { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ prompt: meta?.prompt || "", response: meta?.response || "", feedback: fb, mode_used: meta?.mode || null, desired_response: desired || null }) });
   }
 
-  function formatRoutingBadge(modeUsed, routing) {
+  function formatRoutingBadge(modeUsed, routing, llmUsed) {
     if (!modeUsed) return null;
-    let label = `mode: ${modeUsed}`;
-    if (routing?.route && modeUsed.startsWith("hybrid")) { const b = (routing.backends_used || []).join(" + "); label = `hybrid → ${routing.route}${b ? ` (${b})` : ""}`; }
+    const llmPart = llmUsed?.label ? ` · ${llmUsed.label}` : "";
+    if (modeUsed === "coach" || modeUsed.endsWith(":coach")) {
+      return `domain coach${llmPart}`;
+    }
+    let label = `mode: ${modeUsed}${llmPart}`;
+    if (routing?.route && modeUsed.startsWith("hybrid")) {
+      const backends = (routing.backends_used || []).join(" + ");
+      label = `hybrid → ${routing.route}${backends ? ` (${backends})` : ""}`;
+    }
     return label;
   }
 
@@ -512,8 +598,12 @@
     if (role === "assistant" && modeUsed) {
       const badge = document.createElement("div");
       badge.className = "mode-badge";
-      badge.textContent = formatRoutingBadge(modeUsed, meta?.routing) || `mode: ${modeUsed}`;
-      badge.title = meta?.routing ? JSON.stringify(meta.routing) : "";
+      badge.textContent =
+        formatRoutingBadge(modeUsed, meta?.routing, meta?.llm_used) || `mode: ${modeUsed}`;
+      const titleParts = [];
+      if (meta?.routing) titleParts.push(JSON.stringify(meta.routing));
+      if (meta?.llm_used) titleParts.push(JSON.stringify(meta.llm_used));
+      badge.title = titleParts.join("\n");
       cd.prepend(badge);
     }
     if (role === "assistant" && meta?.prompt && tweakModeEnabled) {
@@ -556,12 +646,24 @@
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ message, conversation_history: conversationHistory, response_mode: responseMode.value, conversation_id: currentConversationId }),
+        body: JSON.stringify({
+          message,
+          conversation_history: conversationHistory,
+          response_mode: responseMode.value,
+          conversation_id: currentConversationId,
+          llm_choice: selectedLlmChoice || llmModelSelect?.value || null,
+        }),
       });
       if (!r.ok) throw new Error("Failed to get response");
       const data = await r.json();
       removeTypingIndicator();
-      addMessage("assistant", data.response, null, data.mode_used || null, { prompt: message, response: data.response, mode: data.mode_used || null, routing: data.routing || null });
+      addMessage("assistant", data.response, null, data.mode_used || null, {
+        prompt: message,
+        response: data.response,
+        mode: data.mode_used || null,
+        routing: data.routing || null,
+        llm_used: data.llm_used || null,
+      });
       conversationHistory.push({ role: "assistant", content: data.response });
       if (data.conversation_id) { currentConversationId = data.conversation_id; await loadConversations(); await loadReflectionThreadsForConversation(currentConversationId); }
     } catch (e) { removeTypingIndicator(); addMessage("assistant", "Sorry, I encountered an error. Please try again."); console.error(e); }

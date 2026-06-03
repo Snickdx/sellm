@@ -25,6 +25,7 @@ import os
 from typing import List, Dict
 import json
 import random
+import re
 
 class RequirementsRAG:
     def __init__(self, excel_file: str, persist_directory: str = "./chroma_db_v2"):
@@ -575,6 +576,144 @@ class SimpleLLM:
                         add_term(piece)
 
         return subgroup_terms[:5]
+
+    def _is_clarification_query(self, query_lower: str) -> bool:
+        if re.search(r"\bwho\b.+\binvolved\b", query_lower):
+            return False
+        return bool(
+            re.search(
+                r"\b(what do you mean|what does .+ mean|tell me more about|can you explain)\b",
+                query_lower,
+            )
+        ) or bool(
+            re.search(r"\bwhat is\s+(?:a|an|the)\s+\w", query_lower)
+        ) or bool(
+            re.search(r"\bwho is\s+(?!involved\b)\S", query_lower)
+        ) or bool(
+            re.search(
+                r"\bwhat are\s+(?!we\b|you\b|they\b|there\b|these\b|those\b)\S",
+                query_lower,
+            )
+        )
+
+    def _is_feature_query(self, query_lower: str) -> bool:
+        if self._is_clarification_query(query_lower):
+            return False
+        if re.search(r"\bwhat (do|does|did|will) you\b", query_lower):
+            return False
+        if re.search(r"\bhow (do|does|did|will) you\b", query_lower):
+            return False
+        return any(
+            w in query_lower
+            for w in [
+                "feature",
+                "features",
+                "function",
+                "functionality",
+                "capability",
+                "capabilities",
+            ]
+        ) or (
+            re.search(r"\bcan (the |it |we )", query_lower)
+            or re.search(r"\bwhat can\b", query_lower)
+        )
+
+    def _clarification_term(self, query: str) -> str:
+        q = query.lower().strip().rstrip("?.!")
+        for pattern in (
+            r"what do you mean by\s+(.+)",
+            r"what does\s+(.+?)\s+mean",
+            r"what is\s+(?:a|an|the)?\s*(.+)",
+            r"what are\s+(.+)",
+            r"who is\s+(.+)",
+            r"tell me more about\s+(.+)",
+        ):
+            m = re.search(pattern, q)
+            if m:
+                return m.group(1).strip()
+        return ""
+
+    def _is_complete_requirement_clause(self, text_lower: str) -> bool:
+        return bool(
+            re.search(r"\b(must|shall|need to|requires|required to|have to)\b", text_lower)
+            or text_lower.startswith(("records ", "we ", "it ", "the ", "all "))
+        )
+
+    def _format_feature_clause(self, feature_text: str, *, index: int) -> str:
+        t = feature_text.lower().strip().rstrip(".")
+        if self._is_complete_requirement_clause(t):
+            if index == 0:
+                return f"{t[0].upper() + t[1:]}. " if t else ""
+            return f"We also need {t}. " if not t.startswith(("we ", "it ", "the ")) else f"{t}. "
+
+        verb_starters = [
+            "handle",
+            "support",
+            "provide",
+            "allow",
+            "enable",
+            "process",
+            "manage",
+            "generate",
+            "create",
+            "integrate",
+            "calculate",
+            "track",
+            "store",
+            "retrieve",
+        ]
+        if any(t.startswith(v) for v in verb_starters):
+            if index == 0:
+                return f"{t}. "
+            return f"It should also {t}. "
+
+        if index == 0:
+            return f"support {t}. "
+        return f"It should also support {t}. "
+
+    def _generate_clarification_response(
+        self, extracted_info: List[Dict], query: str
+    ) -> str:
+        term = self._clarification_term(query)
+        term_lower = term.lower() if term else ""
+        best_desc = ""
+        best_name = term or "that"
+
+        for info in extracted_info:
+            name = str(info.get("name", info.get("stakeholder", ""))).strip()
+            desc = str(info.get("description", info.get("role", info.get("type", "")))).strip()
+            blob = f"{name} {desc}".lower()
+            if term_lower and term_lower not in blob and term_lower not in name.lower():
+                continue
+            if desc and len(desc) > len(best_desc):
+                best_desc = desc
+                best_name = name or term or "that"
+            elif name and not best_desc:
+                best_name = name
+
+        if term_lower in ("courts", "court"):
+            return (
+                "When I mention Courts, I mean the court system as an external party — "
+                "they need access to payroll and employment records for cases, disputes, "
+                "and statutory reporting, not our internal HR team. "
+                "What else do you want to know?"
+            )
+
+        if best_desc:
+            return (
+                f"When I say {best_name}, I mean {best_desc.rstrip('.')}. "
+                "What else do you want to know?"
+            )
+        if term:
+            return (
+                f"I was talking about {term} — one of the groups that interacts with the payroll system. "
+                "I can go into more detail if you tell me what part is unclear. "
+                "What else do you want to know?"
+            )
+        return (
+            "Sure — which part should I unpack? "
+            "What else do you want to know?"
+        )
     
     def _generate_informal_response(self, results: List[Dict], query: str) -> str:
         """Generate a human-like, informal response as a non-technical stakeholder"""
@@ -599,6 +738,9 @@ class SimpleLLM:
         
         if not extracted_info:
             return "I'm not really sure how to answer that. Can you rephrase your question?"
+
+        if self._is_clarification_query(query_lower):
+            return self._generate_clarification_response(extracted_info, query)
         
         # Generate natural, informal response based on query type
         response_parts = []
@@ -626,8 +768,10 @@ class SimpleLLM:
                 else:
                     if role:
                         response_parts.append(f"And then there's {name}, they're the {role}. ")
+                    elif added_count == 1:
+                        response_parts.append(f"There's also {name}. ")
                     else:
-                        response_parts.append(f"Also {name}. ")
+                        response_parts.append(f"and {name}. ")
                 
                 if desc and len(desc) < 100:
                     response_parts.append(f"{desc} ")
@@ -647,34 +791,14 @@ class SimpleLLM:
                     else:
                         response_parts.append(f"We also need {goal_text.lower()}. ")
         
-        elif any(w in query_lower for w in ['feature', 'features', 'function', 'functionality', 'do', 'can']):
-            response_parts.append("Well, the system should be able to ")
+        elif self._is_feature_query(query_lower):
+            response_parts.append("From my side, the system needs to ")
             
             for i, info in enumerate(extracted_info):
                 feature = info.get('feature', info.get('name', info.get('description', '')))
                 if feature:
-                    # Ensure the feature has a proper verb
                     feature_text = self._add_verb_if_needed(feature, context='feature')
-                    feature_text_lower = feature_text.lower().strip()
-                    
-                    # Check if feature_text already starts with a verb (so we don't duplicate "be able to")
-                    verb_starters = ['handle', 'support', 'provide', 'allow', 'enable', 'process', 
-                                    'manage', 'generate', 'create', 'integrate', 'calculate', 'track',
-                                    'store', 'retrieve', 'display', 'export', 'import', 'validate',
-                                    'have', 'do', 'make']
-                    
-                    starts_with_verb = any(feature_text_lower.startswith(verb) for verb in verb_starters)
-                    
-                    if i == 0:
-                        if starts_with_verb:
-                            response_parts.append(f"{feature_text_lower}. ")
-                        else:
-                            response_parts.append(f"{feature_text_lower}. ")
-                    else:
-                        if starts_with_verb:
-                            response_parts.append(f"It should also {feature_text_lower}. ")
-                        else:
-                            response_parts.append(f"It should also be able to {feature_text_lower}. ")
+                    response_parts.append(self._format_feature_clause(feature_text, index=i))
         
         elif any(w in query_lower for w in ['budget', 'cost', 'costs', 'money', 'price', 'expensive']):
             response_parts.append("Money-wise, ")
@@ -705,7 +829,9 @@ class SimpleLLM:
                         response_parts.append(f"Also, {risk_text}. ")
         
         else:
-            # Generic response
+            if re.search(r"\bwhat (is|are)\s+", query_lower):
+                return self._generate_clarification_response(extracted_info, query)
+
             response_parts.append("So, ")
             seen_desc = set()
             for i, info in enumerate(extracted_info):
@@ -715,23 +841,31 @@ class SimpleLLM:
                     if desc_text in seen_desc:
                         continue
                     seen_desc.add(desc_text)
-                    # Ensure it's a complete sentence
-                    if not desc_text.startswith(('we', 'it', 'the', 'our', 'this', 'that', 'i')):
+                    if self._is_complete_requirement_clause(desc_text):
+                        clause = desc_text[0].upper() + desc_text[1:] if desc_text else desc_text
+                        if i == 0:
+                            response_parts.append(f"{clause}. ")
+                        else:
+                            response_parts.append(f"Also, {clause}. ")
+                    elif not desc_text.startswith(
+                        ('we', 'it', 'the', 'our', 'this', 'that', 'i', 'records', 'be able')
+                    ):
                         desc_text = f"it's about {desc_text}"
-                    
-                    if i == 0:
-                        response_parts.append(f"{desc_text}. ")
+                        if i == 0:
+                            response_parts.append(f"{desc_text}. ")
+                        else:
+                            response_parts.append(f"Also, {desc_text}. ")
                     else:
-                        response_parts.append(f"Also, {desc_text}. ")
+                        if i == 0:
+                            response_parts.append(f"{desc_text}. ")
+                        else:
+                            response_parts.append(f"Also, {desc_text}. ")
         
         # Add a casual follow-up
         follow_ups = [
-            "Does that make sense?",
-            "Is that what you were looking for?",
-            "Does that help?",
             "What else do you want to know?",
+            "Happy to go deeper on any of that.",
             "Anything else you're curious about?",
-            "Hope that helps!",
         ]
         response_parts.append(random.choice(follow_ups))
         

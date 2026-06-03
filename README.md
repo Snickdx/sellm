@@ -39,11 +39,11 @@ pip install -r requirements.txt
 1. **Configure environment variables** (recommended):
 
 ```bash
-# Copy the example .env file
-cp .env.example .env
+# Copy the example env file (app/.env is loaded first by the app)
+cp .env.example app/.env
 
-# Edit .env with your settings
-# On Windows: copy .env.example .env
+# Edit app/.env with your settings
+# On Windows: copy .env.example app\.env
 ```
 
 The `.env` file allows you to configure:
@@ -53,11 +53,11 @@ The `.env` file allows you to configure:
 - LLM backend (Ollama, OpenAI, or template)
 - LLM model selection
 
-See `.env.example` (Docker/EasyPanel) and `app/.env.example` (local dev) for all options.
+See [`.env.example`](.env.example) for all options (local paths, Docker `/app` paths, Neo4j, MCP/hybrid).
 
-**Important**: The `.env` file is git-ignored and should not be committed. It contains your personal configuration (passwords, API keys, etc.). Always use `.env.example` as a template.
+**Important**: `app/.env` and `.env` are git-ignored. Copy from `.env.example` only — never commit secrets.
 
-For local development you can also copy `app/.env.example` to `app/.env` (loaded before a project-root `.env`).
+The app loads **`app/.env` first**, then project-root **`.env`** (later files do not override earlier keys).
 
 ## Deployment (Docker / EasyPanel)
 
@@ -77,8 +77,8 @@ Use `docker compose --profile postgres up --build` with `CONVERSATION_DB_URL=pos
 
 1. Make sure your Excel file `data.xlsx` is in the project directory. This file contains the stakeholder knowledge base.
 2. **Configure your environment** (optional but recommended):
-  - Copy `.env.example` to `.env`
-  - Edit `.env` with your settings (Neo4j password, LLM model, etc.)
+  - Copy `.env.example` to `app/.env`
+  - Edit `app/.env` (Neo4j password, LLM model, etc.)
   - The app will automatically load these settings
 3. Start the server:
 
@@ -96,6 +96,13 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 
 ```
 http://localhost:8000
+```
+
+1. **Sign in** — default training users are seeded on startup (`nick`, `wayne`, `claudine`, `snick`; password `badPassword1`). Add more:
+
+```bash
+python -m setup.users.manage_users add myuser mypassword
+python -m setup.users.manage_users list
 ```
 
 1. Start practicing requirements gathering!
@@ -525,8 +532,7 @@ Popular alternatives:
 │   ├── DEPLOY_EASYPANEL.md  # Production on EasyPanel
 
 ├── requirements.txt         # Python dependencies
-├── .env.example             # Docker / EasyPanel env template
-├── .env                     # Your environment variables (create from .env.example)
+├── .env.example             # Env template (copy to app/.env for local dev)
 ├── data.xlsx                # Knowledge base (stakeholder information)
 ├── storage/
 │   ├── chroma_db_v2/        # ChromaDB database (gitignored)
@@ -672,12 +678,10 @@ Your Excel file has a **Relationships sheet** with 48 explicit relationships (HA
   ```bash
    pip install neo4j
   ```
-4. **Configure .env file** (recommended):
+4. **Configure env** (recommended):
   ```bash
-   # Copy example file
-   cp .env.example .env
-
-   # Edit .env and set:
+   cp .env.example app/.env
+   # Edit app/.env and set:
    RAG_BACKEND=neo4j
    NEO4J_PASSWORD=your_password
   ```
@@ -685,7 +689,7 @@ Your Excel file has a **Relationships sheet** with 48 explicit relationships (HA
   ```bash
    python -m app.main
   ```
-   The app will automatically load settings from `.env` file.
+   Settings load from `app/.env` (then optional project-root `.env`).
    **Alternative: Set environment variables directly:**
 
 ### How It Works

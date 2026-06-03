@@ -94,7 +94,7 @@ fi
 # ──────────────────────────────────────────────────────────────
 if [[ ! -f "$REPO_DIR/app/.env" ]]; then
     info "Creating app/.env from template..."
-    cp "$REPO_DIR/app/.env.example" "$REPO_DIR/app/.env"
+    cp "$REPO_DIR/.env.example" "$REPO_DIR/app/.env"
     # Set template backend by default (no API key needed)
     sed -i 's/^LLM_BACKEND=.*/LLM_BACKEND=template/' "$REPO_DIR/app/.env"
     sed -i 's/^LLM_MODEL=.*/LLM_MODEL=/' "$REPO_DIR/app/.env"

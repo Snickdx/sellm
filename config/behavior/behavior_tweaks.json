@@ -1,17 +1,28 @@
 {
   "version": 1,
-  "last_updated": "2026-03-30T19:41:03.402254+00:00",
+  "last_updated": "2026-06-03T16:41:30.602100+00:00",
   "global": {
     "dedupe_sentences": true,
     "replacements": {
       "system shall": "we need it to",
       "System shall": "We need it to",
       "the system shall": "we need the system to",
-      "The system shall": "We need the system to"
+      "The system shall": "We need the system to",
+      " token ": " confirmation link ",
+      " tokens ": " confirmation links ",
+      "Token": "Confirmation link",
+      "role-based access control": "who gets to see and do what",
+      "authentication": "signing in",
+      "authorization": "permission"
     },
     "blocked_phrases": [
       "system shall",
-      "less stable"
+      "less stable",
+      "person interviewing me",
+      "the person interviewing",
+      "goal g",
+      "does that help",
+      "does that make sense"
     ]
   },
   "query_overrides": [
@@ -71,6 +82,15 @@
         "Saved query-specific override response",
         "Added stakeholder-tone guard phrase block"
       ]
+    },
+    {
+      "time": "2026-06-03T16:41:30.602080+00:00",
+      "query": "can you give more details on the accounting systems?",
+      "mode": "vector",
+      "feedback": "too vague",
+      "desired_response": null,
+      "response_excerpt": "Well, the system should be able to integrate with accounting systems. It should also support the we need it to:. It should also manage employee statuary deductions. Does that help.",
+      "changes": []
     }
   ],
   "reflection_log": [
@@ -80,6 +100,6 @@
     }
   ],
   "prompt": {
-    "system_suffix": ""
+    "system_suffix": "Stay in stakeholder role-play. Never mention the interview or interviewer. Employees are end users paid through the system, not a department. Only describe sign-up or onboarding steps that appear in project materials; otherwise say you are not sure of every step. Do not use internal goal codes (G1, G3, etc.)."
   }
 }
