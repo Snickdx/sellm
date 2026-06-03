@@ -367,7 +367,24 @@
     conversationList.querySelectorAll(".conversation-item").forEach((el) => {
       const match = Boolean(currentConversationId && el.dataset.conversationId === currentConversationId);
       el.classList.toggle("active", match);
+      const btn = el.querySelector(".conversation-item-btn");
+      if (btn) {
+        const titleEl = btn.querySelector(".conversation-title");
+        if (titleEl) titleEl.style.fontWeight = match ? "700" : "600";
+      }
     });
+  }
+
+  async function deleteConversation(conversationId) {
+    if (!window.confirm("Delete this conversation?")) return;
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Delete failed");
+      if (currentConversationId === conversationId) resetConversationUi();
+      await loadConversations();
+    } catch (error) {
+      console.error("Could not delete conversation:", error);
+    }
   }
 
   async function loadConversations() {
@@ -378,11 +395,15 @@
       if (!conversationList) return;
       conversationList.innerHTML = "";
       conversations.forEach((c) => {
+        const item = document.createElement("div");
+        item.className = "conversation-item";
+        item.dataset.conversationId = c.id;
+        item.setAttribute("role", "listitem");
+
         const btn = document.createElement("button");
         btn.type = "button";
-        btn.className = "conversation-item";
-        btn.dataset.conversationId = c.id;
-        btn.setAttribute("role", "listitem");
+        btn.className = "conversation-item-btn";
+        btn.setAttribute("aria-label", `Open conversation: ${c.title || c.id}`);
         const titleEl = document.createElement("span");
         titleEl.className = "conversation-title";
         titleEl.textContent = c.title || c.id;
@@ -391,7 +412,21 @@
         metaEl.textContent = formatConversationMeta(c);
         btn.appendChild(titleEl);
         btn.appendChild(metaEl);
-        conversationList.appendChild(btn);
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "conversation-delete";
+        del.textContent = "×";
+        del.setAttribute("aria-label", `Delete conversation: ${c.title || c.id}`);
+        del.title = "Delete";
+        del.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteConversation(c.id);
+        });
+
+        item.appendChild(btn);
+        item.appendChild(del);
+        conversationList.appendChild(item);
       });
       syncListSelection();
     } catch (error) {
@@ -603,7 +638,9 @@
   });
   if (conversationList) {
     conversationList.addEventListener("click", (e) => {
-      const item = e.target.closest(".conversation-item");
+      const btn = e.target.closest(".conversation-item-btn");
+      if (!btn) return;
+      const item = btn.closest(".conversation-item");
       if (!item || !item.dataset.conversationId) return;
       openConversation(item.dataset.conversationId);
     });

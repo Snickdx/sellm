@@ -60,9 +60,7 @@ from app.tweaks.behavior_tweaks import BehaviorTweaksStore
 from app.llm_wrapper import LLMWrapper
 from app.rag_backend import RequirementsRAG
 from app.rag_backend_neo4j import RequirementsRAGNeo4j
-from app.mcp.config import MCPSettings
 from app.mcp.hybrid import HybridKnowledgeService
-from app.mcp.neo4j_mcp_client import neo4j_mcp_client
 from app.reflection import (
     REFLECTION_CHAT_SYSTEM,
     REFLECTION_SYSTEM,
@@ -76,22 +74,19 @@ from app.reflection import (
     split_reflection_response_fallback,
 )
 
-mcp_settings = MCPSettings.from_env()
 hybrid_service: Optional[HybridKnowledgeService] = None
 
 
 @asynccontextmanager
 async def _app_lifespan(_app: FastAPI):
     global hybrid_service
-    await neo4j_mcp_client.connect()
     hybrid_service = HybridKnowledgeService(
         rag_systems.get("vector"),
         rag_systems.get("neo4j"),
-        mcp_client=neo4j_mcp_client,
-        settings=mcp_settings,
+        hybrid_top_k=hybrid_top_k,
+        hybrid_route_margin=hybrid_route_margin,
     )
     yield
-    await neo4j_mcp_client.close()
 
 
 app = FastAPI(title="Requirements Chatbot API", lifespan=_app_lifespan)
@@ -160,6 +155,7 @@ llm_by_mode: Dict[str, Optional[LLMWrapper]] = {
 }
 
 hybrid_top_k = int(os.getenv("HYBRID_TOP_K", "3"))
+hybrid_route_margin = float(os.getenv("HYBRID_ROUTE_MARGIN", "0.15"))
 _tweak_raw = os.getenv("TWEAK_MODE_ENABLED", "")
 tweak_mode_enabled = _tweak_raw.strip().lower() in (
     "1",
@@ -240,7 +236,7 @@ async def chat(request: ChatRequest):
             base_llm = llm_by_mode.get("vector") or llm_by_mode.get("neo4j")
             if not base_llm:
                 raise ValueError("Hybrid mode is unavailable because no LLM wrapper is ready")
-            handoff = await hybrid_service.retrieve(request.message, top_k=hybrid_top_k)
+            handoff = hybrid_service.retrieve(request.message, top_k=hybrid_top_k)
             response = base_llm.generate_response_from_results(
                 request.message,
                 handoff.results,
@@ -287,13 +283,7 @@ async def health():
             "status": "healthy",
             "engines": engine_status,
             "documents": doc_counts,
-            "mcp": {
-                "neo4j": {
-                    "enabled": mcp_settings.neo4j_mcp_enabled,
-                    "url": mcp_settings.neo4j_mcp_url or None,
-                    "status": neo4j_mcp_client.status,
-                }
-            },
+
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -312,7 +302,7 @@ async def modes():
             "compare": (llm_by_mode["vector"] is not None and llm_by_mode["neo4j"] is not None),
         },
         "engine_status": engine_status,
-        "hybrid_routing": "neo4j | chroma | blend per query (see docs/MCP_NEO4J.md)",
+        "hybrid_routing": "neo4j | chroma | blend per query",
     }
 
 
@@ -328,6 +318,14 @@ async def list_conversations():
         )
         for record in records
     ]
+
+
+@app.delete("/api/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    deleted = conversation_store.delete_conversation(conversation_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    return {"status": "ok", "conversation_id": conversation_id}
 
 
 @app.get("/api/conversations/{conversation_id}", response_model=ConversationDetail)
@@ -367,15 +365,8 @@ async def config():
         "llm_backend_env": llm_backend,
         "llm_model_env": llm_model,
         "hybrid_top_k": hybrid_top_k,
-        "hybrid_route_margin": mcp_settings.hybrid_route_margin,
-        "hybrid_neo4j_top_k": mcp_settings.hybrid_neo4j_top_k,
-        "hybrid_chroma_top_k": mcp_settings.hybrid_chroma_top_k,
-        "neo4j_mcp": {
-            "enabled": mcp_settings.neo4j_mcp_enabled,
-            "url": mcp_settings.neo4j_mcp_url or None,
-            "namespace": mcp_settings.neo4j_mcp_namespace or None,
-            "status": neo4j_mcp_client.status,
-        },
+        "hybrid_route_margin": hybrid_route_margin,
+        "hybrid_top_k": hybrid_top_k,
         "tweak_mode_enabled": tweak_mode_enabled,
         "tweak_mode_env_set": bool(_tweak_raw.strip()),
         "env_app_dir": str(APP_DIR),

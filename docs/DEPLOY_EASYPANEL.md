@@ -103,10 +103,6 @@ sellm/
 └── storage/                # gitignored; use volume in production
 ```
 
-## Neo4j MCP (optional)
-
-For graph-aware hybrid routing, run **mcp-neo4j-cypher** (see [MCP_NEO4J.md](MCP_NEO4J.md)) and set `NEO4J_MCP_URL` + `NEO4J_MCP_ENABLED=true` on the app service. Without MCP, hybrid mode falls back to the in-process Neo4j RAG client.
-
 ## One-off operations
 
 Warm Chroma without starting the server (run in **Launcher** or a one-off container with the same image, env, and `/app/storage` mount):

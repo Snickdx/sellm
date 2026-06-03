@@ -201,3 +201,30 @@ class ConversationStore:
             )
             return list(session.exec(stmt).all())
 
+    def delete_conversation(self, conversation_id: str) -> bool:
+        with Session(self.engine) as session:
+            convo = session.get(Conversation, conversation_id)
+            if not convo:
+                return False
+
+            msg_stmt = select(ConversationMessage).where(
+                ConversationMessage.conversation_id == conversation_id
+            )
+            for msg in session.exec(msg_stmt).all():
+                session.delete(msg)
+
+            thread_stmt = select(ReflectionThread).where(
+                ReflectionThread.conversation_id == conversation_id
+            )
+            for thread in session.exec(thread_stmt).all():
+                ref_msg_stmt = select(ReflectionMessage).where(
+                    ReflectionMessage.thread_id == thread.id
+                )
+                for ref_msg in session.exec(ref_msg_stmt).all():
+                    session.delete(ref_msg)
+                session.delete(thread)
+
+            session.delete(convo)
+            session.commit()
+            return True
+

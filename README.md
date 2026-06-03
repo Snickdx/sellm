@@ -20,8 +20,7 @@ This system is designed for **requirements gathering training**. It simulates a 
 
 - **Stakeholder Simulation**: Role-plays as a non-technical stakeholder with natural, informal language
 - **RAG System**: ChromaDB (vector) and Neo4j (vector + graph) backends, selectable per deployment
-- **Hybrid routing**: Chat **hybrid** mode auto-picks Chroma (semantic) or Neo4j MCP (relationships) per question; optional blend when scores are close
-- **Neo4j MCP**: Optional [mcp-neo4j-cypher](https://github.com/neo4j-contrib/mcp-neo4j) sidecar for graph reads (see [docs/MCP_NEO4J.md](docs/MCP_NEO4J.md))
+- **Hybrid routing**: Chat **hybrid** mode auto-picks Chroma (semantic) or Neo4j (relationships) per question, or blends both when scores are close
 - **Intelligent Query Understanding**: Detects query intent and responds contextually
 - **Web Chat UI**: Modern, responsive chat interface for natural conversation
 - **FastAPI Backend**: Lightweight Python API server
@@ -54,7 +53,7 @@ The `.env` file allows you to configure:
 - LLM backend (Ollama, OpenAI, or template)
 - LLM model selection
 
-See `.env.example` (Docker/EasyPanel) and `app/.env.example` (local dev, including Neo4j MCP / hybrid vars) for all options.
+See `.env.example` (Docker/EasyPanel) and `app/.env.example` (local dev) for all options.
 
 **Important**: The `.env` file is git-ignored and should not be committed. It contains your personal configuration (passwords, API keys, etc.). Always use `.env.example` as a template.
 
@@ -72,7 +71,7 @@ docker compose up --build
 
 Use `docker compose --profile postgres up --build` with `CONVERSATION_DB_URL=postgresql+psycopg2://sellm:sellm@postgres:5432/sellm` for a Postgres-backed stack.
 
-**Hybrid mode** routes each question to Chroma (semantic) or Neo4j MCP (graph/relationships). See **[docs/MCP_NEO4J.md](docs/MCP_NEO4J.md)** and `config/mcp/neo4j-mcp.json`.
+**Hybrid mode** routes each question to Chroma (semantic) or Neo4j (graph/relationships), or blends both.
 
 ## Usage
 
@@ -120,15 +119,10 @@ You can configure the system using environment variables (via `.env` file or sys
 
 Load graph data once: `python -m setup.neo4j.load_graph`
 
-**Neo4j MCP + hybrid routing** (optional; full reference in [docs/MCP_NEO4J.md](docs/MCP_NEO4J.md)):
+**Hybrid routing** (optional):
 
-- `NEO4J_MCP_ENABLED`: Use MCP for Neo4j reads when URL is set (default: enabled if `NEO4J_MCP_URL` is set)
-- `NEO4J_MCP_URL`: MCP HTTP endpoint (e.g. `http://localhost:8100/mcp/` or `http://mcp-neo4j:8000/mcp/` in Compose)
-- `NEO4J_MCP_NAMESPACE`: Tool name prefix when the server namespaces tools
 - `HYBRID_ROUTE_MARGIN`: Score gap to choose one backend vs blend (default: `0.15`)
-- `HYBRID_NEO4J_TOP_K` / `HYBRID_CHROMA_TOP_K`: Retrieval depth per backend (default: `3`)
-
-Docker MCP sidecar: `docker compose --profile mcp up --build`
+- `HYBRID_TOP_K`: Retrieval depth for hybrid mode (default: `3`)
 
 **LLM Backend:**
 
@@ -498,10 +492,9 @@ Popular alternatives:
 │   ├── llm_wrapper.py       # LLM wrapper (Ollama/OpenAI/template)
 │   ├── rag_backend.py       # ChromaDB RAG implementation
 │   ├── rag_backend_neo4j.py # Neo4j hybrid RAG
-│   ├── mcp/                 # Hybrid router, Neo4j MCP client, retrievers
+│   ├── mcp/                 # Hybrid router (Chroma + Neo4j)
 │   │   ├── hybrid.py
-│   │   ├── router.py
-│   │   └── neo4j_mcp_client.py
+│   │   └── router.py
 │   ├── api/
 │   │   ├── app.py           # FastAPI app and routes
 │   │   └── schemas.py       # API request/response models
@@ -518,8 +511,7 @@ Popular alternatives:
 ├── config/
 │   ├── behavior/
 │   │   └── behavior_tweaks.json # External behavior tweak data
-│   └── mcp/
-│       └── neo4j-mcp.json       # Cursor / Claude Desktop MCP template
+
 ├── setup/
 │   ├── chroma/
 │   │   └── init_chroma.py   # Chroma setup/warmup script
@@ -531,7 +523,7 @@ Popular alternatives:
 ├── docs/
 │   ├── SETUP_LLM.md         # LLM setup guide
 │   ├── DEPLOY_EASYPANEL.md  # Production on EasyPanel
-│   └── MCP_NEO4J.md         # Neo4j MCP + hybrid routing
+
 ├── requirements.txt         # Python dependencies
 ├── .env.example             # Docker / EasyPanel env template
 ├── .env                     # Your environment variables (create from .env.example)
@@ -547,7 +539,7 @@ Popular alternatives:
 - **FastAPI**: Modern web framework for building APIs
 - **ChromaDB**: Open-source vector database for embeddings
 - **Neo4j**: Graph database for relationship-aware RAG (optional backend)
-- **MCP** ([mcp-neo4j-cypher](https://github.com/neo4j-contrib/mcp-neo4j)): Optional graph reads in hybrid mode
+
 - **sentence-transformers**: Library for sentence embeddings
 - **pandas**: Data manipulation and Excel file processing
 - **openpyxl**: Excel file reading library
@@ -652,7 +644,7 @@ The system will automatically:
 
 ## Neo4j Hybrid Backend (Recommended)
 
-> **Chat “hybrid” mode** (UI / `response_mode=hybrid`) is separate: it **auto-routes** each question to Chroma or Neo4j MCP. See [docs/MCP_NEO4J.md](docs/MCP_NEO4J.md).  
+> **Chat “hybrid” mode** (UI / `response_mode=hybrid`) is separate: it **auto-routes** each question to Chroma or Neo4j, or blends both.  
 > This section describes the **`RAG_BACKEND=neo4j`** stack: vector search plus graph relationships in one backend.
 
 The system supports a **hybrid Neo4j backend** that combines vector search with graph relationships for superior context retrieval.
@@ -781,19 +773,17 @@ Query: "What are Sarah's concerns?"
 The chat UI supports per-message response modes:
 
 - `vector`: ChromaDB vector retrieval only
-- `neo4j`: Neo4j graph RAG (local driver, or MCP when `NEO4J_MCP_URL` is configured)
-- `hybrid`: **Auto-route** each question — semantic → Chroma; relationships / paths / “how is X connected” → Neo4j MCP (or local graph fallback); close scores → blend both
+- `neo4j`: Neo4j graph RAG (vector + graph traversal)
+- `hybrid`: **Auto-route** each question — semantic → Chroma; relationships / paths / “how is X connected” → Neo4j; close scores → blend both
 - `compare`: Vector and Neo4j responses side by side for manual comparison
 
-Assistant messages show a mode badge (`mode: vector`, `mode: neo4j`, etc.). In hybrid mode the badge also shows the route, e.g. `hybrid → neo4j (neo4j_mcp)`; hover for full routing JSON from `GET /api/config` / the chat response `routing` field.
+Assistant messages show a mode badge (`mode: vector`, `mode: neo4j`, etc.). In hybrid mode the badge also shows the route, e.g. `hybrid → neo4j`; hover for full routing JSON.
 
 | Hybrid route | Typical questions |
 |--------------|-------------------|
 | `chroma` | Broad, semantic, narrative (“tell me about goals…”) |
 | `neo4j` | Dependencies, paths, timelines, connectivity |
 | `blend` | Ambiguous or close router scores |
-
-Details: [docs/MCP_NEO4J.md](docs/MCP_NEO4J.md).
 
 Backend helpers:
 
