@@ -156,8 +156,9 @@ class LLMWrapper:
         prompt = f"""You are a non-technical stakeholder in a software project. You're being interviewed by someone gathering requirements. 
 You speak casually and informally - like a real person, not a formal document. You don't use technical jargon.
 
-Based on the following information from the project, answer the question naturally and conversationally:
+Below is the project information available about this specific project. Use it as the ground truth for project-specific facts (goals, features, stakeholders, budget, etc.). You can also draw on your general knowledge to explain basic concepts, define terms, or give context — real stakeholders know things beyond just what's written down.
 
+Project information:
 {context_str}
 
 Recent conversation:
@@ -170,8 +171,8 @@ Instructions:
 - Be specific and avoid generic restatements
 - Use casual language: "Oh, well...", "Let me think...", "Yeah, there are..."
 - Don't mention sheets, documents, or technical sources
-- Do not invent details not supported by context; ask one concise clarifying question if needed
-- If you don't know something, say so casually
+- Use project info for specifics, but feel free to use general knowledge to explain or elaborate naturally
+- If the project info doesn't cover something, say so casually or draw on what you know
 - Keep it natural and human-like
 - Use proper grammar but stay informal
 - End with a casual follow-up question like "Does that help?" or "What else do you want to know?"
@@ -301,12 +302,59 @@ Your response:"""
             # Ultimate fallback
             return "I'm not sure how to answer that. Can you rephrase your question?"
 
+    def _call_openai_compatible(
+        self,
+        prompt: str,
+        api_key: str,
+        base_url: str,
+        model: str,
+        behavior_suffix: str = "",
+    ) -> str:
+        """Call an OpenAI-compatible chat completions API using requests directly."""
+        import requests as req
+        url = f"{base_url.rstrip('/')}/chat/completions"
+        system_content = (
+            "You are a non-technical stakeholder. Respond informally and naturally, like you're speaking in person."
+        )
+        if (behavior_suffix or "").strip():
+            system_content = (
+                f"{system_content}\n\n"
+                "Additional behavior instructions from training config:\n"
+                f"{behavior_suffix.strip()}"
+            )
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+        resp = req.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+            timeout=60,
+        )
+        if resp.status_code != 200:
+            raise Exception(f"OpenAI-compatible API error {resp.status_code}: {resp.text}")
+        data = resp.json()
+        choice = data.get("choices", [{}])[0]
+        return choice.get("message", {}).get("content", "").strip()
+
     def generate_response_from_results(
         self,
         query: str,
         context_results: List[Dict],
         conversation_history: Optional[List[Dict]] = None,
         behavior_system_suffix: Optional[str] = None,
+        provider_override: Optional[str] = None,
+        api_key_override: Optional[str] = None,
+        base_url_override: Optional[str] = None,
     ) -> str:
         """Generate response from precomputed retrieval results."""
         suffix = (behavior_system_suffix or "").strip()
@@ -321,6 +369,30 @@ Your response:"""
         prompt = self._build_rag_prompt(
             query, context_results, conversation_history=conversation_history, behavior_suffix=suffix
         )
+
+        # If user has provided their own API key, use that instead of the system default
+        if api_key_override and provider_override:
+            provider_lower = provider_override.lower()
+            base_url = base_url_override or {
+                "openai": "https://api.openai.com/v1",
+                "groq": "https://api.groq.com/openai/v1",
+                "openrouter": "https://openrouter.ai/api/v1",
+            }.get(provider_lower, "https://api.openai.com/v1")
+            model_map = {
+                "openai": "gpt-3.5-turbo",
+                "groq": "llama3-70b-8192",
+                "openrouter": "mistralai/mistral-7b-instruct",
+            }
+            model = model_map.get(provider_lower, "gpt-3.5-turbo")
+            try:
+                response = self._call_openai_compatible(prompt, api_key_override, base_url, model, behavior_suffix=suffix)
+                response = response.strip()
+                if not response.endswith(('?', '!', '.')):
+                    response += "."
+                return response
+            except Exception as e:
+                print(f"Error with user-provided API ({provider_override}): {e}")
+                print("Falling back to system default backend")
 
         try:
             if self.backend == "ollama":
@@ -346,13 +418,18 @@ Your response:"""
         query: str,
         conversation_history: Optional[List[Dict]] = None,
         behavior_system_suffix: Optional[str] = None,
+        provider_override: Optional[str] = None,
+        api_key_override: Optional[str] = None,
+        base_url_override: Optional[str] = None,
     ) -> str:
         """Generate human-like response using RAG + LLM"""
-        # Get relevant context
         results = self.rag.search(query, n_results=self.rag_top_k, filter_by_sheet_type=True)
         return self.generate_response_from_results(
             query,
             results,
             conversation_history=conversation_history,
             behavior_system_suffix=behavior_system_suffix,
+            provider_override=provider_override,
+            api_key_override=api_key_override,
+            base_url_override=base_url_override,
         )

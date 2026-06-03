@@ -48,14 +48,18 @@ from app.api.schemas import (
     ConversationDetail,
     ConversationSummary,
     FeedbackRequest,
+    LoginRequest,
+    LoginResponse,
     ReflectionAnalyzeRequest,
     ReflectionApplyRequest,
     ReflectionThreadChatRequest,
     ReflectionThreadDetail,
     ReflectionThreadStartResponse,
     ReflectionThreadSummary,
+    UserConfigGetResponse,
+    UserConfigSetRequest,
 )
-from app.storage.conversation_store import ConversationStore
+from app.storage.conversation_store import ConversationStore, User
 from app.tweaks.behavior_tweaks import BehaviorTweaksStore
 from app.llm_wrapper import LLMWrapper
 from app.rag_backend import RequirementsRAG
@@ -76,6 +80,23 @@ from app.reflection import (
 
 hybrid_service: Optional[HybridKnowledgeService] = None
 
+# ── Auth helpers ──────────────────────────────────────────────
+
+def _get_token_from_header(request: Request) -> Optional[str]:
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        return auth[7:]
+    return None
+
+def _get_current_user(request: Request) -> Optional[User]:
+    token = _get_token_from_header(request)
+    if not token:
+        return None
+    session = conversation_store.get_session(token)
+    if not session:
+        return None
+    return conversation_store.get_user_by_id(session.user_id)
+
 
 @asynccontextmanager
 async def _app_lifespan(_app: FastAPI):
@@ -86,6 +107,7 @@ async def _app_lifespan(_app: FastAPI):
         hybrid_top_k=hybrid_top_k,
         hybrid_route_margin=hybrid_route_margin,
     )
+    conversation_store.seed_users()
     yield
 
 
@@ -176,15 +198,30 @@ def _behavior_system_suffix() -> str:
     return behavior_tweaks.system_suffix_for_llm()
 
 
-def _generate_mode_response(mode: str, message: str, history: List[Dict]) -> str:
+def _user_api_overrides(user: Optional[User]) -> dict:
+    """Return provider/api_key/base_url from user's config, or empty dict."""
+    if not user:
+        return {}
+    cfg = conversation_store.get_user_api_config(user.id)
+    if cfg and cfg.api_key and cfg.provider:
+        return {
+            "provider_override": cfg.provider,
+            "api_key_override": cfg.api_key,
+            "base_url_override": cfg.base_url,
+        }
+    return {}
+
+def _generate_mode_response(mode: str, message: str, history: List[Dict], user: Optional[User] = None) -> str:
     llm = llm_by_mode.get(mode)
     if not llm:
         status = engine_status.get(mode, "unavailable")
         raise ValueError(f"Mode '{mode}' is unavailable ({status})")
+    overrides = _user_api_overrides(user)
     return llm.generate_response(
         message,
         conversation_history=history,
         behavior_system_suffix=_behavior_system_suffix(),
+        **overrides,
     )
 
 
@@ -194,31 +231,95 @@ def _apply_runtime_tweaks(query: str, response: str) -> str:
     return behavior_tweaks.apply_to_response(query, response)
 
 
+# ── Auth endpoints ────────────────────────────────────────────
+
+@app.post("/api/auth/login", response_model=LoginResponse)
+async def login(request: LoginRequest):
+    user = conversation_store.get_user_by_credentials(request.username, request.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    token = conversation_store.create_session(user.id)
+    return LoginResponse(token=token, user_id=user.id, username=user.username)
+
+@app.post("/api/auth/logout")
+async def logout(request: Request):
+    token = _get_token_from_header(request)
+    if token:
+        conversation_store.delete_session(token)
+    return {"status": "ok"}
+
+@app.get("/api/auth/me")
+async def me(request: Request):
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"user_id": user.id, "username": user.username}
+
+# ── User API config ───────────────────────────────────────────
+
+@app.get("/api/user/config", response_model=UserConfigGetResponse)
+async def get_user_config(request: Request):
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    cfg = conversation_store.get_user_api_config(user.id)
+    if cfg and cfg.api_key:
+        key = cfg.api_key
+        hint = f"{key[:5]}...{key[-3:]}" if len(key) > 10 else "***"
+        return UserConfigGetResponse(provider=cfg.provider, api_key_hint=hint, has_key=True)
+    return UserConfigGetResponse(provider="openai", api_key_hint=None, has_key=False)
+
+@app.post("/api/user/config")
+async def set_user_config(request: Request, body: UserConfigSetRequest):
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    conversation_store.set_user_api_config(
+        user.id,
+        provider=body.provider,
+        api_key=body.api_key,
+        base_url=body.base_url,
+    )
+    return {"status": "ok", "provider": body.provider}
+
+# ── App endpoints ─────────────────────────────────────────────
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    user = _get_current_user(request)
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "authenticated": user is not None,
+        "username": user.username if user else None,
+    })
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+async def chat(request: ChatRequest, req: Request):
+    user = _get_current_user(req)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         conversation_id = request.conversation_id
         if conversation_id:
             convo = conversation_store.get_conversation(conversation_id)
             if not convo:
                 raise ValueError(f"Conversation '{conversation_id}' not found")
+            if convo.user_id != user.id:
+                raise HTTPException(status_code=403, detail="Not your conversation")
         else:
-            convo = conversation_store.create_conversation(first_prompt=request.message)
+            convo = conversation_store.create_conversation(first_prompt=request.message, user_id=user.id if user else 0)
             conversation_id = convo.id
 
         conversation_store.add_message(conversation_id=conversation_id, role="user", content=request.message, mode_used=None)
         stored_messages = conversation_store.get_messages(conversation_id)
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
         mode = (request.response_mode or "vector").lower()
+        overrides = _user_api_overrides(user)
 
         if mode == "compare":
-            vector_response = _apply_runtime_tweaks(request.message, _generate_mode_response("vector", request.message, history))
-            neo4j_response = _apply_runtime_tweaks(request.message, _generate_mode_response("neo4j", request.message, history))
+            vector_response = _apply_runtime_tweaks(request.message, _generate_mode_response("vector", request.message, history, user=user))
+            neo4j_response = _apply_runtime_tweaks(request.message, _generate_mode_response("neo4j", request.message, history, user=user))
             combined = (
                 "<strong>Vector RAG (Embeddings + ChromaDB)</strong><br>"
                 f"{vector_response}<br><br>"
@@ -242,6 +343,7 @@ async def chat(request: ChatRequest):
                 handoff.results,
                 conversation_history=history,
                 behavior_system_suffix=_behavior_system_suffix(),
+                **overrides,
             )
             response = _apply_runtime_tweaks(request.message, response)
             mode_label = f"hybrid:{handoff.route}"
@@ -266,7 +368,7 @@ async def chat(request: ChatRequest):
         if mode not in ("vector", "neo4j"):
             raise ValueError("Invalid response_mode. Use: vector, neo4j, hybrid, or compare")
 
-        response = _apply_runtime_tweaks(request.message, _generate_mode_response(mode, request.message, history))
+        response = _apply_runtime_tweaks(request.message, _generate_mode_response(mode, request.message, history, user=user))
         conversation_store.add_message(conversation_id=conversation_id, role="assistant", content=response, mode_used=mode)
         return ChatResponse(response=response, sources=None, mode_used=mode, conversation_id=conversation_id)
     except Exception as e:
@@ -307,8 +409,11 @@ async def modes():
 
 
 @app.get("/api/conversations", response_model=List[ConversationSummary])
-async def list_conversations():
-    records = conversation_store.list_conversations(limit=100)
+async def list_conversations(request: Request):
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    records = conversation_store.list_conversations(user_id=user.id, limit=100)
     return [
         ConversationSummary(
             id=record.id,
@@ -321,18 +426,29 @@ async def list_conversations():
 
 
 @app.delete("/api/conversations/{conversation_id}")
-async def delete_conversation(conversation_id: str):
-    deleted = conversation_store.delete_conversation(conversation_id)
-    if not deleted:
+async def delete_conversation(conversation_id: str, request: Request):
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    convo = conversation_store.get_conversation(conversation_id)
+    if not convo:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    if convo.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your conversation")
+    deleted = conversation_store.delete_conversation(conversation_id)
     return {"status": "ok", "conversation_id": conversation_id}
 
 
 @app.get("/api/conversations/{conversation_id}", response_model=ConversationDetail)
-async def get_conversation(conversation_id: str):
+async def get_conversation(conversation_id: str, request: Request):
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     convo = conversation_store.get_conversation(conversation_id)
     if not convo:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    if convo.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your conversation")
     messages = conversation_store.get_messages(conversation_id)
     return ConversationDetail(
         id=convo.id,
@@ -430,7 +546,9 @@ def _split_reflection_reply(
 
 
 @app.post("/api/reflection/analyze")
-async def reflection_analyze(request: ReflectionAnalyzeRequest):
+async def reflection_analyze(request: ReflectionAnalyzeRequest, req: Request):
+    if not _get_current_user(req):
+        raise HTTPException(status_code=401, detail="Not authenticated")
     if not tweak_mode_enabled or behavior_tweaks is None:
         raise HTTPException(
             status_code=403,
@@ -464,7 +582,9 @@ async def reflection_analyze(request: ReflectionAnalyzeRequest):
 
 
 @app.get("/api/conversations/{conversation_id}/reflections", response_model=List[ReflectionThreadSummary])
-async def list_reflection_threads(conversation_id: str):
+async def list_reflection_threads(conversation_id: str, request: Request):
+    if not _get_current_user(request):
+        raise HTTPException(status_code=401, detail="Not authenticated")
     convo = conversation_store.get_conversation(conversation_id)
     if not convo:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -482,7 +602,9 @@ async def list_reflection_threads(conversation_id: str):
 
 
 @app.post("/api/conversations/{conversation_id}/reflections/start", response_model=ReflectionThreadStartResponse)
-async def start_reflection_thread(conversation_id: str):
+async def start_reflection_thread(conversation_id: str, request: Request):
+    if not _get_current_user(request):
+        raise HTTPException(status_code=401, detail="Not authenticated")
     if not tweak_mode_enabled or behavior_tweaks is None:
         raise HTTPException(status_code=403, detail="Tweak mode is disabled.")
     convo = conversation_store.get_conversation(conversation_id)
@@ -518,12 +640,14 @@ async def start_reflection_thread(conversation_id: str):
 
 
 @app.get("/api/reflections/{thread_id}", response_model=ReflectionThreadDetail)
-async def get_reflection_thread(thread_id: str):
+async def get_reflection_thread(thread_id: str, request: Request):
+    if not _get_current_user(request):
+        raise HTTPException(status_code=401, detail="Not authenticated")
     return _thread_to_detail(thread_id)
 
 
 @app.post("/api/reflections/{thread_id}/chat")
-async def chat_reflection_thread(thread_id: str, request: ReflectionThreadChatRequest):
+async def chat_reflection_thread(thread_id: str, request: ReflectionThreadChatRequest, req: Request):
     if not tweak_mode_enabled or behavior_tweaks is None:
         raise HTTPException(status_code=403, detail="Tweak mode is disabled.")
     if not request.message.strip():
@@ -561,7 +685,9 @@ async def chat_reflection_thread(thread_id: str, request: ReflectionThreadChatRe
 
 
 @app.post("/api/reflections/{thread_id}/apply")
-async def apply_reflection_thread(thread_id: str, request: ReflectionApplyRequest):
+async def apply_reflection_thread(thread_id: str, request: ReflectionApplyRequest, req: Request):
+    if not _get_current_user(req):
+        raise HTTPException(status_code=401, detail="Not authenticated")
     if not tweak_mode_enabled or behavior_tweaks is None:
         raise HTTPException(status_code=403, detail="Tweak mode is disabled.")
     thread = conversation_store.get_reflection_thread(thread_id)
@@ -586,7 +712,9 @@ async def apply_reflection_thread(thread_id: str, request: ReflectionApplyReques
 
 
 @app.post("/api/reflection/apply")
-async def reflection_apply(request: ReflectionApplyRequest):
+async def reflection_apply(request: ReflectionApplyRequest, req: Request):
+    if not _get_current_user(req):
+        raise HTTPException(status_code=401, detail="Not authenticated")
     if not tweak_mode_enabled or behavior_tweaks is None:
         raise HTTPException(
             status_code=403,
@@ -606,7 +734,9 @@ async def reflection_apply(request: ReflectionApplyRequest):
 
 
 @app.post("/api/feedback")
-async def feedback(request: FeedbackRequest):
+async def feedback(request: FeedbackRequest, req: Request):
+    if not _get_current_user(req):
+        raise HTTPException(status_code=401, detail="Not authenticated")
     if not tweak_mode_enabled or behavior_tweaks is None:
         raise HTTPException(status_code=403, detail="Tweak mode is disabled. Set TWEAK_MODE_ENABLED=true to enable feedback loop.")
     result = behavior_tweaks.update_from_feedback(

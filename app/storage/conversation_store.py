@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+import hashlib
 import os
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
@@ -19,6 +20,7 @@ def _utc_now() -> datetime:
 class Conversation(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     title: str = Field(default="Untitled Conversation", index=True)
+    user_id: int = Field(default=0, index=True)
     created_at: datetime = Field(default_factory=_utc_now, index=True)
     updated_at: datetime = Field(default_factory=_utc_now, index=True)
 
@@ -49,6 +51,31 @@ class ReflectionMessage(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utc_now, index=True)
 
 
+class User(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    username: str = Field(unique=True, index=True)
+    password_hash: str
+    created_at: datetime = Field(default_factory=_utc_now, index=True)
+
+class AuthSession(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    token: str = Field(unique=True, index=True)
+    user_id: int = Field(index=True)
+    created_at: datetime = Field(default_factory=_utc_now, index=True)
+
+class UserApiKey(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(unique=True, index=True)
+    provider: str = Field(default="openai")
+    api_key: str = Field(default="")
+    base_url: Optional[str] = None
+    updated_at: datetime = Field(default_factory=_utc_now, index=True)
+
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
 class ConversationStore:
     def __init__(self, database_url: str = "sqlite:///./storage/conversations.db"):
         url = (database_url or "").strip() or "sqlite:///./storage/conversations.db"
@@ -74,12 +101,12 @@ class ConversationStore:
     def init(self) -> None:
         SQLModel.metadata.create_all(self.engine)
 
-    def create_conversation(self, first_prompt: Optional[str] = None) -> Conversation:
+    def create_conversation(self, first_prompt: Optional[str] = None, user_id: int = 0) -> Conversation:
         title = "Untitled Conversation"
         if first_prompt:
             compact = " ".join(first_prompt.strip().split())
             title = (compact[:72] + "...") if len(compact) > 75 else compact
-        convo = Conversation(title=title, created_at=_utc_now(), updated_at=_utc_now())
+        convo = Conversation(title=title, user_id=user_id, created_at=_utc_now(), updated_at=_utc_now())
         with Session(self.engine) as session:
             session.add(convo)
             session.commit()
@@ -90,9 +117,14 @@ class ConversationStore:
         with Session(self.engine) as session:
             return session.get(Conversation, conversation_id)
 
-    def list_conversations(self, limit: int = 50) -> List[Conversation]:
+    def list_conversations(self, user_id: int = 0, limit: int = 50) -> List[Conversation]:
         with Session(self.engine) as session:
-            stmt = select(Conversation).order_by(Conversation.updated_at.desc()).limit(limit)
+            stmt = (
+                select(Conversation)
+                .where(Conversation.user_id == user_id)
+                .order_by(Conversation.updated_at.desc())
+                .limit(limit)
+            )
             return list(session.exec(stmt).all())
 
     def add_message(
@@ -227,4 +259,89 @@ class ConversationStore:
             session.delete(convo)
             session.commit()
             return True
+
+    # ── User / Auth / API key methods ──────────────────────────
+
+    def seed_users(self) -> None:
+        """Seed the three default users if they don't exist."""
+        users = [
+            ("nick", "badPassword1"),
+            ("wayne", "badPassword1"),
+            ("claudine", "badPassword1"),
+        ]
+        with Session(self.engine) as session:
+            for username, password in users:
+                existing = session.exec(
+                    select(User).where(User.username == username)
+                ).first()
+                if not existing:
+                    session.add(User(
+                        username=username,
+                        password_hash=hash_password(password),
+                    ))
+            session.commit()
+
+    def get_user_by_credentials(self, username: str, password: str) -> Optional[User]:
+        with Session(self.engine) as session:
+            user = session.exec(
+                select(User).where(User.username == username)
+            ).first()
+            if user and user.password_hash == hash_password(password):
+                return user
+            return None
+
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
+        with Session(self.engine) as session:
+            return session.get(User, user_id)
+
+    def create_session(self, user_id: int) -> str:
+        token = str(uuid4())
+        with Session(self.engine) as session:
+            sess = AuthSession(token=token, user_id=user_id)
+            session.add(sess)
+            session.commit()
+        return token
+
+    def get_session(self, token: str) -> Optional[AuthSession]:
+        with Session(self.engine) as session:
+            return session.exec(
+                select(AuthSession).where(AuthSession.token == token)
+            ).first()
+
+    def delete_session(self, token: str) -> None:
+        with Session(self.engine) as session:
+            sess = session.exec(
+                select(AuthSession).where(AuthSession.token == token)
+            ).first()
+            if sess:
+                session.delete(sess)
+                session.commit()
+
+    def get_user_api_config(self, user_id: int) -> Optional[UserApiKey]:
+        with Session(self.engine) as session:
+            return session.exec(
+                select(UserApiKey).where(UserApiKey.user_id == user_id)
+            ).first()
+
+    def set_user_api_config(self, user_id: int, provider: str, api_key: str, base_url: Optional[str] = None) -> UserApiKey:
+        with Session(self.engine) as session:
+            existing = session.exec(
+                select(UserApiKey).where(UserApiKey.user_id == user_id)
+            ).first()
+            if existing:
+                existing.provider = provider
+                existing.api_key = api_key
+                existing.base_url = base_url
+                existing.updated_at = _utc_now()
+            else:
+                existing = UserApiKey(
+                    user_id=user_id,
+                    provider=provider,
+                    api_key=api_key,
+                    base_url=base_url,
+                )
+                session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            return existing
 

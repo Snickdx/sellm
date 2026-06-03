@@ -89,3 +89,25 @@ class ReflectionThreadChatRequest(BaseModel):
     message: str
     reflection: Optional[Dict[str, Any]] = None
 
+
+# ── Auth ──────────────────────────────────────────────────────
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    token: str
+    user_id: int
+    username: str
+
+class UserConfigGetResponse(BaseModel):
+    provider: str
+    api_key_hint: Optional[str] = None
+    has_key: bool
+
+class UserConfigSetRequest(BaseModel):
+    provider: str
+    api_key: str
+    base_url: Optional[str] = None
+
