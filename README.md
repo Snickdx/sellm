@@ -57,6 +57,22 @@ See `.env.example` for all available options.
 
 **Important**: The `.env` file is git-ignored and should not be committed. It contains your personal configuration (passwords, API keys, etc.). Always use `.env.example` as a template.
 
+For local development you can also copy `app/.env.example` to `app/.env` (loaded before a project-root `.env`).
+
+## Deployment (Docker / EasyPanel)
+
+Production deployment uses the repo-root **`Dockerfile`** (Chroma index is built into the image; empty volume mounts are re-seeded at startup). See **[docs/DEPLOY_EASYPANEL.md](docs/DEPLOY_EASYPANEL.md)** for EasyPanel steps (build, proxy port `8000`, PostgreSQL, volume on `/app/storage`, and environment variables).
+
+Local smoke test:
+
+```bash
+docker compose up --build
+```
+
+Use `docker compose --profile postgres up --build` with `CONVERSATION_DB_URL=postgresql+psycopg2://sellm:sellm@postgres:5432/sellm` for a Postgres-backed stack.
+
+**Hybrid mode** routes each question to Chroma (semantic) or Neo4j MCP (graph/relationships). See **[docs/MCP_NEO4J.md](docs/MCP_NEO4J.md)** and `config/mcp/neo4j-mcp.json`.
+
 ## Usage
 
 1. Make sure your Excel file `data.xlsx` is in the project directory. This file contains the stakeholder knowledge base.
@@ -482,9 +498,6 @@ Popular alternatives:
 │   │   └── static/
 │   │       └── components/
 │   │           └── chat.js  # Web chat component logic
-│   └── scripts/
-│       ├── create_neo4j_impl.py # App script entrypoint
-│       └── update_excel_env.py  # App script entrypoint
 ├── config/
 │   └── behavior/
 │       └── behavior_tweaks.json # External behavior tweak data
@@ -493,12 +506,8 @@ Popular alternatives:
 │   │   └── init_chroma.py   # Chroma setup/warmup script
 │   ├── neo4j/
 │   │   └── load_graph.py    # Neo4j graph load script
-│   └── scripts/
-│       └── update_excel_env.py # Misc setup utilities
-├── scripts/
-│   ├── start.bat            # Start script entrypoint
-│   ├── create_neo4j_impl.py # Neo4j loader entrypoint
-│   └── update_excel_env.py  # EXCEL_FILE env helper entrypoint
+├── docker/
+│   └── entrypoint.sh        # Container startup (Chroma seed + uvicorn)
 ├── docs/
 │   └── SETUP_LLM.md         # LLM setup guide
 ├── requirements.txt         # Python dependencies
@@ -792,10 +801,9 @@ Conversation history is now persisted so users can view and continue prior sessi
 
 ### Setup Scripts
 
-- Initialize Chroma store: `python setup/chroma/init_chroma.py`
-- Load Neo4j graph: `python scripts/create_neo4j_impl.py`
-- EXCEL_FILE env helper: `python scripts/update_excel_env.py`
-- Start app: `scripts\start.bat` (or root `start.bat` wrapper)
+- Initialize Chroma store: `python -m setup.chroma.init_chroma`
+- Load Neo4j graph: `python -m setup.neo4j.load_graph`
+- Start app: `start.bat` (Windows) or `python -m app.main`
 
 ### Migration from ChromaDB
 

@@ -22,6 +22,7 @@ class ChatResponse(BaseModel):
     sources: Optional[List[dict]] = None
     mode_used: Optional[str] = None
     conversation_id: Optional[str] = None
+    routing: Optional[Dict[str, Any]] = None
 
 
 class FeedbackRequest(BaseModel):

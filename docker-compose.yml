@@ -1,0 +1,81 @@
+# Local / staging stack. EasyPanel: use the Dockerfile + Environment + Mounts tabs instead.
+# Usage:
+#   docker compose up --build
+#   docker compose --profile postgres up --build
+#   docker compose --profile mcp up --build
+
+services:
+  app:
+    build: .
+    ports:
+      - "${HOST_PORT:-8000}:${PORT:-8000}"
+    environment:
+      PORT: ${PORT:-8000}
+      EXCEL_FILE: ${EXCEL_FILE:-/app/data.xlsx}
+      CHROMA_PERSIST_DIRECTORY: ${CHROMA_PERSIST_DIRECTORY:-/app/storage/chroma_db_v2}
+      CONVERSATION_DB_URL: ${CONVERSATION_DB_URL:-sqlite:////app/storage/conversations.db}
+      LLM_BACKEND: ${LLM_BACKEND:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      RAG_BACKEND: ${RAG_BACKEND:-chromadb}
+      TWEAK_MODE_ENABLED: ${TWEAK_MODE_ENABLED:-false}
+      NEO4J_URI: ${NEO4J_URI:-bolt://host.docker.internal:7687}
+      NEO4J_USER: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-password}
+      NEO4J_MCP_ENABLED: ${NEO4J_MCP_ENABLED:-false}
+      NEO4J_MCP_URL: ${NEO4J_MCP_URL:-http://mcp-neo4j:8000/mcp/}
+    volumes:
+      - app_storage:/app/storage
+    depends_on:
+      mcp-neo4j:
+        condition: service_started
+        required: false
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.getenv(\"PORT\", \"8000\")}/api/health', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sellm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sellm}
+      POSTGRES_DB: ${POSTGRES_DB:-sellm}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sellm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mcp-neo4j:
+    profiles: ["mcp"]
+    image: mcp/neo4j-cypher:latest
+    ports:
+      - "${NEO4J_MCP_HOST_PORT:-8100}:8000"
+    environment:
+      NEO4J_URI: ${NEO4J_URI:-bolt://host.docker.internal:7687}
+      NEO4J_USERNAME: ${NEO4J_USER:-neo4j}
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-password}
+      NEO4J_DATABASE: ${NEO4J_DATABASE:-neo4j}
+      NEO4J_TRANSPORT: http
+      NEO4J_READ_ONLY: "true"
+      NEO4J_MCP_SERVER_HOST: 0.0.0.0
+      NEO4J_MCP_SERVER_PORT: "8000"
+      NEO4J_MCP_SERVER_PATH: /mcp/
+      NEO4J_MCP_SERVER_ALLOWED_HOSTS: "*"
+      NEO4J_NAMESPACE: ${NEO4J_MCP_NAMESPACE:-}
+
+volumes:
+  app_storage:
+  postgres_data:

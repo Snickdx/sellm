@@ -10,6 +10,7 @@ except ImportError:
 
 import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Package dir (`app/`) and repo root — load `.env` from `app/` first, then project root, then cwd.
@@ -59,6 +60,9 @@ from app.tweaks.behavior_tweaks import BehaviorTweaksStore
 from app.llm_wrapper import LLMWrapper
 from app.rag_backend import RequirementsRAG
 from app.rag_backend_neo4j import RequirementsRAGNeo4j
+from app.mcp.config import MCPSettings
+from app.mcp.hybrid import HybridKnowledgeService
+from app.mcp.neo4j_mcp_client import neo4j_mcp_client
 from app.reflection import (
     REFLECTION_CHAT_SYSTEM,
     REFLECTION_SYSTEM,
@@ -72,7 +76,25 @@ from app.reflection import (
     split_reflection_response_fallback,
 )
 
-app = FastAPI(title="Requirements Chatbot API")
+mcp_settings = MCPSettings.from_env()
+hybrid_service: Optional[HybridKnowledgeService] = None
+
+
+@asynccontextmanager
+async def _app_lifespan(_app: FastAPI):
+    global hybrid_service
+    await neo4j_mcp_client.connect()
+    hybrid_service = HybridKnowledgeService(
+        rag_systems.get("vector"),
+        rag_systems.get("neo4j"),
+        mcp_client=neo4j_mcp_client,
+        settings=mcp_settings,
+    )
+    yield
+    await neo4j_mcp_client.close()
+
+
+app = FastAPI(title="Requirements Chatbot API", lifespan=_app_lifespan)
 WEB_DIR = APP_DIR / "web"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
@@ -176,28 +198,6 @@ def _apply_runtime_tweaks(query: str, response: str) -> str:
     return behavior_tweaks.apply_to_response(query, response)
 
 
-def _merge_hybrid_results(message: str) -> List[Dict]:
-    if not rag_systems["vector"] or not rag_systems["neo4j"]:
-        raise ValueError("Hybrid mode requires both vector and neo4j engines")
-
-    vector_results = rag_systems["vector"].search(message, n_results=hybrid_top_k, filter_by_sheet_type=True)
-    neo4j_results = rag_systems["neo4j"].search(message, n_results=hybrid_top_k, filter_by_sheet_type=True)
-    merged: List[Dict] = []
-    seen_docs = set()
-    for idx in range(max(len(vector_results), len(neo4j_results))):
-        if idx < len(vector_results):
-            doc = vector_results[idx].get("document", "")
-            if doc and doc not in seen_docs:
-                merged.append(vector_results[idx])
-                seen_docs.add(doc)
-        if idx < len(neo4j_results):
-            doc = neo4j_results[idx].get("document", "")
-            if doc and doc not in seen_docs:
-                merged.append(neo4j_results[idx])
-                seen_docs.add(doc)
-    return merged
-
-
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
@@ -233,19 +233,39 @@ async def chat(request: ChatRequest):
             return ChatResponse(response=combined, sources=None, mode_used="compare", conversation_id=conversation_id)
 
         if mode == "hybrid":
+            if not hybrid_service:
+                raise ValueError("Hybrid service is not initialized")
+            if not rag_systems["vector"] and not rag_systems["neo4j"]:
+                raise ValueError("Hybrid mode requires at least one of vector or neo4j engines")
             base_llm = llm_by_mode.get("vector") or llm_by_mode.get("neo4j")
             if not base_llm:
                 raise ValueError("Hybrid mode is unavailable because no LLM wrapper is ready")
-            merged_results = _merge_hybrid_results(request.message)
+            handoff = await hybrid_service.retrieve(request.message, top_k=hybrid_top_k)
             response = base_llm.generate_response_from_results(
                 request.message,
-                merged_results,
+                handoff.results,
                 conversation_history=history,
                 behavior_system_suffix=_behavior_system_suffix(),
             )
             response = _apply_runtime_tweaks(request.message, response)
-            conversation_store.add_message(conversation_id=conversation_id, role="assistant", content=response, mode_used="hybrid")
-            return ChatResponse(response=response, sources=None, mode_used="hybrid", conversation_id=conversation_id)
+            mode_label = f"hybrid:{handoff.route}"
+            routing_payload = {
+                **handoff.routing,
+                "backends_used": handoff.backends_used,
+            }
+            conversation_store.add_message(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=response,
+                mode_used=mode_label,
+            )
+            return ChatResponse(
+                response=response,
+                sources=None,
+                mode_used=mode_label,
+                conversation_id=conversation_id,
+                routing=routing_payload,
+            )
 
         if mode not in ("vector", "neo4j"):
             raise ValueError("Invalid response_mode. Use: vector, neo4j, hybrid, or compare")
@@ -263,7 +283,18 @@ async def health():
         doc_counts = {}
         doc_counts["vector"] = rag_systems["vector"].collection.count() if rag_systems["vector"] and hasattr(rag_systems["vector"], "collection") else 0
         doc_counts["neo4j"] = rag_systems["neo4j"]._count_nodes() if rag_systems["neo4j"] and hasattr(rag_systems["neo4j"], "_count_nodes") else 0
-        return {"status": "healthy", "engines": engine_status, "documents": doc_counts}
+        return {
+            "status": "healthy",
+            "engines": engine_status,
+            "documents": doc_counts,
+            "mcp": {
+                "neo4j": {
+                    "enabled": mcp_settings.neo4j_mcp_enabled,
+                    "url": mcp_settings.neo4j_mcp_url or None,
+                    "status": neo4j_mcp_client.status,
+                }
+            },
+        }
     except Exception as e:
         return {"status": "error", "error": str(e)}
 
@@ -274,10 +305,14 @@ async def modes():
         "available_modes": {
             "vector": llm_by_mode["vector"] is not None,
             "neo4j": llm_by_mode["neo4j"] is not None,
-            "hybrid": (llm_by_mode["vector"] is not None and llm_by_mode["neo4j"] is not None),
+            "hybrid": (
+                (rag_systems["vector"] is not None or rag_systems["neo4j"] is not None)
+                and (llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None)
+            ),
             "compare": (llm_by_mode["vector"] is not None and llm_by_mode["neo4j"] is not None),
         },
         "engine_status": engine_status,
+        "hybrid_routing": "neo4j | chroma | blend per query (see docs/MCP_NEO4J.md)",
     }
 
 
@@ -332,6 +367,15 @@ async def config():
         "llm_backend_env": llm_backend,
         "llm_model_env": llm_model,
         "hybrid_top_k": hybrid_top_k,
+        "hybrid_route_margin": mcp_settings.hybrid_route_margin,
+        "hybrid_neo4j_top_k": mcp_settings.hybrid_neo4j_top_k,
+        "hybrid_chroma_top_k": mcp_settings.hybrid_chroma_top_k,
+        "neo4j_mcp": {
+            "enabled": mcp_settings.neo4j_mcp_enabled,
+            "url": mcp_settings.neo4j_mcp_url or None,
+            "namespace": mcp_settings.neo4j_mcp_namespace or None,
+            "status": neo4j_mcp_client.status,
+        },
         "tweak_mode_enabled": tweak_mode_enabled,
         "tweak_mode_env_set": bool(_tweak_raw.strip()),
         "env_app_dir": str(APP_DIR),

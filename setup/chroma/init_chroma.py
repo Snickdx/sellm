@@ -19,6 +19,7 @@ def main() -> int:
     load_dotenv()
     excel_file = os.getenv("EXCEL_FILE", "data.xlsx")
     chroma_path = os.getenv("CHROMA_PERSIST_DIRECTORY", "./storage/chroma_db_v2")
+    os.makedirs(chroma_path, exist_ok=True)
 
     print("Initializing ChromaDB...")
     print(f"Excel file: {excel_file}")

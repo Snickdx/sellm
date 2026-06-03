@@ -1,13 +1,19 @@
 .git
 .gitignore
 .dockerignore
+.cursor
 **/__pycache__
 **/*.py[cod]
-.env
-.env.*
-!.app/.env.example
-storage
-.cursor
-*.dump
 **/.pytest_cache
 **/.ruff_cache
+*.dump
+
+# Secrets — use EasyPanel Environment tab instead
+.env
+.env.*
+!app/.env.example
+!.env.example
+app/.env
+
+# Local runtime data — mount as volumes in production
+storage/

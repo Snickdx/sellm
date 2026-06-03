@@ -461,6 +461,16 @@
     return response.json();
   }
 
+  function formatRoutingBadge(modeUsed, routing) {
+    if (!modeUsed) return null;
+    let label = `mode: ${modeUsed}`;
+    if (routing?.route && modeUsed.startsWith("hybrid")) {
+      const backends = (routing.backends_used || []).join(" + ");
+      label = `hybrid → ${routing.route}${backends ? ` (${backends})` : ""}`;
+    }
+    return label;
+  }
+
   function addMessage(role, content, sources = null, modeUsed = null, meta = null) {
     const messageDiv = document.createElement("div");
     messageDiv.className = `message ${role}`;
@@ -475,7 +485,8 @@
     if (role === "assistant" && modeUsed) {
       const badge = document.createElement("div");
       badge.className = "mode-badge";
-      badge.textContent = `mode: ${modeUsed}`;
+      badge.textContent = formatRoutingBadge(modeUsed, meta?.routing) || `mode: ${modeUsed}`;
+      badge.title = meta?.routing ? JSON.stringify(meta.routing) : "";
       contentDiv.prepend(badge);
     }
 
@@ -567,6 +578,7 @@
         prompt: message,
         response: data.response,
         mode: data.mode_used || null,
+        routing: data.routing || null,
       });
       conversationHistory.push({ role: "assistant", content: data.response });
       if (data.conversation_id) {
