@@ -65,11 +65,18 @@ class AuthSession(SQLModel, table=True):
 
 class UserApiKey(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    user_id: int = Field(unique=True, index=True)
+    user_id: int = Field(index=True)
     provider: str = Field(default="openai")
     api_key: str = Field(default="")
     base_url: Optional[str] = None
     updated_at: datetime = Field(default_factory=_utc_now, index=True)
+
+
+class UserApiKeyProvider(SQLModel, table=False):
+    provider: str
+    api_key: str = ""
+    base_url: Optional[str] = None
+    has_key: bool = False
 
 
 def hash_password(password: str) -> str:
@@ -355,19 +362,32 @@ class ConversationStore:
                 session.delete(sess)
                 session.commit()
 
-    def get_user_api_config(self, user_id: int) -> Optional[UserApiKey]:
+    def get_user_api_config(self, user_id: int, provider: str) -> Optional[UserApiKey]:
         with Session(self.engine) as session:
             return session.exec(
-                select(UserApiKey).where(UserApiKey.user_id == user_id)
+                select(UserApiKey).where(
+                    UserApiKey.user_id == user_id,
+                    UserApiKey.provider == provider,
+                )
             ).first()
+
+    def get_all_user_api_configs(self, user_id: int) -> List[UserApiKey]:
+        with Session(self.engine) as session:
+            return list(
+                session.exec(
+                    select(UserApiKey).where(UserApiKey.user_id == user_id)
+                ).all()
+            )
 
     def set_user_api_config(self, user_id: int, provider: str, api_key: str, base_url: Optional[str] = None) -> UserApiKey:
         with Session(self.engine) as session:
             existing = session.exec(
-                select(UserApiKey).where(UserApiKey.user_id == user_id)
+                select(UserApiKey).where(
+                    UserApiKey.user_id == user_id,
+                    UserApiKey.provider == provider,
+                )
             ).first()
             if existing:
-                existing.provider = provider
                 existing.api_key = api_key
                 existing.base_url = base_url
                 existing.updated_at = _utc_now()

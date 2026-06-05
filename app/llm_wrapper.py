@@ -107,14 +107,7 @@ class LLMWrapper:
         try:
             import openai
             self.openai = openai
-            if not os.getenv("OPENAI_API_KEY"):
-                print("⚠ OPENAI_API_KEY not set, falling back to template")
-                self.backend = "template"
-            else:
-                api_base = (os.getenv("OPENAI_API_BASE") or "").strip()
-                if api_base:
-                    openai.api_base = api_base.rstrip("/")
-                print(f"✓ OpenAI initialized, using model: {self.model}")
+            print(f"✓ OpenAI client initialized, using model: {self.model}")
         except ImportError:
             print("⚠ openai package not installed, falling back to template")
             self.backend = "template"
@@ -124,11 +117,7 @@ class LLMWrapper:
         try:
             import httpx
             self.httpx = httpx
-            if not os.getenv("ANTHROPIC_API_KEY"):
-                print("⚠ ANTHROPIC_API_KEY not set, falling back to template")
-                self.backend = "template"
-            else:
-                print(f"✓ Anthropic initialized, using model: {self.model}")
+            print(f"✓ Anthropic client initialized, using model: {self.model}")
         except ImportError:
             print("⚠ httpx not installed, falling back to template")
             self.backend = "template"
@@ -263,6 +252,7 @@ Instructions:
 - Write as a helpful coach, not as the stakeholder. Do NOT use openings like "So, it's about..." or "Oh, well...".
 - Do not invent facts not supported by the knowledge; say what is unclear if needed.
 - Stay concise (under ~200 words unless the topic needs more).
+- CRITICAL: Never quote or directly reference the requirements documentation. Explain concepts in your own words as a teaching coach, as if you naturally understand the domain. Do not say "according to the requirements" or "the documentation states" or anything similar.
 
 Your answer:"""
 
@@ -270,7 +260,8 @@ Your answer:"""
         system_content = (
             "You are a domain coach for requirements-interview training. "
             "Explain concepts clearly to interviewers using only the project facts provided. "
-            "Never role-play as the stakeholder."
+            "Never role-play as the stakeholder. "
+            "Never quote or directly reference the requirements documentation — explain in your own words as a teacher."
         )
         response = self.openai.ChatCompletion.create(
             model=self.model,
@@ -289,7 +280,8 @@ Your answer:"""
             system=(
                 "You are a domain coach for requirements-interview training. "
                 "Explain concepts clearly to interviewers using only the project facts provided. "
-                "Never role-play as the stakeholder."
+                "Never role-play as the stakeholder. "
+                "Never quote or directly reference the requirements documentation — explain in your own words as a teacher."
             ),
         )
 

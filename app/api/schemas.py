@@ -103,13 +103,20 @@ class LoginResponse(BaseModel):
     user_id: int
     username: str
 
-class UserConfigGetResponse(BaseModel):
+class ProviderKeyEntry(BaseModel):
     provider: str
     api_key_hint: Optional[str] = None
-    has_key: bool
+    has_key: bool = False
+    base_url: Optional[str] = None
+
+class UserConfigGetResponse(BaseModel):
+    keys: List[ProviderKeyEntry] = []
+
+class UserConfigProviderSet(BaseModel):
+    provider: str
+    api_key: str = ""
+    base_url: Optional[str] = None
 
 class UserConfigSetRequest(BaseModel):
-    provider: str
-    api_key: str
-    base_url: Optional[str] = None
+    keys: List[UserConfigProviderSet] = []
 

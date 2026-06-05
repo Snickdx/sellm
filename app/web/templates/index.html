@@ -145,6 +145,16 @@
         .message.user .message-content { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-bottom-right-radius: 4px; }
         .message.assistant .message-content { background: white; color: #333; border: 1px solid #e0e0e0; border-bottom-left-radius: 4px; }
         .message.assistant .message-content strong { color: #667eea; font-weight: 600; }
+        .message.assistant .message-content h1, .message.assistant .message-content h2, .message.assistant .message-content h3, .message.assistant .message-content h4 { margin: 12px 0 6px; font-weight: 600; color: #1f2937; }
+        .message.assistant .message-content h1 { font-size: 17px; } .message.assistant .message-content h2 { font-size: 15px; } .message.assistant .message-content h3 { font-size: 14px; } .message.assistant .message-content h4 { font-size: 13px; }
+        .message.assistant .message-content p { margin: 0 0 8px; }
+        .message.assistant .message-content p:last-child { margin-bottom: 0; }
+        .message.assistant .message-content ul, .message.assistant .message-content ol { margin: 4px 0 8px; padding-left: 20px; }
+        .message.assistant .message-content li { margin-bottom: 3px; font-size: 13px; }
+        .message.assistant .message-content pre { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; overflow-x: auto; margin: 8px 0; font-size: 12px; line-height: 1.5; }
+        .message.assistant .message-content code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: ui-monospace, Consolas, monospace; color: #1f2937; }
+        .message.assistant .message-content pre code { background: none; padding: 0; border-radius: 0; }
+        .message.assistant .message-content a { color: #667eea; text-decoration: underline; }
         .mode-badge { display: inline-block; margin-bottom: 8px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.2px; text-transform: uppercase; background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; }
         .feedback-row { margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .feedback-btn { border: 1px solid #d1d5db; border-radius: 999px; padding: 4px 10px; background: #ffffff; color: #374151; font-size: 12px; cursor: pointer; }
@@ -250,23 +260,17 @@
     </div>
 
     <div id="settingsBackdrop" class="reflection-backdrop" aria-hidden="true">
-        <div class="reflection-modal" style="max-width:500px;" role="dialog" aria-labelledby="settingsTitle">
-            <h3 id="settingsTitle">API Configuration</h3>
+        <div class="reflection-modal" style="max-width:520px;" role="dialog" aria-labelledby="settingsTitle">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                <h3 id="settingsTitle" style="margin:0;">API Configuration</h3>
+                <button type="button" id="settingsDismiss" aria-label="Close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;padding:0 4px;line-height:1;">&times;</button>
+            </div>
             <p style="font-size:13px;color:#6b7280;margin-bottom:16px;">
                 Bring your own API key to use a cloud LLM instead of the local fallback.
             </p>
             <form id="settingsForm">
-                <label for="settingsProvider" style="display:block;font-size:12px;font-weight:600;color:#6b7280;margin-bottom:4px;">Provider</label>
-                <select id="settingsProvider" class="settings-select" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:14px;font-size:14px;">
-                    <option value="openai">OpenAI</option>
-                    <option value="groq">Groq (free tier)</option>
-                    <option value="openrouter">OpenRouter</option>
-                </select>
-                <label for="settingsApiKey" style="display:block;font-size:12px;font-weight:600;color:#6b7280;margin-bottom:4px;">API Key</label>
-                <input type="password" id="settingsApiKey" class="settings-input" placeholder="sk-..." style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:14px;font-size:14px;box-sizing:border-box;" />
-                <label for="settingsBaseUrl" style="display:block;font-size:12px;font-weight:600;color:#6b7280;margin-bottom:4px;">Base URL (optional — for custom endpoints)</label>
-                <input type="text" id="settingsBaseUrl" class="settings-input" placeholder="https://api.openai.com/v1" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:14px;font-size:14px;box-sizing:border-box;" />
-                <div style="display:flex;gap:10px;justify-content:flex-end;">
+                <div id="settingsProvidersContainer"></div>
+                <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
                     <button type="button" id="settingsCancel" style="border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;border:1px solid #d1d5db;background:#fff;color:#374151;">Cancel</button>
                     <button type="submit" id="settingsSave" style="border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;border:none;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;font-weight:600;">Save</button>
                 </div>
@@ -367,6 +371,6 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/chat.js"></script>
+    <script src="/static/components/chat.js?v=3"></script>
 </body>
 </html>

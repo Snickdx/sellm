@@ -1,8 +1,75 @@
 (() => {
+  // ── Lightweight markdown renderer ───────────────────────────
+  function renderMarkdown(text) {
+    const escapeHtml = (s) => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    const codeBlockRe = /```(\w*)\n([\s\S]*?)```/g;
+    const inlineCodeRe = /`([^`]+)`/g;
+    const boldRe = /\*\*([^*]+)\*\*/g;
+    const italicRe = /\*([^*]+)\*/g;
+    const linkRe = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const headingRe = /^(#{1,6})\s+(.*)$/gm;
+    const ulRe = /^[\s]*[-*]\s+(.*)$/gm;
+    const olRe = /^\s*\d+\.\s+(.*)$/gm;
+
+    let html = escapeHtml(text);
+    html = html.replace(codeBlockRe, '<pre><code>$2</code></pre>');
+    html = html.replace(inlineCodeRe, '<code>$1</code>');
+    html = html.replace(boldRe, '<strong>$1</strong>');
+    html = html.replace(italicRe, '<em>$1</em>');
+    html = html.replace(linkRe, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    html = html.replace(headingRe, (_m, hashes, content) => {
+      const level = hashes.length;
+      return `<h${level}>${content}</h${level}>`;
+    });
+
+    const lines = html.split("\n");
+    const out = [];
+    let inList = false;
+    let listTag = null;
+    let listType = null;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const ulMatch = line.match(/^[\s]*[-*]\s+(.*)$/);
+      const olMatch = line.match(/^\s*\d+\.\s+(.*)$/);
+
+      if (ulMatch) {
+        if (!inList || listType !== "ul") {
+          if (inList) out.push(`</${listTag}>`);
+          out.push("<ul>");
+          inList = true;
+          listTag = "ul";
+          listType = "ul";
+        }
+        out.push(`<li>${ulMatch[1]}</li>`);
+      } else if (olMatch) {
+        if (!inList || listType !== "ol") {
+          if (inList) out.push(`</${listTag}>`);
+          out.push("<ol>");
+          inList = true;
+          listTag = "ol";
+          listType = "ol";
+        }
+        out.push(`<li>${olMatch[1]}</li>`);
+      } else {
+        if (inList) { out.push(`</${listTag}>`); inList = false; listTag = null; listType = null; }
+        if (line.trim() === "") {
+          out.push("");
+        } else if (line.match(/^<h[1-6]/)) {
+          out.push(line);
+        } else {
+          out.push(`<p>${line}</p>`);
+        }
+      }
+    }
+    if (inList) out.push(`</${listTag}>`);
+    return out.join("\n");
+  }
+
   // ── Auth state ──────────────────────────────────────────────
   let authToken = localStorage.getItem("auth_token");
   let currentUser = null;
-  let userApiConfig = { provider: "openai", has_key: false };
+  let userApiKeys = {};
 
   function setAuth(token, username) {
     authToken = token;
@@ -53,11 +120,10 @@
   const logoutBtn = document.getElementById("logoutBtn");
   const settingsBackdrop = document.getElementById("settingsBackdrop");
   const settingsForm = document.getElementById("settingsForm");
-  const settingsProvider = document.getElementById("settingsProvider");
-  const settingsApiKey = document.getElementById("settingsApiKey");
-  const settingsBaseUrl = document.getElementById("settingsBaseUrl");
   const settingsCancel = document.getElementById("settingsCancel");
+  const settingsDismiss = document.getElementById("settingsDismiss");
   const settingsStatus = document.getElementById("settingsStatus");
+  const settingsProvidersContainer = document.getElementById("settingsProvidersContainer");
 
   const reflectionRow = document.getElementById("reflectionRow");
   const reflectBtn = document.getElementById("reflectBtn");
@@ -142,7 +208,7 @@
     if (loginUsername) loginUsername.value = "";
     if (loginPassword) loginPassword.value = "";
     if (loginError) loginError.hidden = true;
-    userApiConfig = { provider: "openai", has_key: false };
+    userApiKeys = {};
   }
 
   // ── User API Config ─────────────────────────────────────────
@@ -150,39 +216,93 @@
     try {
       const r = await fetch("/api/user/config", { headers: authHeaders() });
       if (!r.ok) return;
-      userApiConfig = await r.json();
+      const data = await r.json();
+      userApiKeys = {};
+      if (Array.isArray(data.keys)) {
+        for (const entry of data.keys) {
+          userApiKeys[entry.provider] = { has_key: entry.has_key, api_key_hint: entry.api_key_hint, base_url: entry.base_url || "" };
+        }
+      }
     } catch { /* ignore */ }
   }
 
-  async function saveUserConfig(provider, apiKey, baseUrl) {
+  function _gatherProviderKeys() {
+    const keys = [];
+    const container = settingsProvidersContainer;
+    if (!container) return keys;
+    const rows = container.querySelectorAll(".settings-provider-row");
+    for (const row of rows) {
+      const provider = row.dataset.provider;
+      const apiKeyInput = row.querySelector(".settings-provider-key");
+      const baseUrlInput = row.querySelector(".settings-provider-url");
+      if (provider && apiKeyInput) {
+        keys.push({
+          provider: provider,
+          api_key: apiKeyInput.value || "",
+          base_url: baseUrlInput ? baseUrlInput.value || null : null,
+        });
+      }
+    }
+    return keys;
+  }
+
+  async function saveAllUserConfigs() {
     if (settingsStatus) settingsStatus.textContent = "Saving…";
+    const keys = _gatherProviderKeys();
     try {
       const r = await fetch("/api/user/config", {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, api_key: apiKey, base_url: baseUrl || null }),
+        body: JSON.stringify({ keys }),
       });
       if (!r.ok) {
         const d = await r.json();
         if (settingsStatus) settingsStatus.textContent = d.detail || "Save failed";
         return;
       }
-      if (settingsStatus) settingsStatus.textContent = "Saved! Your API key will be used for chat.";
-      userApiConfig = { provider, has_key: !!apiKey };
+      if (settingsStatus) settingsStatus.textContent = "Saved! Your API keys will be used for chat.";
+      await loadUserConfig();
+      loadRuntimeConfig();
     } catch {
       if (settingsStatus) settingsStatus.textContent = "Network error";
     }
   }
 
+  const PROVIDER_CONFIGS = [
+    { provider: "openai", label: "OpenAI", keyPlaceholder: "sk-...", urlPlaceholder: "https://api.openai.com/v1", defaultUrl: "https://api.openai.com/v1", keyUrl: "https://platform.openai.com/api-keys" },
+    { provider: "anthropic", label: "Anthropic", keyPlaceholder: "sk-ant-...", urlPlaceholder: "https://api.anthropic.com/v1", defaultUrl: "https://api.anthropic.com/v1", keyUrl: "https://console.anthropic.com/settings/keys" },
+    { provider: "groq", label: "Groq (free tier)", keyPlaceholder: "gsk_...", urlPlaceholder: "https://api.groq.com/openai/v1", defaultUrl: "https://api.groq.com/openai/v1", keyUrl: "https://console.groq.com/keys" },
+    { provider: "openrouter", label: "OpenRouter", keyPlaceholder: "sk-or-...", urlPlaceholder: "https://openrouter.ai/api/v1", defaultUrl: "https://openrouter.ai/api/v1", keyUrl: "https://openrouter.ai/keys" },
+  ];
+
+  function renderSettingsProviders() {
+    if (!settingsProvidersContainer) return;
+    settingsProvidersContainer.innerHTML = "";
+    for (const pc of PROVIDER_CONFIGS) {
+      const info = userApiKeys[pc.provider] || { has_key: false, api_key_hint: null, base_url: "" };
+      const row = document.createElement("div");
+      row.className = "settings-provider-row";
+      row.dataset.provider = pc.provider;
+      row.style.cssText = "margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e5e7eb;";
+      row.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <label style="font-size:12px;font-weight:600;color:#6b7280;">
+            ${pc.label}
+            ${info.has_key ? '<span style="color:#10b981;font-weight:400;margin-left:6px;">&#10003; key saved</span>' : ""}
+          </label>
+          <a href="${pc.keyUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#667eea;text-decoration:none;">Get API key</a>
+        </div>
+        <input type="password" class="settings-provider-key" placeholder="${pc.keyPlaceholder}" value="" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:6px;font-size:14px;box-sizing:border-box;font-family:inherit;" />
+        <input type="text" class="settings-provider-url" placeholder="${pc.urlPlaceholder}" value="${info.base_url || pc.defaultUrl}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box;font-family:inherit;color:#6b7280;" />
+      `;
+      settingsProvidersContainer.appendChild(row);
+    }
+  }
+
   function openSettings() {
     if (!settingsBackdrop) return;
-    if (settingsProvider) settingsProvider.value = userApiConfig.provider || "openai";
-    if (settingsApiKey) settingsApiKey.value = "";
-    if (settingsBaseUrl) {
-      const urls = { openai: "", groq: "", openrouter: "" };
-      settingsBaseUrl.value = urls[userApiConfig.provider] || "";
-    }
-    if (settingsStatus) settingsStatus.textContent = userApiConfig.has_key ? "A key is already saved (paste again to change it)." : "";
+    renderSettingsProviders();
+    if (settingsStatus) settingsStatus.textContent = "";
     settingsBackdrop.classList.add("visible");
     settingsBackdrop.setAttribute("aria-hidden", "false");
   }
@@ -284,7 +404,7 @@
 
   async function loadRuntimeConfig() {
     try {
-      const response = await fetch("/api/config");
+      const response = await fetch("/api/config", { headers: authHeaders() });
       if (!response.ok) return;
       const config = await response.json();
       tweakModeEnabled = Boolean(config.tweak_mode_enabled);
@@ -593,7 +713,7 @@
     div.className = `message ${role}`;
     const cd = document.createElement("div");
     cd.className = "message-content";
-    if (role === "assistant") cd.innerHTML = content.includes("<") ? content : content.replace(/\n/g, "<br>");
+    if (role === "assistant") cd.innerHTML = renderMarkdown(content);
     else cd.textContent = content;
     if (role === "assistant" && modeUsed) {
       const badge = document.createElement("div");
@@ -684,11 +804,12 @@
 
     if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
     if (settingsCancel) settingsCancel.addEventListener("click", closeSettings);
+    if (settingsDismiss) settingsDismiss.addEventListener("click", closeSettings);
     if (settingsBackdrop) settingsBackdrop.addEventListener("click", (e) => { if (e.target === settingsBackdrop) closeSettings(); });
     if (settingsForm) {
       settingsForm.addEventListener("submit", (e) => {
         e.preventDefault();
-        saveUserConfig(settingsProvider?.value || "openai", settingsApiKey?.value || "", settingsBaseUrl?.value || "");
+        saveAllUserConfigs();
       });
     }
 

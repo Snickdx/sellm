@@ -51,6 +51,7 @@ from app.api.schemas import (
     FeedbackRequest,
     LoginRequest,
     LoginResponse,
+    ProviderKeyEntry,
     ReflectionAnalyzeRequest,
     ReflectionApplyRequest,
     ReflectionThreadChatRequest,
@@ -58,6 +59,7 @@ from app.api.schemas import (
     ReflectionThreadStartResponse,
     ReflectionThreadSummary,
     UserConfigGetResponse,
+    UserConfigProviderSet,
     UserConfigSetRequest,
 )
 from app.storage.conversation_store import ConversationStore, User
@@ -127,13 +129,12 @@ app = FastAPI(title="Requirements Chatbot API", lifespan=_app_lifespan)
 WEB_DIR = APP_DIR / "web"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
-# cache_size=0 avoids Jinja2 3.1 + Starlette template cache TypeError on Windows
-_jinja_env = jinja2.Environment(
+templates = Jinja2Templates(
+    directory=str(TEMPLATES_DIR),
     loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
     autoescape=jinja2.select_autoescape(["html", "xml"]),
     cache_size=0,
 )
-templates = Jinja2Templates(env=_jinja_env)
 conversation_store = ConversationStore(
     os.getenv("CONVERSATION_DB_URL")
     or os.getenv("DATABASE_URL")
@@ -220,12 +221,27 @@ def _user_api_overrides(user: Optional[User]) -> dict:
     """Return provider/api_key/base_url from user's config, or empty dict."""
     if not user:
         return {}
-    cfg = conversation_store.get_user_api_config(user.id)
-    if cfg and cfg.api_key and cfg.provider:
+    all_cfgs = conversation_store.get_all_user_api_configs(user.id)
+    providers = {}
+    for cfg in all_cfgs:
+        if cfg.api_key and cfg.provider:
+            providers[cfg.provider.lower()] = {
+                "api_key": cfg.api_key,
+                "base_url": cfg.base_url,
+            }
+    return {"user_providers": providers}
+
+
+def _get_user_provider_override(user: Optional[User], backend: str) -> dict:
+    """Get the override for a specific backend from user's stored configs."""
+    overrides = _user_api_overrides(user)
+    providers = overrides.get("user_providers", {})
+    info = providers.get(backend.lower())
+    if info and info.get("api_key"):
         return {
-            "provider_override": cfg.provider,
-            "api_key_override": cfg.api_key,
-            "base_url_override": cfg.base_url,
+            "provider_override": backend,
+            "api_key_override": info["api_key"],
+            "base_url_override": info.get("base_url"),
         }
     return {}
 
@@ -236,13 +252,13 @@ def _rag_for_mode(mode: str):
     return rag_systems.get("vector")
 
 
-def _llm_used_payload(choice_id: str) -> Dict[str, str]:
+def _llm_used_payload(choice_id: str, user_provider: str = "") -> Dict[str, str]:
     backend, model = parse_choice_id(choice_id)
     return {
         "id": choice_id,
         "backend": backend or "",
         "model": model or "",
-        "label": choice_label(choice_id),
+        "label": choice_label(choice_id, user_provider=user_provider),
     }
 
 
@@ -260,15 +276,18 @@ def _generate_mode_response(
     if not rag:
         status = engine_status.get(mode, "unavailable")
         raise ValueError(f"Mode '{mode}' is unavailable ({status})")
-    resolved_choice = validate_choice_id(llm_choice)
+    resolved_choice = validate_choice_id(llm_choice, user_provider="")
+    backend, _ = parse_choice_id(resolved_choice)
+    user_override = _get_user_provider_override(user, backend or "")
+    user_provider = (backend or "") if user_override else ""
+    resolved_choice = validate_choice_id(llm_choice, user_provider=user_provider)
     llm = resolve_llm_wrapper(rag, resolved_choice)
-    overrides = _user_api_overrides(user)
     response, style = llm.generate_response(
         message,
         conversation_history=history,
         behavior_system_suffix=_behavior_system_suffix(),
         force_coach=force_coach,
-        **overrides,
+        **user_override,
     )
     if force_coach or style == "coach":
         return response, "coach", resolved_choice
@@ -318,25 +337,36 @@ async def get_user_config(request: Request):
     user = _get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    cfg = conversation_store.get_user_api_config(user.id)
-    if cfg and cfg.api_key:
-        key = cfg.api_key
-        hint = f"{key[:5]}...{key[-3:]}" if len(key) > 10 else "***"
-        return UserConfigGetResponse(provider=cfg.provider, api_key_hint=hint, has_key=True)
-    return UserConfigGetResponse(provider="openai", api_key_hint=None, has_key=False)
+    all_cfgs = conversation_store.get_all_user_api_configs(user.id)
+    entries = []
+    for cfg in all_cfgs:
+        hint = None
+        if cfg.api_key:
+            key = cfg.api_key
+            hint = f"{key[:5]}...{key[-3:]}" if len(key) > 10 else "***"
+        entries.append(
+            ProviderKeyEntry(
+                provider=cfg.provider,
+                api_key_hint=hint,
+                has_key=bool(cfg.api_key),
+                base_url=cfg.base_url,
+            )
+        )
+    return UserConfigGetResponse(keys=entries)
 
 @app.post("/api/user/config")
 async def set_user_config(request: Request, body: UserConfigSetRequest):
     user = _get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    conversation_store.set_user_api_config(
-        user.id,
-        provider=body.provider,
-        api_key=body.api_key,
-        base_url=body.base_url,
-    )
-    return {"status": "ok", "provider": body.provider}
+    for entry in body.keys:
+        conversation_store.set_user_api_config(
+            user.id,
+            provider=entry.provider,
+            api_key=entry.api_key,
+            base_url=entry.base_url,
+        )
+    return {"status": "ok"}
 
 # ── App endpoints ─────────────────────────────────────────────
 
@@ -344,9 +374,9 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
 async def read_root(request: Request):
     user = _get_current_user(request)
     return templates.TemplateResponse(
-        request,
         "index.html",
         {
+            "request": request,
             "authenticated": user is not None,
             "username": user.username if user else None,
         },
@@ -374,7 +404,9 @@ async def chat(request: ChatRequest, req: Request):
         stored_messages = conversation_store.get_messages(conversation_id)
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
         mode = (request.response_mode or "vector").lower()
-        llm_choice = validate_choice_id(request.llm_choice)
+        user_overrides = _user_api_overrides(user)
+        user_providers = user_overrides.get("user_providers", {})
+        llm_choice = validate_choice_id(request.llm_choice, user_provider="")
 
         if mode == "compare":
             vector_response, _, choice_v = _generate_mode_response(
@@ -415,13 +447,15 @@ async def chat(request: ChatRequest, req: Request):
                 raise ValueError("Hybrid mode requires at least one of vector or neo4j engines")
             rag = rag_systems["vector"] or rag_systems["neo4j"]
             llm = resolve_llm_wrapper(rag, llm_choice)
+            resolved_backend, _ = parse_choice_id(llm_choice)
+            user_override = _get_user_provider_override(user, resolved_backend or "")
             handoff = hybrid_service.retrieve(request.message, top_k=hybrid_top_k)
             response, style = llm.generate_response_from_results(
                 request.message,
                 handoff.results,
                 conversation_history=history,
                 behavior_system_suffix=_behavior_system_suffix(),
-                **_user_api_overrides(user),
+                **user_override,
             )
             if style == "coach":
                 mode_label = "coach"
@@ -588,9 +622,7 @@ async def get_conversation(conversation_id: str, request: Request):
 
 
 @app.get("/api/config")
-async def config():
-    openai_key = os.getenv("OPENAI_API_KEY")
-    openai_key_status = "present" if openai_key else "missing"
+async def config(request: Request = None):
     active_wrappers = {mode: wrapper for mode, wrapper in llm_by_mode.items() if wrapper is not None}
     llm_runtime = {
         mode: {
@@ -602,10 +634,29 @@ async def config():
         }
         for mode, wrapper in active_wrappers.items()
     }
-    choices = list_llm_choices()
+    user = _get_current_user(request) if request else None
+    user_overrides = _user_api_overrides(user) if user else {}
+    user_providers = user_overrides.get("user_providers", {})
+    user_provider_names = set(user_providers.keys())
+
+    has_openai = "openai" in user_provider_names
+    has_anthropic = "anthropic" in user_provider_names
+    has_groq = "groq" in user_provider_names
+    has_openrouter = "openrouter" in user_provider_names
+
+    # Determine primary user_provider for list_llm_choices
+    for p in ("openai", "anthropic"):
+        if p in user_provider_names:
+            user_llm_provider = p
+            break
+    else:
+        user_llm_provider = ""
+
+    choices = list_llm_choices(user_provider=user_llm_provider)
+
     switcher_on = (
-        openai_configured()
-        or anthropic_configured()
+        has_openai
+        or has_anthropic
         or ollama_reachable()
         or len([c for c in choices if c["provider"] != "template"]) > 0
     )
@@ -619,8 +670,10 @@ async def config():
         "llm_choices": choices,
         "llm_model_switcher_enabled": switcher_on and len(choices) > 1,
         "llm_providers": {
-            "openai": openai_configured(),
-            "anthropic": anthropic_configured(),
+            "openai": has_openai,
+            "anthropic": has_anthropic,
+            "groq": has_groq,
+            "openrouter": has_openrouter,
             "ollama": ollama_reachable(),
         },
         "hybrid_top_k": hybrid_top_k,
@@ -643,8 +696,6 @@ async def config():
             or "sqlite:///./storage/conversations.db"
         ),
         "chroma_persist_directory": chroma_persist_directory,
-        "openai_api_key_status": openai_key_status,
-        "openai_api_key_hint": (f"{openai_key[:7]}...{openai_key[-4:]}" if openai_key and len(openai_key) > 12 else None),
         "llm_runtime_by_mode": llm_runtime,
     }
 
