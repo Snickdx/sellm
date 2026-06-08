@@ -118,6 +118,11 @@
   const newConversationBtn = document.getElementById("newConversationBtn");
   const settingsBtn = document.getElementById("settingsBtn");
   const logoutBtn = document.getElementById("logoutBtn");
+  const sideNav = document.getElementById("sideNav");
+  const sideNavToggle = document.getElementById("sideNavToggle");
+  const sideNavClose = document.getElementById("sideNavClose");
+  const sideNavBackdrop = document.getElementById("sideNavBackdrop");
+  const MOBILE_NAV_MQ = window.matchMedia("(max-width: 768px)");
   const settingsBackdrop = document.getElementById("settingsBackdrop");
   const settingsForm = document.getElementById("settingsForm");
   const settingsCancel = document.getElementById("settingsCancel");
@@ -170,6 +175,32 @@
 
   function showApp() {
     if (loginOverlay) loginOverlay.classList.add("hidden");
+  }
+
+  function isMobileNav() {
+    return MOBILE_NAV_MQ.matches;
+  }
+
+  function openSideNav() {
+    if (!sideNav) return;
+    sideNav.classList.add("open");
+    if (sideNavBackdrop) {
+      sideNavBackdrop.classList.add("visible");
+      sideNavBackdrop.setAttribute("aria-hidden", "false");
+    }
+    document.body.classList.add("side-nav-open");
+    if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "true");
+  }
+
+  function closeSideNav() {
+    if (!sideNav) return;
+    sideNav.classList.remove("open");
+    if (sideNavBackdrop) {
+      sideNavBackdrop.classList.remove("visible");
+      sideNavBackdrop.setAttribute("aria-hidden", "true");
+    }
+    document.body.classList.remove("side-nav-open");
+    if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "false");
   }
 
   async function doLogin(username, password) {
@@ -301,6 +332,7 @@
 
   function openSettings() {
     if (!settingsBackdrop) return;
+    closeSideNav();
     renderSettingsProviders();
     if (settingsStatus) settingsStatus.textContent = "";
     settingsBackdrop.classList.add("visible");
@@ -667,6 +699,7 @@
   }
 
   function resetConversationUi() {
+    closeSideNav();
     conversationHistory.length = 0;
     currentConversationId = null;
     chatMessages.innerHTML = `<div class="message assistant"><div class="message-content">Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.<br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.<br><br>You can ask me about:<br>• Who's involved in this project<br>• What we're trying to accomplish<br>• What the system needs to do<br>• Budget and cost concerns<br>• Any worries or risks we have<br><br><em>Remember: Take notes as we talk, then formalize my informal responses into structured requirements!</em></div></div>`;
@@ -686,6 +719,7 @@
       data.messages.forEach((m) => { addMessage(m.role, m.content, null, null, null); conversationHistory.push({ role: m.role, content: m.content }); });
       syncListSelection();
       await loadReflectionThreadsForConversation(currentConversationId);
+      closeSideNav();
     } catch (e) { console.error(e); }
   }
 
@@ -802,6 +836,16 @@
     }
     if (logoutBtn) logoutBtn.addEventListener("click", doLogout);
 
+    if (sideNavToggle) {
+      sideNavToggle.addEventListener("click", () => {
+        if (sideNav?.classList.contains("open")) closeSideNav();
+        else openSideNav();
+      });
+    }
+    if (sideNavClose) sideNavClose.addEventListener("click", closeSideNav);
+    if (sideNavBackdrop) {
+      sideNavBackdrop.addEventListener("click", closeSideNav);
+    }
     if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
     if (settingsCancel) settingsCancel.addEventListener("click", closeSettings);
     if (settingsDismiss) settingsDismiss.addEventListener("click", closeSettings);
@@ -838,6 +882,18 @@
     if (reflectionSendBtn) reflectionSendBtn.addEventListener("click", sendReflectionMessage);
     if (reflectionChatInput) reflectionChatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); sendReflectionMessage(); } });
     if (reflectionThreadList) reflectionThreadList.addEventListener("click", (e) => { const item = e.target.closest(".reflection-thread-item"); if (item?.dataset.threadId) openReflectionThread(item.dataset.threadId); });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && sideNav?.classList.contains("open")) closeSideNav();
+    });
+    const onNavMqChange = () => {
+      if (!isMobileNav()) closeSideNav();
+    };
+    if (typeof MOBILE_NAV_MQ.addEventListener === "function") {
+      MOBILE_NAV_MQ.addEventListener("change", onNavMqChange);
+    } else if (typeof MOBILE_NAV_MQ.addListener === "function") {
+      MOBILE_NAV_MQ.addListener(onNavMqChange);
+    }
   }
 
   // ── Start ───────────────────────────────────────────────────

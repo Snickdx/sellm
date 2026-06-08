@@ -19,15 +19,29 @@
             width: min(1200px, 96vw);
             height: min(900px, 92vh);
         }
+        .side-nav-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            z-index: 1500;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .side-nav-backdrop.visible {
+            display: block;
+            opacity: 1;
+        }
         .master-detail {
             display: grid;
-            grid-template-columns: 1fr 5fr;
+            grid-template-columns: minmax(220px, 1fr) 5fr;
             width: 100%;
             height: 100%;
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             overflow: hidden;
+            position: relative;
         }
         .conversations-pane {
             display: flex;
@@ -35,6 +49,36 @@
             min-width: 0;
             background: #f8fafc;
             border-right: 1px solid #e2e8f0;
+            z-index: 1600;
+        }
+        .side-nav-close {
+            display: none;
+            border: none;
+            background: transparent;
+            font-size: 22px;
+            line-height: 1;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+        .side-nav-close:hover { background: #e2e8f0; color: #334155; }
+        .side-nav-toggle {
+            display: none;
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            font-size: 18px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 6px 10px;
+            border-radius: 10px;
+        }
+        .side-nav-toggle:hover { background: rgba(255, 255, 255, 0.22); }
+        .chat-header-text {
+            min-width: 0;
+            flex: 1;
         }
         .conversations-pane-header {
             padding: 10px 12px 10px;
@@ -134,9 +178,19 @@
             min-width: 0;
             min-height: 0;
         }
-        .chat-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display:flex; align-items:center; gap:12px; padding:8px 16px; flex-shrink:0; min-height:44px; }
-        .chat-header h1 { font-size: 15px; font-weight: 600; white-space:nowrap; }
-        .chat-header p { font-size: 12px; opacity:0.85; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            flex-shrink: 0;
+            min-height: 48px;
+        }
+        .chat-header h1 { font-size: 15px; font-weight: 600; line-height: 1.25; }
+        .chat-header p { font-size: 12px; opacity: 0.85; line-height: 1.35; }
+        .chat-header-subtitle { display: block; }
         .chat-messages { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 16px; background: #f8f9fa; }
         .message { margin-bottom: 15px; display: flex; animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -236,9 +290,65 @@
         .settings-icon-btn:hover { background: #e2e8f0; }
         .settings-select { font-family: inherit; }
         .logout-btn:hover { background: #f1f5f9; color: #475569; }
-        @media (max-width: 720px) {
-            .master-detail { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-            .conversations-pane { max-height: 38vh; border-right: none; border-bottom: 1px solid #e2e8f0; }
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+                align-items: stretch;
+            }
+            .shell {
+                width: 100%;
+                height: 100dvh;
+                max-height: 100dvh;
+            }
+            .master-detail {
+                grid-template-columns: 1fr;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .conversations-pane {
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: min(320px, 88vw);
+                max-width: 88vw;
+                border-right: 1px solid #e2e8f0;
+                border-bottom: none;
+                transform: translateX(-105%);
+                transition: transform 0.25s ease;
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+            }
+            .conversations-pane.open {
+                transform: translateX(0);
+            }
+            body.side-nav-open {
+                overflow: hidden;
+            }
+            .side-nav-toggle,
+            .side-nav-close {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .chat-header-subtitle {
+                display: none;
+            }
+            .message-content {
+                max-width: 88%;
+            }
+            .chat-input-container {
+                padding: 8px 12px 12px;
+            }
+            .send-button {
+                padding: 12px 16px;
+            }
+            .reflection-workspace {
+                grid-template-columns: 1fr;
+            }
+            .reflection-modal {
+                max-height: 95dvh;
+                padding: 12px;
+            }
         }
     </style>
 </head>
@@ -279,13 +389,17 @@
         </div>
     </div>
 
+    <div id="sideNavBackdrop" class="side-nav-backdrop" aria-hidden="true"></div>
     <div class="shell">
         <div class="master-detail chat-container">
-            <aside class="conversations-pane" aria-label="Conversations">
+            <aside id="sideNav" class="conversations-pane" aria-label="Conversations and settings">
                 <div class="conversations-pane-header">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <h2 style="margin:0;">Conversations</h2>
-                        <button type="button" id="settingsBtn" class="settings-icon-btn" title="API Configuration">⚙️</button>
+                        <div style="display:flex;align-items:center;gap:4px;">
+                            <button type="button" id="settingsBtn" class="settings-icon-btn" title="API Configuration" aria-label="API Configuration">⚙️</button>
+                            <button type="button" id="sideNavClose" class="side-nav-close" aria-label="Close menu">&times;</button>
+                        </div>
                     </div>
                     <button type="button" id="newConversationBtn" class="new-chat-btn" style="margin-top:10px;">+ New chat</button>
                     <button type="button" id="logoutBtn" class="logout-btn" style="margin-top:6px;width:100%;border:none;border-radius:10px;padding:6px 12px;background:transparent;color:#94a3b8;font-size:12px;cursor:pointer;">Sign out</button>
@@ -294,8 +408,11 @@
             </aside>
             <main class="chat-pane">
                 <div class="chat-header">
-                    <h1>Requirements Gathering Training</h1>
-                    <p>Practice extracting and formalizing requirements from stakeholder conversations</p>
+                    <button type="button" id="sideNavToggle" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="sideNav">&#9776;</button>
+                    <div class="chat-header-text">
+                        <h1>Requirements Gathering Training</h1>
+                        <p class="chat-header-subtitle">Practice extracting and formalizing requirements from stakeholder conversations</p>
+                    </div>
                 </div>
                 <div class="chat-messages" id="chatMessages">
                     <div class="message assistant">
@@ -371,6 +488,6 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/chat.js?v=4"></script>
+    <script src="/static/components/chat.js?v=5"></script>
 </body>
 </html>
