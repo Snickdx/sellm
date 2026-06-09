@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!app/.env.example
 app/.env
 
 # Python build/cache

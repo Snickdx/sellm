@@ -274,9 +274,10 @@ Your answer:"""
         )
         return response.choices[0].message.content.strip()
 
-    def _generate_coach_with_anthropic(self, prompt: str) -> str:
+    def _generate_coach_with_anthropic(self, prompt: str, api_key: str = "") -> str:
         return self._generate_with_anthropic(
             prompt,
+            api_key=api_key,
             system=(
                 "You are a domain coach for requirements-interview training. "
                 "Explain concepts clearly to interviewers using only the project facts provided. "
@@ -311,8 +312,9 @@ Your answer:"""
         )
         return "\n".join(lines)
 
-    def _generate_with_anthropic(self, prompt: str, *, system: str) -> str:
-        api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    def _generate_with_anthropic(self, prompt: str, *, system: str, api_key: str = "") -> str:
+        if not api_key:
+            raise ValueError("Anthropic API key is required — set one in your API Configuration")
         response = self.httpx.post(
             "https://api.anthropic.com/v1/messages",
             headers={
@@ -459,6 +461,7 @@ Your answer:"""
             try:
                 return self._generate_with_anthropic(
                     user,
+                    api_key="",
                     system=system or "You are a precise assistant.",
                 )
             except Exception as e:
@@ -581,7 +584,7 @@ Your answer:"""
                 elif self.backend == "openai":
                     response = self._generate_coach_with_openai(prompt)
                 elif self.backend == "anthropic":
-                    response = self._generate_coach_with_anthropic(prompt)
+                    response = self._generate_coach_with_anthropic(prompt, api_key=api_key_override or "")
                 else:
                     response = self._generate_coach_with_template(query, context_results)
             except Exception as e:
@@ -628,6 +631,7 @@ Your answer:"""
             elif self.backend == "anthropic":
                 response = self._generate_with_anthropic(
                     prompt,
+                    api_key=api_key_override or "",
                     system=self._stakeholder_system_content(suffix),
                 )
             else:

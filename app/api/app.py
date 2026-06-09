@@ -129,12 +129,11 @@ app = FastAPI(title="Requirements Chatbot API", lifespan=_app_lifespan)
 WEB_DIR = APP_DIR / "web"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
-_jinja_env = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
+templates = Jinja2Templates(
+    directory=str(TEMPLATES_DIR),
     autoescape=jinja2.select_autoescape(["html", "xml"]),
     cache_size=0,
 )
-templates = Jinja2Templates(env=_jinja_env)
 conversation_store = ConversationStore(
     os.getenv("CONVERSATION_DB_URL")
     or os.getenv("DATABASE_URL")
@@ -374,9 +373,9 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
 async def read_root(request: Request):
     user = _get_current_user(request)
     return templates.TemplateResponse(
-        request,
         "index.html",
         {
+            "request": request,
             "authenticated": user is not None,
             "username": user.username if user else None,
         },
