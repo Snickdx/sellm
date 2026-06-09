@@ -575,8 +575,8 @@ async def chat(request: ChatRequest, req: Request):
                 except Exception as exc:
                     sections.append((title, f"[{title} unavailable: {exc}]"))
 
-            combined = "<br><br>".join(
-                f"<strong>{title}</strong><br>{body}" for title, body in sections
+            combined = "\n\n".join(
+                f"**{title}**\n{body}" for title, body in sections
             )
             conversation_store.add_message(
                 conversation_id=conversation_id,
