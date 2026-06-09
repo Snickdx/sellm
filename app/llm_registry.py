@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple  # noqa: F401 used by stakeholder_llm_available
 
 from app.llm_wrapper import LLMWrapper
 
@@ -109,6 +109,17 @@ def anthropic_configured() -> bool:
     return False
 
 
+def stakeholder_llm_available(user_providers: Optional[Dict[str, Any]] = None) -> bool:
+    """True when stakeholder simulation can call a real LLM."""
+    if ollama_reachable():
+        return True
+    if user_providers:
+        for info in user_providers.values():
+            if isinstance(info, dict) and info.get("api_key"):
+                return True
+    return False
+
+
 def choice_id(backend: str, model: str) -> str:
     return f"{backend.lower()}:{model}"
 
@@ -179,8 +190,6 @@ def list_llm_choices(user_provider: str = "") -> List[Dict[str, Any]]:
                 available,
             )
 
-    if not any(c["provider"] != "template" for c in choices):
-        add("template", "builtin", "Template (offline fallback)", "template", True)
     return choices
 
 
@@ -215,12 +224,10 @@ def get_llm_wrapper(rag: Any, backend: str, model: str) -> LLMWrapper:
 def resolve_llm_wrapper(rag: Any, choice_id: Optional[str]) -> LLMWrapper:
     resolved = validate_choice_id(choice_id)
     backend, model = parse_choice_id(resolved)
-    if not backend:
-        backend = "template"
-        model = "builtin"
-    if backend == "template":
-        model = "builtin"
-    return get_llm_wrapper(rag, backend, model)
+    if not backend or backend == "template":
+        backend = "ollama"
+        model = model if model and model not in ("builtin", "template") else None
+    return get_llm_wrapper(rag, backend, model or "llama3.2")
 
 
 def choice_label(choice_id: str, user_provider: str = "") -> str:

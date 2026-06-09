@@ -69,12 +69,19 @@ from app.llm_registry import (
     choice_label,
     default_choice_id,
     list_llm_choices,
-    openai_configured,
     ollama_reachable,
     parse_choice_id,
     resolve_llm_wrapper,
+    stakeholder_llm_available,
     validate_choice_id,
-    anthropic_configured,
+)
+from app.scenario.scenario_pack import ScenarioPack, load_scenario_pack
+from app.scenario.stakeholder_prompt import STAKEHOLDER_LLM_REQUIRED_MSG
+from app.security.secret_store import (
+    decrypt_secret,
+    encrypt_secret,
+    is_unchanged_api_key,
+    mask_secret,
 )
 from app.rag_backend import RequirementsRAG
 from app.rag_backend_neo4j import RequirementsRAGNeo4j
@@ -129,11 +136,11 @@ app = FastAPI(title="Requirements Chatbot API", lifespan=_app_lifespan)
 WEB_DIR = APP_DIR / "web"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
-templates = Jinja2Templates(
-    directory=str(TEMPLATES_DIR),
+jinja_env = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
     autoescape=jinja2.select_autoescape(["html", "xml"]),
-    cache_size=0,
 )
+templates = Jinja2Templates(env=jinja_env)
 conversation_store = ConversationStore(
     os.getenv("CONVERSATION_DB_URL")
     or os.getenv("DATABASE_URL")
@@ -206,6 +213,14 @@ tweak_mode_enabled = _tweak_raw.strip().lower() in (
 )
 behavior_tweaks_file = os.getenv("BEHAVIOR_TWEAKS_FILE", "config/behavior/behavior_tweaks.json")
 behavior_tweaks = BehaviorTweaksStore(behavior_tweaks_file) if tweak_mode_enabled else None
+
+scenario_pack: Optional[ScenarioPack] = None
+try:
+    scenario_pack = load_scenario_pack(excel_file)
+    print(f"✓ Scenario pack compiled ({len(scenario_pack.sections)} sections)")
+except Exception as e:
+    print(f"⚠ Scenario pack compilation failed: {e}")
+
 print("RAG system ready!")
 
 
@@ -225,7 +240,7 @@ def _user_api_overrides(user: Optional[User]) -> dict:
     for cfg in all_cfgs:
         if cfg.api_key and cfg.provider:
             providers[cfg.provider.lower()] = {
-                "api_key": cfg.api_key,
+                "api_key": decrypt_secret(cfg.api_key),
                 "base_url": cfg.base_url,
             }
     return {"user_providers": providers}
@@ -261,48 +276,134 @@ def _llm_used_payload(choice_id: str, user_provider: str = "") -> Dict[str, str]
     }
 
 
-def _generate_mode_response(
-    mode: str,
-    message: str,
-    history: List[Dict],
+def _require_stakeholder_llm(user: Optional[User]) -> None:
+    providers = _user_api_overrides(user).get("user_providers", {})
+    if not stakeholder_llm_available(providers):
+        raise ValueError(STAKEHOLDER_LLM_REQUIRED_MSG)
+
+
+def _resolve_llm_for_user(
+    user: Optional[User],
+    llm_choice: Optional[str],
     *,
-    user: Optional[User] = None,
-    force_coach: bool = False,
-    llm_choice: Optional[str] = None,
-) -> tuple[str, str, str]:
-    """Returns (response_text, mode_used label, resolved llm_choice id)."""
-    rag = _rag_for_mode(mode)
-    if not rag:
-        status = engine_status.get(mode, "unavailable")
-        raise ValueError(f"Mode '{mode}' is unavailable ({status})")
+    mode: str = "vector",
+) -> tuple:
+    """Returns (llm, resolved_choice_id, user_override dict)."""
     resolved_choice = validate_choice_id(llm_choice, user_provider="")
     backend, _ = parse_choice_id(resolved_choice)
     user_override = _get_user_provider_override(user, backend or "")
     user_provider = (backend or "") if user_override else ""
     resolved_choice = validate_choice_id(llm_choice, user_provider=user_provider)
+    rag = _rag_for_mode(mode) or rag_systems.get("vector") or rag_systems.get("neo4j")
+    if not rag:
+        raise ValueError("No RAG engine available for LLM wrapper")
     llm = resolve_llm_wrapper(rag, resolved_choice)
-    response, style = llm.generate_response(
+    return llm, resolved_choice, user_override
+
+
+def _debug_chunks(results: Optional[List[Dict]]) -> List[Dict[str, Any]]:
+    chunks: List[Dict[str, Any]] = []
+    for item in (results or [])[:6]:
+        meta = item.get("metadata") or {}
+        doc = (item.get("document") or "").strip()
+        chunks.append(
+            {
+                "sheet": meta.get("sheet"),
+                "row": meta.get("row"),
+                "backend": meta.get("backend"),
+                "excerpt": doc[:240] if doc else "",
+            }
+        )
+    return chunks
+
+
+def _generate_rag_response(
+    mode: str,
+    message: str,
+    history: List[Dict],
+    *,
+    user: Optional[User] = None,
+    llm_choice: Optional[str] = None,
+) -> tuple[str, str, str, Optional[Dict[str, Any]]]:
+    """Returns (response, mode_label, choice_id, debug)."""
+    rag = _rag_for_mode(mode)
+    if not rag:
+        status = engine_status.get(mode, "unavailable")
+        raise ValueError(f"Mode '{mode}' is unavailable ({status})")
+    _require_stakeholder_llm(user)
+    llm, resolved_choice, user_override = _resolve_llm_for_user(
+        user, llm_choice, mode=mode
+    )
+    results = rag.search(message, n_results=llm.rag_top_k, filter_by_sheet_type=True)
+    response = llm.generate_stakeholder_from_results(
         message,
+        results,
         conversation_history=history,
-        behavior_system_suffix=_behavior_system_suffix(),
-        force_coach=force_coach,
+        scenario_pack=scenario_pack,
         **user_override,
     )
-    if force_coach or style == "coach":
-        return response, "coach", resolved_choice
-    return response, mode, resolved_choice
+    debug = {"mode": mode, "retrieved_chunks": _debug_chunks(results)}
+    return response, mode, resolved_choice, debug
 
 
-def _finalize_response(query: str, response: str, mode_label: str) -> str:
-    if mode_label == "coach" or mode_label.endswith(":coach"):
-        return response
-    return _apply_runtime_tweaks(query, response)
+def _generate_hybrid_response(
+    message: str,
+    history: List[Dict],
+    *,
+    user: Optional[User] = None,
+    llm_choice: Optional[str] = None,
+) -> tuple[str, str, str, Dict[str, Any], Optional[Dict[str, Any]]]:
+    if not hybrid_service:
+        raise ValueError("Hybrid service is not initialized")
+    if not rag_systems["vector"] and not rag_systems["neo4j"]:
+        raise ValueError("Hybrid mode requires at least one of vector or neo4j engines")
+    _require_stakeholder_llm(user)
+    llm, resolved_choice, user_override = _resolve_llm_for_user(
+        user, llm_choice, mode="hybrid"
+    )
+    handoff = hybrid_service.retrieve(message, top_k=hybrid_top_k)
+    response = llm.generate_stakeholder_from_results(
+        message,
+        handoff.results,
+        conversation_history=history,
+        scenario_pack=scenario_pack,
+        **user_override,
+    )
+    mode_label = f"hybrid:{handoff.route}"
+    routing_payload = {**handoff.routing, "backends_used": handoff.backends_used}
+    debug = {
+        "mode": mode_label,
+        "retrieved_chunks": _debug_chunks(handoff.results),
+        "routing": routing_payload,
+    }
+    return response, mode_label, resolved_choice, routing_payload, debug
 
 
-def _apply_runtime_tweaks(query: str, response: str) -> str:
-    if not tweak_mode_enabled or behavior_tweaks is None:
-        return response
-    return behavior_tweaks.apply_to_response(query, response)
+def _generate_direct_response(
+    message: str,
+    history: List[Dict],
+    *,
+    user: Optional[User] = None,
+    llm_choice: Optional[str] = None,
+) -> tuple[str, str, str, Optional[Dict[str, Any]]]:
+    if not scenario_pack:
+        raise ValueError("Direct mode requires a compiled scenario pack from data.xlsx")
+    _require_stakeholder_llm(user)
+    llm, resolved_choice, user_override = _resolve_llm_for_user(
+        user, llm_choice, mode="direct"
+    )
+    response = llm.generate_stakeholder_direct(
+        message,
+        scenario_pack,
+        conversation_history=history,
+        **user_override,
+    )
+    debug = {
+        "mode": "direct",
+        "scenario_sections": list(scenario_pack.sections.keys()),
+        "retrieved_chunks": [],
+    }
+    return response, "direct", resolved_choice, debug
 
 
 # ── Auth endpoints ────────────────────────────────────────────
@@ -339,15 +440,14 @@ async def get_user_config(request: Request):
     all_cfgs = conversation_store.get_all_user_api_configs(user.id)
     entries = []
     for cfg in all_cfgs:
-        hint = None
-        if cfg.api_key:
-            key = cfg.api_key
-            hint = f"{key[:5]}...{key[-3:]}" if len(key) > 10 else "***"
+        plain = decrypt_secret(cfg.api_key) if cfg.api_key else ""
+        masked = mask_secret(plain) if plain else None
         entries.append(
             ProviderKeyEntry(
                 provider=cfg.provider,
-                api_key_hint=hint,
-                has_key=bool(cfg.api_key),
+                api_key_hint=masked,
+                api_key_masked=masked,
+                has_key=bool(plain),
                 base_url=cfg.base_url,
             )
         )
@@ -359,10 +459,17 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     for entry in body.keys:
+        existing = conversation_store.get_user_api_config(user.id, entry.provider)
+        if is_unchanged_api_key(entry.api_key):
+            stored_key = existing.api_key if existing else ""
+        elif not (entry.api_key or "").strip():
+            stored_key = ""
+        else:
+            stored_key = encrypt_secret(entry.api_key.strip())
         conversation_store.set_user_api_config(
             user.id,
             provider=entry.provider,
-            api_key=entry.api_key,
+            api_key=stored_key,
             base_url=entry.base_url,
         )
     return {"status": "ok"}
@@ -373,9 +480,9 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
 async def read_root(request: Request):
     user = _get_current_user(request)
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "authenticated": user is not None,
             "username": user.username if user else None,
         },
@@ -407,64 +514,68 @@ async def chat(request: ChatRequest, req: Request):
         user_providers = user_overrides.get("user_providers", {})
         llm_choice = validate_choice_id(request.llm_choice, user_provider="")
 
+        debug_out: Optional[Dict[str, Any]] = None
+        llm_payload = _llm_used_payload(llm_choice)
+
         if mode == "compare":
-            vector_response, _, choice_v = _generate_mode_response(
-                "vector",
-                request.message,
-                history,
-                user=user,
-                llm_choice=llm_choice,
+            _require_stakeholder_llm(user)
+            sections: List[tuple[str, str]] = []
+            compare_debug: Dict[str, Any] = {}
+            resolved_choice = llm_choice
+
+            for key, title in (
+                ("vector", "Vector RAG"),
+                ("neo4j", "Neo4j RAG"),
+                ("hybrid", "Hybrid RAG"),
+                ("direct", "Direct Model"),
+            ):
+                try:
+                    if key == "vector":
+                        resp, _, resolved_choice, dbg = _generate_rag_response(
+                            "vector", request.message, history, user=user, llm_choice=llm_choice
+                        )
+                    elif key == "neo4j":
+                        resp, _, resolved_choice, dbg = _generate_rag_response(
+                            "neo4j", request.message, history, user=user, llm_choice=llm_choice
+                        )
+                    elif key == "hybrid":
+                        resp, _, resolved_choice, _, dbg = _generate_hybrid_response(
+                            request.message, history, user=user, llm_choice=llm_choice
+                        )
+                    else:
+                        resp, _, resolved_choice, dbg = _generate_direct_response(
+                            request.message, history, user=user, llm_choice=llm_choice
+                        )
+                    compare_debug[key] = dbg
+                    sections.append((title, resp))
+                except Exception as exc:
+                    sections.append((title, f"[{title} unavailable: {exc}]"))
+
+            combined = "<br><br>".join(
+                f"<strong>{title}</strong><br>{body}" for title, body in sections
             )
-            neo4j_response, _, choice_n = _generate_mode_response(
-                "neo4j",
-                request.message,
-                history,
-                user=user,
-                llm_choice=llm_choice,
+            conversation_store.add_message(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=combined,
+                mode_used="compare",
             )
-            vector_response = _finalize_response(request.message, vector_response, "vector")
-            neo4j_response = _finalize_response(request.message, neo4j_response, "neo4j")
-            combined = (
-                "<strong>Vector RAG (Embeddings + ChromaDB)</strong><br>"
-                f"{vector_response}<br><br>"
-                "<strong>Neo4j Structured RAG</strong><br>"
-                f"{neo4j_response}"
-            )
-            conversation_store.add_message(conversation_id=conversation_id, role="assistant", content=combined, mode_used="compare")
+            if request.debug:
+                debug_out = {"compare": compare_debug}
+            llm_payload = _llm_used_payload(resolved_choice or llm_choice)
             return ChatResponse(
                 response=combined,
                 sources=None,
                 mode_used="compare",
                 conversation_id=conversation_id,
-                llm_used=_llm_used_payload(choice_v or choice_n or llm_choice),
+                llm_used=llm_payload,
+                debug=debug_out,
             )
 
         if mode == "hybrid":
-            if not hybrid_service:
-                raise ValueError("Hybrid service is not initialized")
-            if not rag_systems["vector"] and not rag_systems["neo4j"]:
-                raise ValueError("Hybrid mode requires at least one of vector or neo4j engines")
-            rag = rag_systems["vector"] or rag_systems["neo4j"]
-            llm = resolve_llm_wrapper(rag, llm_choice)
-            resolved_backend, _ = parse_choice_id(llm_choice)
-            user_override = _get_user_provider_override(user, resolved_backend or "")
-            handoff = hybrid_service.retrieve(request.message, top_k=hybrid_top_k)
-            response, style = llm.generate_response_from_results(
-                request.message,
-                handoff.results,
-                conversation_history=history,
-                behavior_system_suffix=_behavior_system_suffix(),
-                **user_override,
+            response, mode_label, resolved, routing_payload, debug_out = _generate_hybrid_response(
+                request.message, history, user=user, llm_choice=llm_choice
             )
-            if style == "coach":
-                mode_label = "coach"
-            else:
-                mode_label = f"hybrid:{handoff.route}"
-            response = _finalize_response(request.message, response, mode_label)
-            routing_payload = {
-                **handoff.routing,
-                "backends_used": handoff.backends_used,
-            }
             conversation_store.add_message(
                 conversation_id=conversation_id,
                 role="assistant",
@@ -477,21 +588,14 @@ async def chat(request: ChatRequest, req: Request):
                 mode_used=mode_label,
                 conversation_id=conversation_id,
                 routing=routing_payload,
-                llm_used=_llm_used_payload(llm_choice),
+                llm_used=_llm_used_payload(resolved),
+                debug=debug_out if request.debug else None,
             )
 
-        if mode == "coach":
-            if not rag_systems.get("vector"):
-                raise ValueError("Coach mode requires vector RAG (ChromaDB)")
-            response, mode_label, resolved = _generate_mode_response(
-                "vector",
-                request.message,
-                history,
-                user=user,
-                force_coach=True,
-                llm_choice=llm_choice,
+        if mode == "direct":
+            response, mode_label, resolved, debug_out = _generate_direct_response(
+                request.message, history, user=user, llm_choice=llm_choice
             )
-            response = _finalize_response(request.message, response, mode_label)
             conversation_store.add_message(
                 conversation_id=conversation_id,
                 role="assistant",
@@ -504,19 +608,17 @@ async def chat(request: ChatRequest, req: Request):
                 mode_used=mode_label,
                 conversation_id=conversation_id,
                 llm_used=_llm_used_payload(resolved),
+                debug=debug_out if request.debug else None,
             )
 
         if mode not in ("vector", "neo4j"):
-            raise ValueError("Invalid response_mode. Use: vector, neo4j, hybrid, compare, or coach")
+            raise ValueError(
+                "Invalid response_mode. Use: vector, neo4j, hybrid, direct, or compare"
+            )
 
-        response, mode_label, resolved = _generate_mode_response(
-            mode,
-            request.message,
-            history,
-            user=user,
-            llm_choice=llm_choice,
+        response, mode_label, resolved, debug_out = _generate_rag_response(
+            mode, request.message, history, user=user, llm_choice=llm_choice
         )
-        response = _finalize_response(request.message, response, mode_label)
         conversation_store.add_message(
             conversation_id=conversation_id,
             role="assistant",
@@ -529,7 +631,12 @@ async def chat(request: ChatRequest, req: Request):
             mode_used=mode_label,
             conversation_id=conversation_id,
             llm_used=_llm_used_payload(resolved),
+            debug=debug_out if request.debug else None,
         )
+    except ValueError as e:
+        detail = str(e)
+        status = 503 if "unavailable" in detail.lower() else 400
+        raise HTTPException(status_code=status, detail=detail)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -560,12 +667,17 @@ async def modes():
                 (rag_systems["vector"] is not None or rag_systems["neo4j"] is not None)
                 and (llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None)
             ),
-            "compare": (llm_by_mode["vector"] is not None and llm_by_mode["neo4j"] is not None),
-            "coach": llm_by_mode["vector"] is not None,
+            "direct": scenario_pack is not None and (
+                llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None
+            ),
+            "compare": (
+                scenario_pack is not None
+                and (llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None)
+            ),
         },
         "engine_status": engine_status,
         "hybrid_routing": "neo4j | chroma | blend per query",
-        "coach_hint": "define / explain / what is … questions auto-use domain coach in any mode",
+        "direct_mode": "full scenario pack in prompt (no retrieval)",
     }
 
 

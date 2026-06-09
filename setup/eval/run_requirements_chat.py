@@ -19,13 +19,13 @@ PASSWORD = os.getenv("EVAL_PASSWORD", "badPassword1")
 OUT_DIR = _REPO / "docs" / "eval"
 
 TURNS = [
-    ("vector", "Who's involved in this project from your perspective?"),
-    ("vector", "What are we trying to accomplish overall?"),
-    ("vector", "any other user types?"),
-    ("vector", "What happens when a new admin user signs up?"),
-    ("vector", "What worries you most about this project?"),
-    ("hybrid", "define a deduction"),
-    ("coach", "explain what a benefit plan is in this project"),
+    ("vector", "Can you tell me about the project?"),
+    ("neo4j", "What are you most worried about?"),
+    ("hybrid", "Who else is involved?"),
+    ("direct", "What does success look like?"),
+    ("vector", "Are there any budget or timeline constraints?"),
+    ("direct", "What is a deduction?"),
+    ("compare", "What happens if the system is unavailable?"),
 ]
 
 

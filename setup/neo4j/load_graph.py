@@ -16,7 +16,8 @@ from app.rag_backend_neo4j import RequirementsRAGNeo4j
 
 
 def main() -> int:
-    load_dotenv()
+    load_dotenv(ROOT / "app" / ".env")
+    load_dotenv(ROOT / ".env")
     excel_file = os.getenv("EXCEL_FILE", "data.xlsx")
     neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     neo4j_user = os.getenv("NEO4J_USER", "neo4j")

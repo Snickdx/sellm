@@ -251,7 +251,12 @@
       userApiKeys = {};
       if (Array.isArray(data.keys)) {
         for (const entry of data.keys) {
-          userApiKeys[entry.provider] = { has_key: entry.has_key, api_key_hint: entry.api_key_hint, base_url: entry.base_url || "" };
+          userApiKeys[entry.provider] = {
+            has_key: entry.has_key,
+            api_key_hint: entry.api_key_hint,
+            api_key_masked: entry.api_key_masked || entry.api_key_hint || "",
+            base_url: entry.base_url || "",
+          };
         }
       }
     } catch { /* ignore */ }
@@ -267,9 +272,15 @@
       const apiKeyInput = row.querySelector(".settings-provider-key");
       const baseUrlInput = row.querySelector(".settings-provider-url");
       if (provider && apiKeyInput) {
+        const val = (apiKeyInput.value || "").trim();
+        const masked = (apiKeyInput.dataset.masked || "").trim();
+        let api_key = val;
+        if (masked && val === masked) {
+          api_key = "__UNCHANGED__";
+        }
         keys.push({
           provider: provider,
-          api_key: apiKeyInput.value || "",
+          api_key,
           base_url: baseUrlInput ? baseUrlInput.value || null : null,
         });
       }
@@ -310,7 +321,8 @@
     if (!settingsProvidersContainer) return;
     settingsProvidersContainer.innerHTML = "";
     for (const pc of PROVIDER_CONFIGS) {
-      const info = userApiKeys[pc.provider] || { has_key: false, api_key_hint: null, base_url: "" };
+      const info = userApiKeys[pc.provider] || { has_key: false, api_key_hint: null, api_key_masked: "", base_url: "" };
+      const masked = info.api_key_masked || info.api_key_hint || "";
       const row = document.createElement("div");
       row.className = "settings-provider-row";
       row.dataset.provider = pc.provider;
@@ -323,7 +335,7 @@
           </label>
           <a href="${pc.keyUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#667eea;text-decoration:none;">Get API key</a>
         </div>
-        <input type="password" class="settings-provider-key" placeholder="${pc.keyPlaceholder}" value="" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:6px;font-size:14px;box-sizing:border-box;font-family:inherit;" />
+        <input type="password" class="settings-provider-key" placeholder="${info.has_key ? "Replace key to update" : pc.keyPlaceholder}" value="${masked.replace(/"/g, "&quot;")}" data-masked="${masked.replace(/"/g, "&quot;")}" autocomplete="off" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:6px;font-size:14px;box-sizing:border-box;font-family:inherit;" />
         <input type="text" class="settings-provider-url" placeholder="${pc.urlPlaceholder}" value="${info.base_url || pc.defaultUrl}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box;font-family:inherit;color:#6b7280;" />
       `;
       settingsProvidersContainer.appendChild(row);
@@ -731,15 +743,23 @@
   function formatRoutingBadge(modeUsed, routing, llmUsed) {
     if (!modeUsed) return null;
     const llmPart = llmUsed?.label ? ` · ${llmUsed.label}` : "";
-    if (modeUsed === "coach" || modeUsed.endsWith(":coach")) {
-      return `domain coach${llmPart}`;
+    const labels = {
+      vector: "Vector RAG",
+      neo4j: "Neo4j RAG",
+      direct: "Direct Model",
+      compare: "Compare All",
+    };
+    if (modeUsed === "compare") return `${labels.compare}${llmPart}`;
+    if (modeUsed === "direct") return `${labels.direct}${llmPart}`;
+    if (modeUsed === "vector" || modeUsed === "neo4j") {
+      return `${labels[modeUsed] || modeUsed}${llmPart}`;
     }
-    let label = `mode: ${modeUsed}${llmPart}`;
-    if (routing?.route && modeUsed.startsWith("hybrid")) {
-      const backends = (routing.backends_used || []).join(" + ");
-      label = `hybrid → ${routing.route}${backends ? ` (${backends})` : ""}`;
+    if (modeUsed.startsWith("hybrid")) {
+      const route = routing?.route || modeUsed.split(":")[1] || "";
+      const backends = (routing?.backends_used || []).join(" + ");
+      return `Hybrid RAG → ${route}${backends ? ` (${backends})` : ""}${llmPart}`;
     }
-    return label;
+    return `${modeUsed}${llmPart}`;
   }
 
   function addMessage(role, content, sources = null, modeUsed = null, meta = null) {
@@ -808,7 +828,16 @@
           llm_choice: selectedLlmChoice || llmModelSelect?.value || null,
         }),
       });
-      if (!r.ok) throw new Error("Failed to get response");
+      if (!r.ok) {
+        let detail = "Failed to get response";
+        try {
+          const errBody = await r.json();
+          detail = errBody.detail || detail;
+        } catch (_) {
+          /* ignore */
+        }
+        throw new Error(detail);
+      }
       const data = await r.json();
       removeTypingIndicator();
       addMessage("assistant", data.response, null, data.mode_used || null, {
@@ -820,7 +849,11 @@
       });
       conversationHistory.push({ role: "assistant", content: data.response });
       if (data.conversation_id) { currentConversationId = data.conversation_id; await loadConversations(); await loadReflectionThreadsForConversation(currentConversationId); }
-    } catch (e) { removeTypingIndicator(); addMessage("assistant", "Sorry, I encountered an error. Please try again."); console.error(e); }
+    } catch (e) {
+      removeTypingIndicator();
+      addMessage("assistant", e?.message || "Sorry, I encountered an error. Please try again.");
+      console.error(e);
+    }
     finally { sendButton.disabled = false; chatInput.focus(); }
   }
 

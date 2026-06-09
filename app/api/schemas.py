@@ -16,6 +16,7 @@ class ChatRequest(BaseModel):
     response_mode: Optional[str] = "vector"
     conversation_id: Optional[str] = None
     llm_choice: Optional[str] = None  # e.g. openai:gpt-4o-mini, ollama:llama3.2
+    debug: Optional[bool] = False  # include retrieval/routing metadata for instructors
 
 
 class ChatResponse(BaseModel):
@@ -25,6 +26,7 @@ class ChatResponse(BaseModel):
     conversation_id: Optional[str] = None
     routing: Optional[Dict[str, Any]] = None
     llm_used: Optional[Dict[str, Any]] = None
+    debug: Optional[Dict[str, Any]] = None
 
 
 class FeedbackRequest(BaseModel):
@@ -106,6 +108,7 @@ class LoginResponse(BaseModel):
 class ProviderKeyEntry(BaseModel):
     provider: str
     api_key_hint: Optional[str] = None
+    api_key_masked: Optional[str] = None
     has_key: bool = False
     base_url: Optional[str] = None
 
@@ -114,7 +117,7 @@ class UserConfigGetResponse(BaseModel):
 
 class UserConfigProviderSet(BaseModel):
     provider: str
-    api_key: str = ""
+    api_key: Optional[str] = None
     base_url: Optional[str] = None
 
 class UserConfigSetRequest(BaseModel):

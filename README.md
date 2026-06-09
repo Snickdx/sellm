@@ -18,13 +18,14 @@ This system is designed for **requirements gathering training**. It simulates a 
 
 ## Features
 
-- **Stakeholder Simulation**: Role-plays as a non-technical stakeholder with natural, informal language
-- **RAG System**: ChromaDB (vector) and Neo4j (vector + graph) backends, selectable per deployment
-- **Hybrid routing**: Chat **hybrid** mode auto-picks Chroma (semantic) or Neo4j (relationships) per question, or blends both when scores are close
-- **Intelligent Query Understanding**: Detects query intent and responds contextually
-- **Web Chat UI**: Modern, responsive chat interface for natural conversation
-- **FastAPI Backend**: Lightweight Python API server
-- **Excel Knowledge Base**: Uses Excel sheets as the ground truth for stakeholder responses
+- **Stakeholder simulation**: Role-plays as a non-technical stakeholder with plain, informal language
+- **Comparison modes**: Vector RAG, Neo4j RAG, Hybrid RAG, **Direct Model** (full scenario in prompt), and **Compare All**
+- **Dual RAG**: ChromaDB (vector) and Neo4j (vector + graph), usable separately or via **hybrid** auto-routing
+- **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Groq, OpenRouter); stakeholder chat requires a real LLM
+- **Scenario pack**: `data.xlsx` compiled into structured context for direct mode and optional RAG prompt enrichment
+- **Auth + persistence**: Login, per-user conversations (SQLite/Postgres), reflection threads for meta-review
+- **Responsive UI**: Collapsible side nav on mobile (conversations, new chat, API config)
+- **Excel knowledge base**: `data.xlsx` is ground truth for retrieval (not cited in stakeholder answers)
 
 ## Installation
 
@@ -150,51 +151,119 @@ Load graph data once: `python -m setup.neo4j.load_graph`
 
 ## Architecture
 
-### System Overview
+### System overview
 
-The system follows a RAG (Retrieval-Augmented Generation) architecture designed for role-playing:
+The app is a **FastAPI** service with a Jinja2 web UI. Each chat message goes through **auth → mode selection → retrieve or compile scenario pack → stakeholder prompt → LLM generation → persistence**. See **[docs/REFACTOR_NOTES.md](docs/REFACTOR_NOTES.md)** for the comparison-mode refactor.
 
+```mermaid
+flowchart TB
+  subgraph client [Browser]
+    UI[index.html + chat.js]
+    Nav[Side nav: conversations / new chat / config]
+  end
+
+  subgraph api [FastAPI app/api/app.py]
+    Auth[Bearer session auth]
+    Chat[POST /api/chat]
+    Store[(ConversationStore SQLite or Postgres)]
+    Tweaks[behavior_tweaks.json]
+  end
+
+  subgraph retrieval [Retrieval layer]
+    Vector[RequirementsRAG ChromaDB]
+    Graph[RequirementsRAGNeo4j]
+    Hybrid[HybridKnowledgeService + router]
+  end
+
+  subgraph generation [Generation layer]
+    Scenario[scenario_pack + stakeholder_prompt]
+    LLM[LLMWrapper + llm_registry]
+  end
+
+  KB[(data.xlsx)]
+
+  UI --> Auth
+  Nav --> UI
+  Auth --> Chat
+  Chat --> Store
+  Chat --> Hybrid
+  Chat --> Vector
+  Chat --> Graph
+  Hybrid --> Vector
+  Hybrid --> Graph
+  Vector --> KB
+  Graph --> KB
+  Chat --> Scenario
+  Scenario --> LLM
+  Vector --> LLM
+  Graph --> LLM
+  Chat --> Store
 ```
-┌─────────────┐
-│   Browser   │
-│  (Frontend) │
-└──────┬──────┘
-       │ HTTP/REST
-       ▼
-┌─────────────┐
-│   FastAPI   │
-│   Backend   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐      ┌──────────────┐
-│  SimpleLLM  │─────▶│ Requirements │
-│  (Stakeholder│      │     RAG      │
-│  Simulator) │      └──────┬───────┘
-└─────────────┘             │
-                            ▼
-                    ┌──────────────┐
-                    │   ChromaDB   │
-                    │  (Vector DB) │
-                    └──────┬───────┘
-                           │
-                           ▼
-                    ┌──────────────┐
-                    │  Excel File  │
-                    │ (Knowledge   │
-                    │    Base)     │
-                    └──────────────┘
-```
+
+**At startup** (`app/api/app.py` lifespan):
+
+1. Load `data.xlsx` into **Chroma** (`app/rag_backend.py`) and optionally **Neo4j** (`app/rag_backend_neo4j.py`).
+2. Wire **HybridKnowledgeService** (`app/mcp/hybrid.py`) with both engines when available.
+3. Initialize **LLMWrapper** via `llm_registry` (Ollama / OpenAI / Anthropic / template).
+4. Seed default users and open the conversation database.
+
+Hybrid routing uses `app/mcp/router.py` in-process (no separate MCP sidecar). Neo4j may be unavailable if credentials or the graph load fail; vector-only modes still work.
 
 ### Components
 
-1. **Frontend (`app/web/templates/index.html` + `app/web/static/components/chat.js`)**: Jinja-rendered web UI and chat client logic
-2. **API Server (`app/api/app.py`)**: FastAPI server handling HTTP requests and template/static routing
-3. **RAG Backend (`app/rag_backend.py`)**: Core RAG implementation with:
-  - `RequirementsRAG`: Handles data loading, embedding, and retrieval
-  - `SimpleLLM`: Generates informal, human-like stakeholder responses
-4. **Vector Database**: ChromaDB for persistent vector storage
-5. **Knowledge Base**: Excel file containing stakeholder information (not directly referenced in responses)
+| Layer | Module(s) | Role |
+|-------|-----------|------|
+| **UI** | `app/web/templates/index.html`, `app/web/static/components/chat.js` | Chat, mode/LLM selectors, mobile side nav, settings modal, reflection UI |
+| **API** | `app/api/app.py`, `app/api/schemas.py` | Routes, auth, chat orchestration, config |
+| **Auth & history** | `app/storage/conversation_store.py` | Users, sessions, conversations, messages, reflection threads |
+| **Vector RAG** | `app/rag_backend.py` | Embeddings, Chroma search, sheet-intent filtering, `SimpleLLM` template fallback |
+| **Graph RAG** | `app/rag_backend_neo4j.py` | Neo4j vector + relationship traversal |
+| **Hybrid** | `app/mcp/hybrid.py`, `app/mcp/router.py` | Per-question route: `chroma`, `neo4j`, or `blend` |
+| **Scenario** | `app/scenario/scenario_pack.py`, `app/scenario/stakeholder_prompt.py`, `app/scenario/direct_model.py` | Workbook → scenario pack; shared stakeholder persona |
+| **LLM** | `app/llm_wrapper.py`, `app/llm_registry.py` | Stakeholder generation (RAG + direct), model dropdown |
+| **Tweaks** | `app/tweaks/behavior_tweaks.py`, `config/behavior/behavior_tweaks.json` | Optional reflection/feedback only (not applied to normal chat) |
+| **Reflection** | `app/reflection.py` | Session meta-review and tweak draft proposals |
+| **Knowledge** | `data.xlsx` | Source workbook (Goals, Features, Stakeholders, etc.) |
+
+### How the chat works
+
+End-to-end flow for `POST /api/chat`:
+
+1. **Authenticate** — Browser sends `Authorization: Bearer <token>` (from `POST /api/auth/login`). Unauthenticated requests return 401.
+
+2. **Conversation** — If `conversation_id` is omitted, a new conversation is created from the first message. Prior turns are loaded as `conversation_history` for the LLM (last few messages).
+
+3. **Pick mode** — `response_mode` on the request (UI dropdown):
+   - `vector` — Chroma retrieval → stakeholder LLM
+   - `neo4j` — Neo4j retrieval → stakeholder LLM
+   - `hybrid` — Auto-route to **chroma**, **neo4j**, or **blend**
+   - `direct` — Full scenario pack in prompt (no retrieval) — baseline for comparison
+   - `compare` — All four modes side by side in one message
+
+4. **Context** — RAG modes retrieve top-k workbook chunks; direct mode uses the compiled scenario pack from `app/scenario/scenario_pack.py`. All modes share `app/scenario/stakeholder_prompt.py`.
+
+5. **Generate** — `LLMWrapper` calls Ollama (default) or a user-configured API key. Stakeholder chat fails clearly if no LLM is available (no template fallback).
+
+6. **Respond & save** — JSON includes `response`, `mode_used` (e.g. `vector`, `hybrid:chroma`, `direct`, `compare`), optional `routing`, `llm_used`, optional `debug`, and `conversation_id`.
+
+**UI behavior** (`chat.js`):
+
+- **Desktop** — Conversation list and settings stay in the left pane.
+- **Mobile (≤768px)** — Pane is off-canvas; **☰** opens conversations, **+ New chat**, **⚙️ API config**, and sign out.
+- **LLM model** dropdown appears when Ollama and/or API keys are configured (`GET /api/config`).
+- **👍 / 👎** on assistant messages feed the tweak file when tweak mode is on.
+
+**Comparing retrieval vs direct model:**
+
+| You want… | Example prompt | Mode | Typical `mode_used` |
+|-----------|----------------|------|---------------------|
+| Vector retrieval | `What worries you most?` | Vector RAG | `vector` |
+| Graph retrieval | `Who depends on this milestone?` | Neo4j RAG | `neo4j` |
+| Auto routing | `Tell me about the project` | Hybrid RAG | `hybrid:chroma` etc. |
+| No retrieval baseline | Same question | Direct Model | `direct` |
+| Side-by-side | Select **Compare All** | All four | `compare` |
+
+Domain terms (e.g. `What is a deduction?`) are answered **in character** as the stakeholder would — not as a classroom explainer.
 
 ## Data Processing & Chunking Strategy
 
@@ -293,33 +362,16 @@ intent_keywords = {
 
 ## Response Generation
 
-### Human-Like Stakeholder Simulation
+Generation is handled by **`LLMWrapper`** — stakeholder chat requires a configured LLM (Ollama or user API key); there is no template fallback.
 
-The system generates informal, natural responses that mimic a non-technical stakeholder:
+### Stakeholder persona (all modes)
 
-**Key Characteristics:**
+- One shared prompt in `app/scenario/stakeholder_prompt.py` — natural, in-character, gradual reveal
+- Clear definitions tied to **this** project’s workbook
+- Bullet list of good follow-up questions for a real stakeholder interview
+- Does not use stakeholder openings (`Oh, well…`) or role-play
 
-- **Informal language**: Uses casual phrases like "Oh, well...", "Let me think...", "Yeah, there are..."
-- **No technical jargon**: Avoids formal requirements terminology
-- **Natural flow**: Responses feel conversational, not structured
-- **Uncertainty**: Sometimes includes phrases like "I'm not sure" or "Does that make sense?"
-- **No source references**: Never mentions sheets, documents, or technical sources
-
-### Response Examples
-
-**Query**: "Who are the stakeholders?"
-
-**Response**: "Oh, well, there are a few people involved in this project. Let me think... There's Sarah, who's the Product Manager. And then there's John, they're the Lead Developer. Also Mike, he's our QA lead. Does that help?"
-
-**Query**: "What are the main goals?"
-
-**Response**: "So, what we're really trying to do here is... reduce operational costs. Also, we need to be able to handle changes in legislation quickly. And make sure we have good backup and recovery in place. Is that what you were looking for?"
-
-### Response Formatting
-
-- **No HTML lists**: Responses are plain text paragraphs
-- **Natural language**: Uses conversational connectors
-- **Casual follow-ups**: Ends with questions like "Does that make sense?" or "What else do you want to know?"
+See [How the chat works](#how-the-chat-works) for the full pipeline. Example eval transcripts: `docs/eval/`.
 
 ## Training Workflow
 
@@ -496,10 +548,13 @@ Popular alternatives:
 ├── app/
 │   ├── main.py              # Entrypoint module (python -m app.main)
 │   ├── fix_pytree.py        # Torch/pytree compatibility shim
-│   ├── llm_wrapper.py       # LLM wrapper (Ollama/OpenAI/template)
-│   ├── rag_backend.py       # ChromaDB RAG implementation
-│   ├── rag_backend_neo4j.py # Neo4j hybrid RAG
-│   ├── mcp/                 # Hybrid router (Chroma + Neo4j)
+│   ├── scenario/            # scenario_pack, stakeholder_prompt, direct_model
+│   ├── llm_wrapper.py       # Stakeholder LLM generation (no template fallback)
+│   ├── llm_registry.py      # Model discovery, dropdown, Ollama name resolution
+│   ├── stakeholder_tone.py  # Plain-language post-processing for stakeholders
+│   ├── rag_backend.py       # ChromaDB RAG + SimpleLLM template fallback
+│   ├── rag_backend_neo4j.py # Neo4j vector + graph RAG
+│   ├── mcp/                 # In-process hybrid router (Chroma + Neo4j)
 │   │   ├── hybrid.py
 │   │   └── router.py
 │   ├── api/
@@ -524,6 +579,10 @@ Popular alternatives:
 │   │   └── init_chroma.py   # Chroma setup/warmup script
 │   ├── neo4j/
 │   │   └── load_graph.py    # Neo4j graph load script
+│   ├── users/
+│   │   └── manage_users.py  # CLI: seed / list / add users
+│   └── eval/
+│       └── run_requirements_chat.py  # Scripted chat eval runner
 ├── docker/
 │   └── entrypoint.sh        # Container startup (Chroma seed + uvicorn)
 ├── docker-compose.yml       # Local stack (+ optional postgres / mcp profiles)
@@ -603,12 +662,12 @@ The template-based approach has significant limitations:
 
 ### How RAG + LLM Works
 
-1. **Retrieval**: System finds relevant context from Excel data using vector search
-2. **Augmentation**: Context is formatted into a prompt for the LLM
-3. **Generation**: LLM generates a natural, human-like response based on the context
-4. **Persona**: LLM is instructed to respond as a non-technical stakeholder
+1. **Mode** — Vector, Neo4j, hybrid, direct, or compare.
+2. **Context** — RAG retrieval or full scenario pack (direct).
+3. **Prompting** — Shared stakeholder prompt + context + conversation history.
+4. **Generation** — Ollama or user-configured cloud API (required).
 
-This is the **standard RAG pattern** used in production systems.
+See [How the chat works](#how-the-chat-works) for the full request path.
 
 ### Recommended Setup
 
@@ -774,14 +833,17 @@ Query: "What are Sarah's concerns?"
 
 ### Response Modes in the Chat UI
 
-The chat UI supports per-message response modes:
+Per-message `response_mode` (dropdown in the chat input area):
 
-- `vector`: ChromaDB vector retrieval only
-- `neo4j`: Neo4j graph RAG (vector + graph traversal)
-- `hybrid`: **Auto-route** each question — semantic → Chroma; relationships / paths / “how is X connected” → Neo4j; close scores → blend both
-- `compare`: Vector and Neo4j responses side by side for manual comparison
+| Mode | Retrieval | Notes |
+|------|-----------|-------|
+| `vector` | Chroma only | Stakeholder persona |
+| `neo4j` | Neo4j only | Stakeholder persona |
+| `hybrid` | Auto-route (`chroma` / `neo4j` / `blend`) | Stakeholder persona |
+| `direct` | None (full scenario pack) | Baseline without RAG |
+| `compare` | All four independently | Side-by-side labels in one reply |
 
-Assistant messages show a mode badge (`mode: vector`, `mode: neo4j`, etc.). In hybrid mode the badge also shows the route, e.g. `hybrid → neo4j`; hover for full routing JSON.
+Assistant messages show a badge (`Vector RAG`, `hybrid → chroma`, `Direct Model`, etc.) and which LLM was used when applicable.
 
 | Hybrid route | Typical questions |
 |--------------|-------------------|
@@ -826,7 +888,7 @@ Conversation history is now persisted so users can view and continue prior sessi
 - **Storage**: SQLite via SQLModel (`CONVERSATION_DB_URL`, default `sqlite:///./storage/conversations.db`)
 - **Continue chat**: send `conversation_id` in `POST /api/chat`
 - **New chat**: omit `conversation_id` and the app creates one automatically
-- **UI support**: conversation selector in the chat UI loads previous conversations
+- **UI support**: conversation list in the side nav (collapsible drawer on mobile); **+ New chat** clears the active thread without deleting history
 
 ### Setup Scripts
 

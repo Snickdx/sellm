@@ -425,8 +425,8 @@
                             <br>• What the system needs to do
                             <br>• Budget and cost concerns
                             <br>• Any worries or risks we have
-                            <br><br><strong>Learning the domain?</strong> Ask things like <em>define a deduction</em> or <em>what is a benefit plan</em> — you'll get a <strong>domain coach</strong> answer (not stakeholder role-play).
                             <br><br><em>Remember: Take notes as we talk, then formalize my informal responses into structured requirements!</em>
+                            <br><br>Try different <strong>RAG modes</strong> or <strong>Direct Model</strong> (full scenario in prompt) to compare answer quality. Use <strong>Compare All</strong> to see every approach side by side.
                         </div>
                     </div>
                 </div>
@@ -440,11 +440,11 @@
                     <div class="mode-row">
                         <label class="mode-label" for="responseMode">RAG mode</label>
                         <select id="responseMode" class="mode-select">
-                            <option value="vector">Vector RAG (ChromaDB)</option>
-                            <option value="neo4j">Neo4j Structured RAG</option>
-                            <option value="hybrid">Hybrid (auto: Chroma or Neo4j)</option>
-                            <option value="coach">Domain coach (always)</option>
-                            <option value="compare">Compare both</option>
+                            <option value="vector">Vector RAG</option>
+                            <option value="neo4j">Neo4j RAG</option>
+                            <option value="hybrid">Hybrid RAG</option>
+                            <option value="direct">Direct Model</option>
+                            <option value="compare">Compare All</option>
                         </select>
                     </div>
                     <div class="mode-row hidden" id="llmModelRow">
@@ -453,7 +453,7 @@
                         <span class="llm-hint" id="llmModelHint"></span>
                     </div>
                     <form class="chat-input-form" id="chatForm">
-                        <input type="text" class="chat-input" id="chatInput" placeholder="Practice: ask the stakeholder… or learn: define / explain a term…" autocomplete="off" />
+                        <input type="text" class="chat-input" id="chatInput" placeholder="Ask the stakeholder a requirements question…" autocomplete="off" />
                         <button type="submit" class="send-button" id="sendButton">Send</button>
                     </form>
                 </div>
@@ -488,6 +488,6 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/chat.js?v=5"></script>
+    <script src="/static/components/chat.js?v=7"></script>
 </body>
 </html>
