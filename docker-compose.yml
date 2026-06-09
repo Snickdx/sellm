@@ -13,8 +13,8 @@ services:
       EXCEL_FILE: ${EXCEL_FILE:-/app/data.xlsx}
       CHROMA_PERSIST_DIRECTORY: ${CHROMA_PERSIST_DIRECTORY:-/app/storage/chroma_db_v2}
       CONVERSATION_DB_URL: ${CONVERSATION_DB_URL:-sqlite:////app/storage/conversations.db}
-      LLM_BACKEND: ${LLM_BACKEND:-openai}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_BACKEND: ${LLM_BACKEND:-ollama}
+      LLM_MODEL: ${LLM_MODEL:-llama3.2}
       RAG_BACKEND: ${RAG_BACKEND:-chromadb}
       TWEAK_MODE_ENABLED: ${TWEAK_MODE_ENABLED:-false}
       NEO4J_URI: ${NEO4J_URI:-bolt://host.docker.internal:7687}
