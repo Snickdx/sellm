@@ -21,7 +21,7 @@ This system is designed for **requirements gathering training**. It simulates a 
 - **Stakeholder simulation**: Role-plays as a non-technical stakeholder with plain, informal language
 - **Comparison modes**: Vector RAG, Neo4j RAG, Hybrid RAG, **Direct Model** (full scenario in prompt), and **Compare All**
 - **Dual RAG**: ChromaDB (vector) and Neo4j (vector + graph), usable separately or via **hybrid** auto-routing
-- **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Groq, OpenRouter); stakeholder chat requires a real LLM
+- **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Gemini, Groq, OpenRouter); stakeholder chat requires a real LLM
 - **Scenario pack**: `data.xlsx` compiled into structured context for direct mode and optional RAG prompt enrichment
 - **Auth + persistence**: Login, per-user conversations (SQLite/Postgres), reflection threads for meta-review
 - **Responsive UI**: Collapsible side nav on mobile (conversations, new chat, API config)
@@ -51,8 +51,10 @@ The `.env` file allows you to configure:
 
 - RAG backend (ChromaDB or Neo4j)
 - Neo4j connection settings
-- LLM backend (Ollama, OpenAI, or template)
-- LLM model selection
+- Ollama backend and model selection
+- Database URL for conversation persistence
+
+**Cloud provider API keys** (OpenAI, Anthropic, Gemini, Groq, OpenRouter) are configured **per user** through the settings UI — never via environment variables.
 
 See [`.env.example`](.env.example) for all options (local paths, Docker `/app` paths, Neo4j, MCP/hybrid).
 
@@ -134,12 +136,18 @@ Load graph data once: `python -m setup.neo4j.load_graph`
 
 **LLM Backend:**
 
-- `LLM_BACKEND`: `"ollama"` (default), `"openai"`, or `"template"`
-- `LLM_MODEL`: Model name (e.g., `llama3.2`, `mistral`, `gpt-3.5-turbo`)
+- `LLM_BACKEND`: `"ollama"` (default) — the default backend for unauthenticated / local use
+- `LLM_MODEL`: Ollama model name (e.g., `llama3.2`, `mistral`)
 
-**OpenAI (if using OpenAI backend):**
+**Cloud providers**: API keys are configured **per user** through the settings UI (⚙️ in the side nav) — never via environment variables. Supported providers:
 
-- `OPENAI_API_KEY`: Your OpenAI API key
+- **OpenAI** (`gpt-4o-mini`, `gpt-4o`, etc.)
+- **Anthropic** (`claude-3-5-sonnet`, `claude-3-5-haiku`)
+- **Gemini** (`gemini-2.0-flash`, `gemini-2.0-flash-lite`) — requires a billing-enabled Google AI project
+- **Groq** (`llama3-70b-8192`, `mixtral-8x7b-32768`) — free tier available
+- **OpenRouter** (multi-model access via unified API)
+
+Keys are encrypted at rest using Fernet (AES-128-CBC) before storage. The model dropdown shows all providers you've configured.
 
 ### Training Tips
 
@@ -221,6 +229,7 @@ Hybrid routing uses `app/mcp/router.py` in-process (no separate MCP sidecar). Ne
 | **Hybrid** | `app/mcp/hybrid.py`, `app/mcp/router.py` | Per-question route: `chroma`, `neo4j`, or `blend` |
 | **Scenario** | `app/scenario/scenario_pack.py`, `app/scenario/stakeholder_prompt.py`, `app/scenario/direct_model.py` | Workbook → scenario pack; shared stakeholder persona |
 | **LLM** | `app/llm_wrapper.py`, `app/llm_registry.py` | Stakeholder generation (RAG + direct), model dropdown |
+| **Secrets** | `app/security/secret_store.py` | Fernet-encrypted API key storage (no env vars) |
 | **Tweaks** | `app/tweaks/behavior_tweaks.py`, `config/behavior/behavior_tweaks.json` | Optional reflection/feedback only (not applied to normal chat) |
 | **Reflection** | `app/reflection.py` | Session meta-review and tweak draft proposals |
 | **Knowledge** | `data.xlsx` | Source workbook (Goals, Features, Stakeholders, etc.) |
@@ -362,7 +371,7 @@ intent_keywords = {
 
 ## Response Generation
 
-Generation is handled by **`LLMWrapper`** — stakeholder chat requires a configured LLM (Ollama or user API key); there is no template fallback.
+Generation is handled by **`LLMWrapper`** — stakeholder chat requires a configured LLM (Ollama or a per-user cloud API key stored via the settings UI).
 
 ### Stakeholder persona (all modes)
 
@@ -457,63 +466,38 @@ response_parts.append("Well, from our perspective... ")
 
 ### Using a Real LLM (Recommended)
 
-The system now supports real LLMs for much more natural, human-like responses. The template-based approach is limited - using a real LLM is the standard RAG approach.
+The system supports multiple LLM providers for natural, human-like stakeholder responses.
 
-#### Option 1: Ollama (Recommended - Free & Local)
+#### Option 1: Ollama (Free & Local — default)
 
-**Ollama** is the easiest way to get high-quality, local LLM responses:
+**Ollama** is the default backend and runs entirely on your machine:
 
 1. **Install Ollama**: Download from [ollama.ai](https://ollama.ai)
-2. **Pull a model** (choose one):
-  ```bash
-   ollama pull llama3.2        # Fast, good quality (recommended)
-   ollama pull mistral         # Alternative option
+2. **Pull a model**:
+   ```bash
+   ollama pull llama3.2        # Fast, good quality
+   ollama pull mistral         # Alternative
    ollama pull phi3            # Smaller, faster
-  ```
-3. **Start the server** (Ollama runs automatically):
-  ```bash
-   # Ollama should start automatically, or:
-   ollama serve
-  ```
-4. **Run your app** (it will auto-detect Ollama):
-  ```bash
-   python -m app.main
-  ```
-   Or specify the model:
+   ```
+3. The app auto-detects Ollama on startup.
 
-**Benefits:**
+**Note**: Local models require sufficient RAM. `llama3.2` needs ~2 GB; smaller models like `phi3` need ~1 GB.
 
-- ✅ Free and runs locally (no API costs)
-- ✅ Privacy (data stays on your machine)
-- ✅ High-quality, natural responses
-- ✅ Works offline
+#### Option 2: Cloud Providers (via Settings UI)
 
-#### Option 2: OpenAI API
+After logging in, open the **⚙️ Settings** panel in the side nav and enter your API key for any supported provider:
 
-For cloud-based LLM (requires API key):
+| Provider   | Base URL (autofilled)                                | Models                                      |
+|------------|------------------------------------------------------|---------------------------------------------|
+| OpenAI     | `https://api.openai.com/v1`                          | `gpt-4o-mini`, `gpt-4o`, `o1-mini`, …      |
+| Anthropic  | `https://api.anthropic.com/v1`                       | `claude-3-5-sonnet`, `claude-3-5-haiku`     |
+| Gemini     | `https://generativelanguage.googleapis.com/v1beta/openai/v1` | `gemini-2.0-flash`, `gemini-2.0-flash-lite` |
+| Groq       | `https://api.groq.com/openai/v1`                     | `llama3-70b`, `mixtral-8x7b`, `gemma2-9b`   |
+| OpenRouter | `https://openrouter.ai/api/v1`                       | `mistralai/mistral-7b`, `gpt-4o-mini`, …   |
 
-1. **Install OpenAI package**:
-  ```bash
-   pip install openai
-  ```
-2. **Set your API key**:
-  ```bash
-   export OPENAI_API_KEY="your-key-here"
-  ```
-3. **Run with OpenAI backend**:
-  ```bash
-   LLM_BACKEND=openai LLM_MODEL=gpt-3.5-turbo python -m app.main
-  ```
+Once saved, the model dropdown shows all available models from every configured provider. Select any model — your choice applies to the next message.
 
-#### Option 3: Template Fallback
-
-If no LLM is available, the system automatically falls back to template-based generation:
-
-```bash
-LLM_BACKEND=template python -m app.main
-```
-
-**Note**: Template-based responses are limited in quality and naturalness. A real LLM is strongly recommended.
+Keys are **encrypted at rest** using Fernet (AES-128-CBC). They are never logged or exposed to other users.
 
 ### Adding More Sheets
 
@@ -548,6 +532,8 @@ Popular alternatives:
 ├── app/
 │   ├── main.py              # Entrypoint module (python -m app.main)
 │   ├── fix_pytree.py        # Torch/pytree compatibility shim
+│   ├── security/
+│   │   └── secret_store.py   # Fernet-encrypted API key storage
 │   ├── scenario/            # scenario_pack, stakeholder_prompt, direct_model
 │   ├── llm_wrapper.py       # Stakeholder LLM generation (no template fallback)
 │   ├── llm_registry.py      # Model discovery, dropdown, Ollama name resolution
@@ -671,19 +657,14 @@ See [How the chat works](#how-the-chat-works) for the full request path.
 
 ### Recommended Setup
 
-**For best results, use Ollama with llama3.2:**
+**For local-only use, Ollama with llama3.2:**
 
 ```bash
-# Install Ollama, then:
 ollama pull llama3.2
 python -m app.main  # Auto-detects Ollama
 ```
 
-The system will automatically:
-
-- Use Ollama if available
-- Fall back to template if Ollama isn't running
-- Provide much better responses with LLM
+**For cloud LLMs** — log in, open ⚙️ Settings, and paste your API key(s). The model dropdown will populate automatically.
 
 ## Limitations & Future Improvements
 

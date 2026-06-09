@@ -173,6 +173,18 @@ def list_llm_choices(user_provider: str = "") -> List[Dict[str, Any]]:
         for model in ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"]:
             add("anthropic", model, f"Anthropic · {model}", "anthropic", True)
 
+    if user_provider == "gemini":
+        for model in ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash-preview-04-17"]:
+            add("gemini", model, f"Gemini · {model}", "gemini", True)
+
+    if user_provider == "groq":
+        for model in ["llama3-70b-8192", "llama3-8b-8192", "mixtral-8x7b-32768", "gemma2-9b-it"]:
+            add("groq", model, f"Groq · {model}", "groq", True)
+
+    if user_provider == "openrouter":
+        for model in ["mistralai/mistral-7b-instruct", "openai/gpt-4o-mini", "anthropic/claude-3-5-sonnet"]:
+            add("openrouter", model, f"OpenRouter · {model}", "openrouter", True)
+
     installed_ollama = fetch_ollama_model_names()
     ollama_models = list(
         dict.fromkeys(
@@ -221,8 +233,8 @@ def get_llm_wrapper(rag: Any, backend: str, model: str) -> LLMWrapper:
     return _wrapper_cache[cache_key]
 
 
-def resolve_llm_wrapper(rag: Any, choice_id: Optional[str]) -> LLMWrapper:
-    resolved = validate_choice_id(choice_id)
+def resolve_llm_wrapper(rag: Any, choice_id: Optional[str], user_provider: str = "") -> LLMWrapper:
+    resolved = validate_choice_id(choice_id, user_provider=user_provider)
     backend, model = parse_choice_id(resolved)
     if not backend or backend == "template":
         backend = "ollama"

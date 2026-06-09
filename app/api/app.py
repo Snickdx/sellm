@@ -136,11 +136,10 @@ app = FastAPI(title="Requirements Chatbot API", lifespan=_app_lifespan)
 WEB_DIR = APP_DIR / "web"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
-jinja_env = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(str(TEMPLATES_DIR)),
+templates = Jinja2Templates(
+    directory=str(TEMPLATES_DIR),
     autoescape=jinja2.select_autoescape(["html", "xml"]),
 )
-templates = Jinja2Templates(env=jinja_env)
 conversation_store = ConversationStore(
     os.getenv("CONVERSATION_DB_URL")
     or os.getenv("DATABASE_URL")
@@ -163,42 +162,54 @@ neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 neo4j_user = os.getenv("NEO4J_USER", "neo4j")
 neo4j_password = os.getenv("NEO4J_PASSWORD", "password")
 
-print("Initializing RAG systems for comparison...")
 rag_systems: Dict[str, Optional[object]] = {"vector": None, "neo4j": None}
 engine_status: Dict[str, str] = {"vector": "not_initialized", "neo4j": "not_initialized"}
+_rag_backend = os.getenv("RAG_BACKEND", "chromadb").lower()
 
-try:
-    rag_systems["vector"] = RequirementsRAG(excel_file, persist_directory=chroma_persist_directory)
-    engine_status["vector"] = "ready"
-    print("✓ Vector RAG (ChromaDB) initialized")
-except Exception as e:
-    engine_status["vector"] = f"error: {e}"
-    print(f"⚠ Vector RAG initialization failed: {e}")
+if _rag_backend in ("chromadb", "vector", "hybrid", "compare"):
+    try:
+        rag_systems["vector"] = RequirementsRAG(excel_file, persist_directory=chroma_persist_directory)
+        engine_status["vector"] = "ready"
+        print("✓ Vector RAG (ChromaDB) initialized")
+    except Exception as e:
+        engine_status["vector"] = f"error: {e}"
+        print(f"⚠ Vector RAG initialization failed: {e}")
 
-try:
-    rag_systems["neo4j"] = RequirementsRAGNeo4j(
+if _rag_backend in ("neo4j", "hybrid", "compare"):
+    try:
+        rag_systems["neo4j"] = RequirementsRAGNeo4j(
+            excel_file,
+            neo4j_uri=neo4j_uri,
+            neo4j_user=neo4j_user,
+            neo4j_password=neo4j_password,
+        )
+        engine_status["neo4j"] = "ready"
+        print("✓ Neo4j structured RAG initialized")
+    except ImportError:
+        engine_status["neo4j"] = "error: neo4j package not installed"
+    except Exception as e:
+        engine_status["neo4j"] = f"error: {e}"
+
+if _rag_backend == "hybrid":
+    rag_systems["vector"] = rag_systems["vector"] or RequirementsRAG(excel_file, persist_directory=chroma_persist_directory)
+    rag_systems["neo4j"] = rag_systems["neo4j"] or RequirementsRAGNeo4j(
         excel_file,
         neo4j_uri=neo4j_uri,
         neo4j_user=neo4j_user,
         neo4j_password=neo4j_password,
     )
-    engine_status["neo4j"] = "ready"
-    print("✓ Neo4j structured RAG initialized")
-except ImportError:
-    engine_status["neo4j"] = "error: neo4j package not installed"
-except Exception as e:
-    engine_status["neo4j"] = f"error: {e}"
 
 llm_backend = os.getenv("LLM_BACKEND", "ollama").lower()
 llm_model = os.getenv("LLM_MODEL", None)
 print(f"Initializing LLM backend: {llm_backend}...")
+_llm_wrappers: Dict[str, LLMWrapper] = {}
+if rag_systems["vector"]:
+    _llm_wrappers["vector"] = LLMWrapper(rag_systems["vector"], backend=llm_backend, model=llm_model)
+if rag_systems["neo4j"]:
+    _llm_wrappers["neo4j"] = LLMWrapper(rag_systems["neo4j"], backend=llm_backend, model=llm_model)
 llm_by_mode: Dict[str, Optional[LLMWrapper]] = {
-    "vector": LLMWrapper(rag_systems["vector"], backend=llm_backend, model=llm_model)
-    if rag_systems["vector"]
-    else None,
-    "neo4j": LLMWrapper(rag_systems["neo4j"], backend=llm_backend, model=llm_model)
-    if rag_systems["neo4j"]
-    else None,
+    "vector": _llm_wrappers.get("vector"),
+    "neo4j": _llm_wrappers.get("neo4j"),
 }
 
 hybrid_top_k = int(os.getenv("HYBRID_TOP_K", "3"))
@@ -282,6 +293,21 @@ def _require_stakeholder_llm(user: Optional[User]) -> None:
         raise ValueError(STAKEHOLDER_LLM_REQUIRED_MSG)
 
 
+def _user_llm_provider(user: Optional[User], llm_choice: Optional[str] = None) -> str:
+    """Provider name from user's stored API keys, matching llm_choice if given."""
+    if not user:
+        return ""
+    providers = _user_api_overrides(user).get("user_providers", {})
+    if llm_choice:
+        hint, _ = parse_choice_id(llm_choice)
+        if hint and hint in providers:
+            return hint
+    for p in ("openai", "anthropic", "gemini", "groq", "openrouter"):
+        if p in providers:
+            return p
+    return ""
+
+
 def _resolve_llm_for_user(
     user: Optional[User],
     llm_choice: Optional[str],
@@ -289,15 +315,14 @@ def _resolve_llm_for_user(
     mode: str = "vector",
 ) -> tuple:
     """Returns (llm, resolved_choice_id, user_override dict)."""
-    resolved_choice = validate_choice_id(llm_choice, user_provider="")
+    user_provider = _user_llm_provider(user, llm_choice)
+    resolved_choice = validate_choice_id(llm_choice, user_provider=user_provider)
     backend, _ = parse_choice_id(resolved_choice)
     user_override = _get_user_provider_override(user, backend or "")
-    user_provider = (backend or "") if user_override else ""
-    resolved_choice = validate_choice_id(llm_choice, user_provider=user_provider)
     rag = _rag_for_mode(mode) or rag_systems.get("vector") or rag_systems.get("neo4j")
     if not rag:
         raise ValueError("No RAG engine available for LLM wrapper")
-    llm = resolve_llm_wrapper(rag, resolved_choice)
+    llm = resolve_llm_wrapper(rag, resolved_choice, user_provider=user_provider)
     return llm, resolved_choice, user_override
 
 
@@ -480,9 +505,9 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
 async def read_root(request: Request):
     user = _get_current_user(request)
     return templates.TemplateResponse(
-        request,
         "index.html",
         {
+            "request": request,
             "authenticated": user is not None,
             "username": user.username if user else None,
         },
@@ -510,9 +535,8 @@ async def chat(request: ChatRequest, req: Request):
         stored_messages = conversation_store.get_messages(conversation_id)
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
         mode = (request.response_mode or "vector").lower()
-        user_overrides = _user_api_overrides(user)
-        user_providers = user_overrides.get("user_providers", {})
-        llm_choice = validate_choice_id(request.llm_choice, user_provider="")
+        user_provider = _user_llm_provider(user, request.llm_choice)
+        llm_choice = validate_choice_id(request.llm_choice, user_provider=user_provider)
 
         debug_out: Optional[Dict[str, Any]] = None
         llm_payload = _llm_used_payload(llm_choice)
@@ -752,22 +776,24 @@ async def config(request: Request = None):
 
     has_openai = "openai" in user_provider_names
     has_anthropic = "anthropic" in user_provider_names
+    has_gemini = "gemini" in user_provider_names
     has_groq = "groq" in user_provider_names
     has_openrouter = "openrouter" in user_provider_names
 
-    # Determine primary user_provider for list_llm_choices
-    for p in ("openai", "anthropic"):
+    # Gather choices from all configured user providers
+    choices = list_llm_choices()  # base (Ollama)
+    seen_ids = {c["id"] for c in choices}
+    for p in ("openai", "anthropic", "gemini", "groq", "openrouter"):
         if p in user_provider_names:
-            user_llm_provider = p
-            break
-    else:
-        user_llm_provider = ""
-
-    choices = list_llm_choices(user_provider=user_llm_provider)
+            for c in list_llm_choices(user_provider=p):
+                if c["id"] not in seen_ids:
+                    seen_ids.add(c["id"])
+                    choices.append(c)
 
     switcher_on = (
         has_openai
         or has_anthropic
+        or has_gemini
         or ollama_reachable()
         or len([c for c in choices if c["provider"] != "template"]) > 0
     )
@@ -783,6 +809,7 @@ async def config(request: Request = None):
         "llm_providers": {
             "openai": has_openai,
             "anthropic": has_anthropic,
+            "gemini": has_gemini,
             "groq": has_groq,
             "openrouter": has_openrouter,
             "ollama": ollama_reachable(),

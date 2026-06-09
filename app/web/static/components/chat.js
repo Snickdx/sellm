@@ -288,7 +288,8 @@
     return keys;
   }
 
-  async function saveAllUserConfigs() {
+  async function saveAllUserConfigs(event) {
+    if (event) event.preventDefault();
     if (settingsStatus) settingsStatus.textContent = "Saving…";
     const keys = _gatherProviderKeys();
     try {
@@ -298,8 +299,9 @@
         body: JSON.stringify({ keys }),
       });
       if (!r.ok) {
-        const d = await r.json();
-        if (settingsStatus) settingsStatus.textContent = d.detail || "Save failed";
+        let detail = "Save failed";
+        try { const d = await r.json(); detail = d.detail || detail; } catch {}
+        if (settingsStatus) settingsStatus.textContent = detail;
         return;
       }
       if (settingsStatus) settingsStatus.textContent = "Saved! Your API keys will be used for chat.";
@@ -313,6 +315,7 @@
   const PROVIDER_CONFIGS = [
     { provider: "openai", label: "OpenAI", keyPlaceholder: "sk-...", urlPlaceholder: "https://api.openai.com/v1", defaultUrl: "https://api.openai.com/v1", keyUrl: "https://platform.openai.com/api-keys" },
     { provider: "anthropic", label: "Anthropic", keyPlaceholder: "sk-ant-...", urlPlaceholder: "https://api.anthropic.com/v1", defaultUrl: "https://api.anthropic.com/v1", keyUrl: "https://console.anthropic.com/settings/keys" },
+    { provider: "gemini", label: "Google Gemini (free tier)", keyPlaceholder: "AI...", urlPlaceholder: "https://generativelanguage.googleapis.com/v1beta/openai/v1", defaultUrl: "https://generativelanguage.googleapis.com/v1beta/openai/v1", keyUrl: "https://aistudio.google.com/apikey" },
     { provider: "groq", label: "Groq (free tier)", keyPlaceholder: "gsk_...", urlPlaceholder: "https://api.groq.com/openai/v1", defaultUrl: "https://api.groq.com/openai/v1", keyUrl: "https://console.groq.com/keys" },
     { provider: "openrouter", label: "OpenRouter", keyPlaceholder: "sk-or-...", urlPlaceholder: "https://openrouter.ai/api/v1", defaultUrl: "https://openrouter.ai/api/v1", keyUrl: "https://openrouter.ai/keys" },
   ];
@@ -326,16 +329,15 @@
       const row = document.createElement("div");
       row.className = "settings-provider-row";
       row.dataset.provider = pc.provider;
-      row.style.cssText = "margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e5e7eb;";
       row.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
           <label style="font-size:12px;font-weight:600;color:#6b7280;">
             ${pc.label}
-            ${info.has_key ? '<span style="color:#10b981;font-weight:400;margin-left:6px;">&#10003; key saved</span>' : ""}
+            ${info.has_key ? '<span style="color:#10b981;font-weight:400;margin-left:6px;">&#10003;</span>' : ""}
           </label>
-          <a href="${pc.keyUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#667eea;text-decoration:none;">Get API key</a>
+          <a href="${pc.keyUrl}" target="_blank" rel="noopener" style="font-size:11px;color:#667eea;text-decoration:none;">Get key</a>
         </div>
-        <input type="password" class="settings-provider-key" placeholder="${info.has_key ? "Replace key to update" : pc.keyPlaceholder}" value="${masked.replace(/"/g, "&quot;")}" data-masked="${masked.replace(/"/g, "&quot;")}" autocomplete="off" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:6px;font-size:14px;box-sizing:border-box;font-family:inherit;" />
+        <input type="password" class="settings-provider-key" placeholder="${info.has_key ? "Update key" : pc.keyPlaceholder}" value="${masked.replace(/"/g, "&quot;")}" data-masked="${masked.replace(/"/g, "&quot;")}" autocomplete="off" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;margin-bottom:6px;font-size:14px;box-sizing:border-box;font-family:inherit;" />
         <input type="text" class="settings-provider-url" placeholder="${pc.urlPlaceholder}" value="${info.base_url || pc.defaultUrl}" style="width:100%;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;box-sizing:border-box;font-family:inherit;color:#6b7280;" />
       `;
       settingsProvidersContainer.appendChild(row);
@@ -361,14 +363,18 @@
   // ── Config ──────────────────────────────────────────────────
   async function loadRuntimeConfig() {
     try {
-      const r = await fetch("/api/config");
-      if (!r.ok) return;
-      const cfg = await r.json();
-      tweakModeEnabled = Boolean(cfg.tweak_mode_enabled);
-      if (reflectionRow) reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
+      const response = await fetch("/api/config", { headers: authHeaders() });
+      if (!response.ok) return;
+      const config = await response.json();
+      tweakModeEnabled = Boolean(config.tweak_mode_enabled);
+      if (reflectionRow) {
+        reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
+      }
+      populateLlmModelSelect(config);
     } catch {
       tweakModeEnabled = false;
       if (reflectionRow) reflectionRow.style.display = "none";
+      if (llmModelRow) llmModelRow.classList.add("hidden");
     }
   }
 
@@ -438,28 +444,14 @@
     const hints = [];
     if (providers.openai) hints.push("OpenAI");
     if (providers.anthropic) hints.push("Anthropic");
+    if (providers.gemini) hints.push("Gemini");
+    if (providers.groq) hints.push("Groq");
+    if (providers.openrouter) hints.push("OpenRouter");
     if (providers.ollama) hints.push("Ollama");
     if (llmModelHint) {
       llmModelHint.textContent = hints.length
         ? `Configured: ${hints.join(", ")}. Choice applies to the next message.`
         : "";
-    }
-  }
-
-  async function loadRuntimeConfig() {
-    try {
-      const response = await fetch("/api/config", { headers: authHeaders() });
-      if (!response.ok) return;
-      const config = await response.json();
-      tweakModeEnabled = Boolean(config.tweak_mode_enabled);
-      if (reflectionRow) {
-        reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
-      }
-      populateLlmModelSelect(config);
-    } catch {
-      tweakModeEnabled = false;
-      if (reflectionRow) reflectionRow.style.display = "none";
-      if (llmModelRow) llmModelRow.classList.add("hidden");
     }
   }
 

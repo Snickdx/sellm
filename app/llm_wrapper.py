@@ -237,15 +237,17 @@ class LLMWrapper:
             provider_lower = provider_override.lower()
             base_url = base_url_override or {
                 "openai": "https://api.openai.com/v1",
+                "gemini": "https://generativelanguage.googleapis.com/v1beta/openai/v1",
                 "groq": "https://api.groq.com/openai/v1",
                 "openrouter": "https://openrouter.ai/api/v1",
             }.get(provider_lower, "https://api.openai.com/v1")
             model_map = {
                 "openai": "gpt-3.5-turbo",
+                "gemini": "gemini-2.0-flash",
                 "groq": "llama3-70b-8192",
                 "openrouter": "mistralai/mistral-7b-instruct",
             }
-            model = model_map.get(provider_lower, "gpt-3.5-turbo")
+            model = self.model or model_map.get(provider_lower, "gpt-3.5-turbo")
             return self._call_openai_compatible(
                 user_message,
                 system=system,
