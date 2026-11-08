@@ -45,9 +45,15 @@ class FeedbackRequest(BaseModel):
     desired_response: Optional[str] = None
 
 
+class CreateConversationRequest(BaseModel):
+    scenario_slug: Optional[str] = None
+    title: Optional[str] = None
+
+
 class ConversationSummary(BaseModel):
     id: str
     title: str
+    scenario_slug: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -55,6 +61,7 @@ class ConversationSummary(BaseModel):
 class ConversationDetail(BaseModel):
     id: str
     title: str
+    scenario_slug: Optional[str] = None
     created_at: str
     updated_at: str
     messages: List[ChatMessage]

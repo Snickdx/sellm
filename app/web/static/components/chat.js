@@ -117,15 +117,20 @@
   const chatInput = document.getElementById("chatInput");
   const sendButton = document.getElementById("sendButton");
   const responseMode = document.getElementById("responseMode");
-  const yamlScenarioRow = document.getElementById("yamlScenarioRow");
-  const scenarioSelect = document.getElementById("scenarioSelect");
   const personaSelect = document.getElementById("personaSelect");
+  const personaField = document.getElementById("personaField");
+  const scenarioLockedLabel = document.getElementById("scenarioLockedLabel");
+  const newChatBackdrop = document.getElementById("newChatBackdrop");
+  const newChatScenarioSelect = document.getElementById("newChatScenarioSelect");
+  const newChatCancel = document.getElementById("newChatCancel");
+  const newChatStart = document.getElementById("newChatStart");
   const llmModelRow = document.getElementById("llmModelRow");
   const llmModelSelect = document.getElementById("llmModelSelect");
   const llmModelHint = document.getElementById("llmModelHint");
   const LLM_CHOICE_STORAGE_KEY = "sellm_llm_choice";
   let selectedLlmChoice = null;
   let yamlScenarios = [];
+  let lockedScenarioSlug = null;
   const conversationList = document.getElementById("conversationList");
   const newConversationBtn = document.getElementById("newConversationBtn");
   const settingsBtn = document.getElementById("settingsBtn");
@@ -134,7 +139,11 @@
   const sideNavToggle = document.getElementById("sideNavToggle");
   const sideNavClose = document.getElementById("sideNavClose");
   const sideNavBackdrop = document.getElementById("sideNavBackdrop");
+  const controlsPane = document.getElementById("controlsPane");
+  const controlsPaneToggle = document.getElementById("controlsPaneToggle");
+  const controlsPaneClose = document.getElementById("controlsPaneClose");
   const MOBILE_NAV_MQ = window.matchMedia("(max-width: 768px)");
+  const WELCOME_HTML = `Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.<br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.<br><br>Start with <strong>+ New chat</strong> and pick a scenario (locked for that chat). Switch personas, mode, and model from the right panel anytime.`;
   const settingsBackdrop = document.getElementById("settingsBackdrop");
   const settingsForm = document.getElementById("settingsForm");
   const settingsCancel = document.getElementById("settingsCancel");
@@ -178,34 +187,40 @@
     loadRuntimeConfig();
     loadConversations();
     await loadYamlScenarios();
-    syncYamlModeVisibility();
+    applyLockedScenario(null);
     bindEvents();
     chatInput?.focus();
   }
 
+  function populateScenarioSelect(selectEl, preferredSlug) {
+    if (!selectEl) return;
+    selectEl.innerHTML = "";
+    const excelOpt = document.createElement("option");
+    excelOpt.value = "excel";
+    excelOpt.textContent = "Excel (PowerPay workbook)";
+    selectEl.appendChild(excelOpt);
+    yamlScenarios.forEach((s) => {
+      const opt = document.createElement("option");
+      opt.value = s.slug;
+      opt.textContent = `${s.title} (${s.slug})`;
+      selectEl.appendChild(opt);
+    });
+    if (preferredSlug && [...selectEl.options].some((o) => o.value === preferredSlug)) {
+      selectEl.value = preferredSlug;
+    } else if (yamlScenarios.length) {
+      selectEl.value = yamlScenarios[0].slug;
+    } else {
+      selectEl.value = "excel";
+    }
+  }
+
   async function loadYamlScenarios() {
-    if (!scenarioSelect || !personaSelect) return;
     try {
       const r = await fetch("/api/scenarios", { headers: authHeaders() });
       if (!r.ok) return;
       yamlScenarios = await r.json();
-      scenarioSelect.innerHTML = "";
-      const excelOpt = document.createElement("option");
-      excelOpt.value = "excel";
-      excelOpt.textContent = "Excel (PowerPay workbook)";
-      scenarioSelect.appendChild(excelOpt);
-      yamlScenarios.forEach((s) => {
-        const opt = document.createElement("option");
-        opt.value = s.slug;
-        opt.textContent = `${s.title} (${s.slug})`;
-        scenarioSelect.appendChild(opt);
-      });
-      // Prefer first YAML scenario when available so personas drive RAG by default
-      if (yamlScenarios.length) {
-        scenarioSelect.value = yamlScenarios[0].slug;
-      }
-      fillPersonaOptions(scenarioSelect.value);
-      syncPersonaAvailability();
+      populateScenarioSelect(newChatScenarioSelect, yamlScenarios[0]?.slug);
+      if (lockedScenarioSlug) applyLockedScenario(lockedScenarioSlug);
     } catch (e) {
       console.error("Failed to load YAML scenarios", e);
     }
@@ -215,14 +230,22 @@
     return !slug || slug === "excel" || slug === "__excel__" || slug === "powerpay";
   }
 
-  function fillPersonaOptions(slug) {
+  function scenarioDisplayName(slug) {
+    if (isExcelScenario(slug)) return "Excel (PowerPay workbook)";
+    const scen = yamlScenarios.find((s) => s.slug === slug);
+    return scen ? `${scen.title}` : slug;
+  }
+
+  function fillPersonaOptions(slug, preferredPersona) {
     if (!personaSelect) return;
     personaSelect.innerHTML = "";
     if (isExcelScenario(slug)) {
       personaSelect.innerHTML = '<option value="">(Excel — no persona)</option>';
       personaSelect.disabled = true;
+      if (personaField) personaField.classList.add("hidden");
       return;
     }
+    if (personaField) personaField.classList.remove("hidden");
     personaSelect.disabled = false;
     const scen = yamlScenarios.find((s) => s.slug === slug);
     const personas = scen?.personas || [];
@@ -236,16 +259,25 @@
       opt.textContent = `${p.display_name} — ${p.role}`;
       personaSelect.appendChild(opt);
     });
+    if (preferredPersona && [...personaSelect.options].some((o) => o.value === preferredPersona)) {
+      personaSelect.value = preferredPersona;
+    }
   }
 
-  function syncPersonaAvailability() {
-    if (yamlScenarioRow) yamlScenarioRow.classList.remove("hidden");
-    fillPersonaOptions(scenarioSelect?.value);
-  }
-
-  function syncYamlModeVisibility() {
-    // Scenario + persona apply to every mode (vector/graph/direct/yaml/compare)
-    syncPersonaAvailability();
+  function applyLockedScenario(slug) {
+    lockedScenarioSlug = slug || null;
+    if (!scenarioLockedLabel) return;
+    if (!lockedScenarioSlug) {
+      scenarioLockedLabel.innerHTML = `No chat yet<span class="scenario-locked-meta">Chosen when you start a new chat</span>`;
+      fillPersonaOptions("excel");
+      return;
+    }
+    const name = scenarioDisplayName(lockedScenarioSlug);
+    const meta = isExcelScenario(lockedScenarioSlug)
+      ? "Locked for this chat"
+      : `Locked · ${lockedScenarioSlug}`;
+    scenarioLockedLabel.innerHTML = `${name}<span class="scenario-locked-meta">${meta}</span>`;
+    fillPersonaOptions(lockedScenarioSlug);
   }
 
   // ── Login / Logout ──────────────────────────────────────────
@@ -261,26 +293,97 @@
     return MOBILE_NAV_MQ.matches;
   }
 
-  function openSideNav() {
-    if (!sideNav) return;
-    sideNav.classList.add("open");
-    if (sideNavBackdrop) {
+  function syncBackdrop() {
+    const anyOpen = Boolean(
+      (sideNav && sideNav.classList.contains("open")) ||
+      (controlsPane && controlsPane.classList.contains("open"))
+    );
+    if (!sideNavBackdrop) return;
+    if (anyOpen) {
       sideNavBackdrop.classList.add("visible");
       sideNavBackdrop.setAttribute("aria-hidden", "false");
+    } else {
+      sideNavBackdrop.classList.remove("visible");
+      sideNavBackdrop.setAttribute("aria-hidden", "true");
     }
+  }
+
+  function openSideNav() {
+    if (!sideNav) return;
+    closeControlsPane({ skipBackdrop: true });
+    sideNav.classList.add("open");
     document.body.classList.add("side-nav-open");
     if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "true");
+    syncBackdrop();
   }
 
   function closeSideNav() {
     if (!sideNav) return;
     sideNav.classList.remove("open");
-    if (sideNavBackdrop) {
-      sideNavBackdrop.classList.remove("visible");
-      sideNavBackdrop.setAttribute("aria-hidden", "true");
-    }
     document.body.classList.remove("side-nav-open");
     if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "false");
+    syncBackdrop();
+  }
+
+  function openControlsPane() {
+    if (!controlsPane) return;
+    closeSideNav();
+    controlsPane.classList.add("open");
+    document.body.classList.add("controls-pane-open");
+    if (controlsPaneToggle) controlsPaneToggle.setAttribute("aria-expanded", "true");
+    syncBackdrop();
+  }
+
+  function closeControlsPane(opts = {}) {
+    if (!controlsPane) return;
+    controlsPane.classList.remove("open");
+    document.body.classList.remove("controls-pane-open");
+    if (controlsPaneToggle) controlsPaneToggle.setAttribute("aria-expanded", "false");
+    if (!opts.skipBackdrop) syncBackdrop();
+  }
+
+  function openNewChatModal() {
+    populateScenarioSelect(newChatScenarioSelect, yamlScenarios[0]?.slug || "excel");
+    if (!newChatBackdrop) return;
+    newChatBackdrop.classList.add("visible");
+    newChatBackdrop.setAttribute("aria-hidden", "false");
+    newChatScenarioSelect?.focus();
+  }
+
+  function closeNewChatModal() {
+    if (!newChatBackdrop) return;
+    newChatBackdrop.classList.remove("visible");
+    newChatBackdrop.setAttribute("aria-hidden", "true");
+  }
+
+  async function startNewChatWithScenario() {
+    const slug = newChatScenarioSelect?.value || "excel";
+    if (newChatStart) newChatStart.disabled = true;
+    try {
+      const r = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ scenario_slug: slug }),
+      });
+      if (!r.ok) {
+        let detail = "Could not create chat";
+        try {
+          const err = await r.json();
+          detail = err.detail || detail;
+        } catch (_) { /* ignore */ }
+        throw new Error(detail);
+      }
+      const data = await r.json();
+      closeNewChatModal();
+      closeSideNav();
+      await loadConversations();
+      await openConversation(data.id);
+      chatInput?.focus();
+    } catch (e) {
+      window.alert(e?.message || "Could not create chat");
+    } finally {
+      if (newChatStart) newChatStart.disabled = false;
+    }
   }
 
   async function doLogin(username, password) {
@@ -844,9 +947,19 @@
 
   // ── Conversations ───────────────────────────────────────────
   function formatConversationMeta(c) {
+    let when = "";
     const raw = c.updated_at || c.created_at;
-    if (!raw) return "";
-    try { const d = new Date(raw); if (Number.isNaN(d.getTime())) return ""; return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); } catch { return ""; }
+    if (raw) {
+      try {
+        const d = new Date(raw);
+        if (!Number.isNaN(d.getTime())) {
+          when = d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        }
+      } catch { /* ignore */ }
+    }
+    const scen = c.scenario_slug ? scenarioDisplayName(c.scenario_slug) : "";
+    if (scen && when) return `${scen} · ${when}`;
+    return scen || when;
   }
 
   function syncListSelection() {
@@ -913,9 +1026,11 @@
 
   function resetConversationUi() {
     closeSideNav();
+    closeControlsPane();
     conversationHistory.length = 0;
     currentConversationId = null;
-    chatMessages.innerHTML = `<div class="message assistant"><div class="message-content">Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.<br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.<br><br>You can ask me about:<br>• Who's involved in this project<br>• What we're trying to accomplish<br>• What the system needs to do<br>• Budget and cost concerns<br>• Any worries or risks we have<br><br><em>Remember: Take notes as we talk, then formalize my informal responses into structured requirements!</em></div></div>`;
+    applyLockedScenario(null);
+    chatMessages.innerHTML = `<div class="message assistant"><div class="message-content">${WELCOME_HTML}</div></div>`;
     syncListSelection();
     loadReflectionThreadsForConversation(currentConversationId);
   }
@@ -927,9 +1042,14 @@
       if (!r.ok) throw new Error("Could not load conversation");
       const data = await r.json();
       currentConversationId = data.id;
+      applyLockedScenario(data.scenario_slug || "excel");
       conversationHistory.length = 0;
       chatMessages.innerHTML = "";
-      data.messages.forEach((m) => { addMessage(m.role, m.content, null, null, null); conversationHistory.push({ role: m.role, content: m.content }); });
+      if (!data.messages?.length) {
+        chatMessages.innerHTML = `<div class="message assistant"><div class="message-content">${WELCOME_HTML}</div></div>`;
+      } else {
+        data.messages.forEach((m) => { addMessage(m.role, m.content, null, null, null); conversationHistory.push({ role: m.role, content: m.content }); });
+      }
       syncListSelection();
       await loadReflectionThreadsForConversation(currentConversationId);
       closeSideNav();
@@ -1019,6 +1139,10 @@
   function removeTypingIndicator() { const el = document.getElementById("typingIndicator"); if (el) el.remove(); }
 
   async function sendMessage(message) {
+    if (!currentConversationId || !lockedScenarioSlug) {
+      openNewChatModal();
+      return;
+    }
     addMessage("user", message);
     conversationHistory.push({ role: "user", content: message });
     chatInput.value = "";
@@ -1034,8 +1158,8 @@
           response_mode: responseMode.value,
           conversation_id: currentConversationId,
           llm_choice: selectedLlmChoice || llmModelSelect?.value || null,
-          scenario_slug: scenarioSelect?.value || null,
-          persona_key: isExcelScenario(scenarioSelect?.value) ? null : (personaSelect?.value || null),
+          scenario_slug: lockedScenarioSlug,
+          persona_key: isExcelScenario(lockedScenarioSlug) ? null : (personaSelect?.value || null),
         }),
       });
       if (!r.ok) {
@@ -1095,8 +1219,25 @@
       });
     }
     if (sideNavClose) sideNavClose.addEventListener("click", closeSideNav);
+    if (controlsPaneToggle) {
+      controlsPaneToggle.addEventListener("click", () => {
+        if (controlsPane?.classList.contains("open")) closeControlsPane();
+        else openControlsPane();
+      });
+    }
+    if (controlsPaneClose) controlsPaneClose.addEventListener("click", closeControlsPane);
     if (sideNavBackdrop) {
-      sideNavBackdrop.addEventListener("click", closeSideNav);
+      sideNavBackdrop.addEventListener("click", () => {
+        closeSideNav();
+        closeControlsPane();
+      });
+    }
+    if (newChatCancel) newChatCancel.addEventListener("click", closeNewChatModal);
+    if (newChatStart) newChatStart.addEventListener("click", startNewChatWithScenario);
+    if (newChatBackdrop) {
+      newChatBackdrop.addEventListener("click", (e) => {
+        if (e.target === newChatBackdrop) closeNewChatModal();
+      });
     }
     if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
     if (settingsCancel) settingsCancel.addEventListener("click", closeSettings);
@@ -1124,22 +1265,10 @@
         if (item?.dataset.conversationId) openConversation(item.dataset.conversationId);
       });
     }
-    if (newConversationBtn) newConversationBtn.addEventListener("click", resetConversationUi);
-    if (responseMode) {
-      responseMode.addEventListener("change", () => {
-        if (responseMode.value === "yaml" && isExcelScenario(scenarioSelect?.value) && yamlScenarios.length) {
-          scenarioSelect.value = yamlScenarios[0].slug;
-        }
-        syncYamlModeVisibility();
-      });
-    }
-    if (scenarioSelect) {
-      scenarioSelect.addEventListener("change", () => {
-        fillPersonaOptions(scenarioSelect.value);
-        if (responseMode?.value === "yaml" && isExcelScenario(scenarioSelect.value) && yamlScenarios.length) {
-          scenarioSelect.value = yamlScenarios[0].slug;
-          fillPersonaOptions(scenarioSelect.value);
-        }
+    if (newConversationBtn) {
+      newConversationBtn.addEventListener("click", () => {
+        closeSideNav();
+        openNewChatModal();
       });
     }
 
@@ -1153,10 +1282,16 @@
     if (reflectionThreadList) reflectionThreadList.addEventListener("click", (e) => { const item = e.target.closest(".reflection-thread-item"); if (item?.dataset.threadId) openReflectionThread(item.dataset.threadId); });
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && sideNav?.classList.contains("open")) closeSideNav();
+      if (e.key !== "Escape") return;
+      if (newChatBackdrop?.classList.contains("visible")) closeNewChatModal();
+      else if (sideNav?.classList.contains("open")) closeSideNav();
+      else if (controlsPane?.classList.contains("open")) closeControlsPane();
     });
     const onNavMqChange = () => {
-      if (!isMobileNav()) closeSideNav();
+      if (!isMobileNav()) {
+        closeSideNav();
+        closeControlsPane();
+      }
     };
     if (typeof MOBILE_NAV_MQ.addEventListener === "function") {
       MOBILE_NAV_MQ.addEventListener("change", onNavMqChange);

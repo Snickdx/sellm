@@ -31,7 +31,7 @@
         }
         .master-detail {
             display: grid;
-            grid-template-columns: minmax(220px, 1fr) 5fr;
+            grid-template-columns: minmax(200px, 0.95fr) minmax(0, 5fr) minmax(250px, 1.05fr);
             width: 100%;
             height: 100vh;
             background: white;
@@ -58,7 +58,8 @@
             border-radius: 8px;
         }
         .side-nav-close:hover { background: #e2e8f0; color: #334155; }
-        .side-nav-toggle {
+        .side-nav-toggle,
+        .controls-pane-toggle {
             display: none;
             flex-shrink: 0;
             border: 1px solid rgba(255, 255, 255, 0.35);
@@ -70,7 +71,91 @@
             padding: 6px 10px;
             border-radius: 10px;
         }
-        .side-nav-toggle:hover { background: rgba(255, 255, 255, 0.22); }
+        .side-nav-toggle:hover,
+        .controls-pane-toggle:hover { background: rgba(255, 255, 255, 0.22); }
+        .controls-pane {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            background: #f8fafc;
+            border-left: 1px solid #e2e8f0;
+            z-index: 1600;
+        }
+        .controls-pane-header {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, #f1f5f9 0%, #f8fafc 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .controls-pane-header h2 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin: 0;
+        }
+        .controls-pane-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .controls-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .controls-field label {
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            letter-spacing: 0.02em;
+        }
+        .controls-field .mode-select {
+            width: 100%;
+            min-width: 0;
+        }
+        .scenario-locked {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            font-size: 13px;
+            color: #1e293b;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+        .scenario-locked-meta {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #64748b;
+        }
+        .controls-pane .budget-meter {
+            margin: 0;
+        }
+        .controls-pane-close {
+            display: none;
+            border: none;
+            background: transparent;
+            font-size: 22px;
+            line-height: 1;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+        .controls-pane-close:hover { background: #e2e8f0; color: #334155; }
         .chat-header-text {
             min-width: 0;
             flex: 1;
@@ -320,11 +405,39 @@
         .reflect-btn-secondary:hover:not(:disabled) { background: #f5f3ff; }
         .reflection-busy-hint { font-size: 12px; color: #4338ca; font-weight: 600; min-height: 1.2em; }
         .reflection-send-btn:disabled { opacity: 0.65; cursor: wait; }
-        .mode-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
-        .mode-label { font-size: 13px; color: #555; font-weight: 600; }
-        .mode-select { flex: 1; min-width: 160px; padding: 8px 12px; border: 1px solid #d0d0d0; border-radius: 10px; background: white; color: #333; font-size: 13px; }
-        .mode-row.hidden { display: none; }
-        .llm-hint { font-size: 11px; color: #6b7280; width: 100%; margin-top: -4px; }
+        .mode-select { padding: 8px 12px; border: 1px solid #d0d0d0; border-radius: 10px; background: white; color: #333; font-size: 13px; }
+        .mode-row.hidden,
+        .controls-field.hidden { display: none; }
+        .llm-hint { font-size: 11px; color: #6b7280; line-height: 1.35; }
+        .new-chat-modal {
+            width: min(440px, 94vw);
+            max-height: 90vh;
+            overflow: auto;
+            background: white;
+            border-radius: 16px;
+            padding: 20px 22px;
+            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.25);
+        }
+        .new-chat-modal h3 { margin: 0 0 6px; font-size: 18px; color: #1f2937; }
+        .new-chat-modal p { margin: 0 0 14px; font-size: 13px; color: #6b7280; line-height: 1.4; }
+        .new-chat-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+        .new-chat-actions button {
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .new-chat-cancel {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            color: #374151;
+        }
+        .new-chat-start {
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            font-weight: 600;
+        }
         .chat-input-form { display: flex; gap: 10px; }
         .chat-input { flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 14px; outline: none; transition: border-color 0.3s; min-width: 0; }
         .chat-input:focus { border-color: #667eea; }
@@ -450,11 +563,29 @@
             .conversations-pane.open {
                 transform: translateX(0);
             }
-            body.side-nav-open {
+            .controls-pane {
+                position: fixed;
+                top: 0;
+                right: 0;
+                bottom: 0;
+                width: min(320px, 88vw);
+                max-width: 88vw;
+                border-left: 1px solid #e2e8f0;
+                transform: translateX(105%);
+                transition: transform 0.25s ease;
+                box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+            }
+            .controls-pane.open {
+                transform: translateX(0);
+            }
+            body.side-nav-open,
+            body.controls-pane-open {
                 overflow: hidden;
             }
             .side-nav-toggle,
-            .side-nav-close {
+            .side-nav-close,
+            .controls-pane-toggle,
+            .controls-pane-close {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
@@ -549,24 +680,36 @@
                         <h1>Requirements Gathering Training</h1>
                         <p class="chat-header-subtitle">Practice extracting and formalizing requirements from stakeholder conversations</p>
                     </div>
+                    <button type="button" id="controlsPaneToggle" class="controls-pane-toggle" aria-label="Open controls" aria-expanded="false" aria-controls="controlsPane">⚙</button>
                 </div>
                 <div class="chat-messages" id="chatMessages">
                     <div class="message assistant">
                         <div class="message-content">
                             Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.
                             <br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.
-                            <br><br>You can ask me about:
-                            <br>• Who's involved in this project
-                            <br>• What we're trying to accomplish
-                            <br>• What the system needs to do
-                            <br>• Budget and cost concerns
-                            <br>• Any worries or risks we have
-                            <br><br><em>Remember: Take notes as we talk, then formalize my informal responses into structured requirements!</em>
-                            <br><br>Pick a <strong>scenario + persona</strong> (or Excel workbook), then a mode: <strong>Vector</strong> / <strong>Neo4j</strong> / <strong>Hybrid</strong> RAG, <strong>Direct</strong>, or <strong>YAML Persona</strong>. Persona facts are indexed into vector and graph for YAML scenarios.
+                            <br><br>Start with <strong>+ New chat</strong> and pick a scenario (locked for that chat). Switch personas, mode, and model from the right panel anytime.
                         </div>
                     </div>
                 </div>
                 <div class="chat-input-container">
+                    <div class="reflection-row" id="reflectionRow">
+                        <button type="button" id="reflectBtn" class="reflect-btn" title="Send this session to the LLM for meta-review and proposed tweak updates">Reflect on session</button>
+                        <button type="button" id="viewReflectionThreadsBtn" class="reflect-btn reflect-btn-secondary" title="Open saved reflection threads for this conversation">Open reflections</button>
+                        <span id="reflectionBusyHint" class="reflection-busy-hint" hidden aria-live="polite"></span>
+                        <span class="feedback-note">Meta-review → proposed tweak updates (confirm before save).</span>
+                    </div>
+                    <form class="chat-input-form" id="chatForm">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="Ask the stakeholder a requirements question…" autocomplete="off" />
+                        <button type="submit" class="send-button" id="sendButton">Send</button>
+                    </form>
+                </div>
+            </main>
+            <aside id="controlsPane" class="controls-pane" aria-label="Chat controls">
+                <div class="controls-pane-header">
+                    <h2>Controls</h2>
+                    <button type="button" id="controlsPaneClose" class="controls-pane-close" aria-label="Close controls">&times;</button>
+                </div>
+                <div class="controls-pane-body">
                     <div id="budgetMeter" class="budget-meter" aria-live="polite" hidden>
                         <div class="budget-meter-top">
                             <span class="budget-meter-title">Shared interview budget</span>
@@ -581,14 +724,19 @@
                         </div>
                         <p id="budgetMeterHint" class="budget-meter-hint"></p>
                     </div>
-                    <div class="reflection-row" id="reflectionRow">
-                        <button type="button" id="reflectBtn" class="reflect-btn" title="Send this session to the LLM for meta-review and proposed tweak updates">Reflect on session</button>
-                        <button type="button" id="viewReflectionThreadsBtn" class="reflect-btn reflect-btn-secondary" title="Open saved reflection threads for this conversation">Open reflections</button>
-                        <span id="reflectionBusyHint" class="reflection-busy-hint" hidden aria-live="polite"></span>
-                        <span class="feedback-note">Meta-review → proposed tweak updates (confirm before save).</span>
+                    <div class="controls-field">
+                        <label>Scenario</label>
+                        <div id="scenarioLockedLabel" class="scenario-locked">
+                            No chat yet
+                            <span class="scenario-locked-meta">Chosen when you start a new chat</span>
+                        </div>
                     </div>
-                    <div class="mode-row">
-                        <label class="mode-label" for="responseMode">Mode</label>
+                    <div class="controls-field" id="personaField">
+                        <label for="personaSelect">Persona</label>
+                        <select id="personaSelect" class="mode-select" title="Stakeholder persona for this scenario"></select>
+                    </div>
+                    <div class="controls-field">
+                        <label for="responseMode">Mode</label>
                         <select id="responseMode" class="mode-select">
                             <option value="vector">Vector RAG</option>
                             <option value="neo4j">Neo4j RAG</option>
@@ -598,23 +746,27 @@
                             <option value="compare">Compare All</option>
                         </select>
                     </div>
-                    <div class="mode-row" id="yamlScenarioRow">
-                        <label class="mode-label" for="scenarioSelect">Scenario</label>
-                        <select id="scenarioSelect" class="mode-select" title="Excel workbook or COMP 3613 YAML package"></select>
-                        <label class="mode-label" for="personaSelect">Persona</label>
-                        <select id="personaSelect" class="mode-select" title="Stakeholder persona (YAML scenarios)"></select>
-                    </div>
-                    <div class="mode-row hidden" id="llmModelRow">
-                        <label class="mode-label" for="llmModelSelect">LLM model</label>
+                    <div class="controls-field hidden" id="llmModelRow">
+                        <label for="llmModelSelect">LLM model</label>
                         <select id="llmModelSelect" class="mode-select" title="Switch model when API keys or Ollama are configured"></select>
                         <span class="llm-hint" id="llmModelHint"></span>
                     </div>
-                    <form class="chat-input-form" id="chatForm">
-                        <input type="text" class="chat-input" id="chatInput" placeholder="Ask the stakeholder a requirements question…" autocomplete="off" />
-                        <button type="submit" class="send-button" id="sendButton">Send</button>
-                    </form>
                 </div>
-            </main>
+            </aside>
+        </div>
+    </div>
+    <div id="newChatBackdrop" class="reflection-backdrop" aria-hidden="true">
+        <div class="new-chat-modal" role="dialog" aria-labelledby="newChatTitle">
+            <h3 id="newChatTitle">Start a new chat</h3>
+            <p>Pick a scenario for this interview. It stays locked for the chat; you can still switch personas.</p>
+            <div class="controls-field">
+                <label for="newChatScenarioSelect">Scenario</label>
+                <select id="newChatScenarioSelect" class="mode-select"></select>
+            </div>
+            <div class="new-chat-actions">
+                <button type="button" id="newChatCancel" class="new-chat-cancel">Cancel</button>
+                <button type="button" id="newChatStart" class="new-chat-start">Start chat</button>
+            </div>
         </div>
     </div>
     <div id="reflectionBackdrop" class="reflection-backdrop" aria-hidden="true">
@@ -645,6 +797,6 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/chat.js?v=11"></script>
+    <script src="/static/components/chat.js?v=12"></script>
 </body>
 </html>

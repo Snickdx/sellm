@@ -48,6 +48,7 @@ from app.api.schemas import (
     ChatResponse,
     ConversationDetail,
     ConversationSummary,
+    CreateConversationRequest,
     FeedbackRequest,
     LoginRequest,
     LoginResponse,
@@ -726,7 +727,11 @@ async def chat(request: ChatRequest, req: Request):
             if convo.user_id != user.id:
                 raise HTTPException(status_code=403, detail="Not your conversation")
         else:
-            convo = conversation_store.create_conversation(first_prompt=request.message, user_id=user.id if user else 0)
+            convo = conversation_store.create_conversation(
+                first_prompt=request.message,
+                user_id=user.id if user else 0,
+                scenario_slug=request.scenario_slug,
+            )
             conversation_id = convo.id
 
         conversation_store.add_message(conversation_id=conversation_id, role="user", content=request.message, mode_used=None)
@@ -752,8 +757,10 @@ async def chat(request: ChatRequest, req: Request):
 
         debug_out: Optional[Dict[str, Any]] = None
         llm_payload = _llm_used_payload(llm_choice)
+        # Scenario is locked on the conversation; persona may still change per turn
+        locked_slug = (getattr(convo, "scenario_slug", None) or request.scenario_slug or "").strip() or None
         scope_slug, scope_persona, scope_package = _resolve_persona_scope(
-            request.scenario_slug,
+            locked_slug,
             request.persona_key,
             request.scenario_version,
         )
@@ -999,11 +1006,44 @@ async def list_conversations(request: Request):
         ConversationSummary(
             id=record.id,
             title=record.title,
+            scenario_slug=getattr(record, "scenario_slug", None),
             created_at=record.created_at.isoformat(),
             updated_at=record.updated_at.isoformat(),
         )
         for record in records
     ]
+
+
+@app.post("/api/conversations", response_model=ConversationDetail)
+async def create_conversation(body: CreateConversationRequest, request: Request):
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    slug = (body.scenario_slug or "").strip() or "excel"
+    if slug not in ("excel", "__excel__", "powerpay"):
+        package = scenario_registry.get(slug)
+        if package is None:
+            raise HTTPException(status_code=400, detail=f"Unknown scenario '{slug}'")
+    title = (body.title or "").strip() or None
+    if not title:
+        if slug in ("excel", "__excel__", "powerpay"):
+            title = "Excel workbook interview"
+        else:
+            package = scenario_registry.get(slug)
+            title = f"{package.title} interview" if package else f"{slug} interview"
+    convo = conversation_store.create_conversation(
+        user_id=user.id,
+        scenario_slug=slug,
+        title=title,
+    )
+    return ConversationDetail(
+        id=convo.id,
+        title=convo.title,
+        scenario_slug=convo.scenario_slug,
+        created_at=convo.created_at.isoformat(),
+        updated_at=convo.updated_at.isoformat(),
+        messages=[],
+    )
 
 
 @app.delete("/api/conversations/{conversation_id}")
@@ -1034,6 +1074,7 @@ async def get_conversation(conversation_id: str, request: Request):
     return ConversationDetail(
         id=convo.id,
         title=convo.title,
+        scenario_slug=getattr(convo, "scenario_slug", None),
         created_at=convo.created_at.isoformat(),
         updated_at=convo.updated_at.isoformat(),
         messages=[ChatMessage(role=m.role, content=m.content) for m in messages],

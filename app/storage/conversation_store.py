@@ -21,6 +21,8 @@ class Conversation(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     title: str = Field(default="Untitled Conversation", index=True)
     user_id: int = Field(default=0, index=True)
+    # Locked at create time (excel | yaml slug); persona may still change per turn
+    scenario_slug: Optional[str] = Field(default=None, index=True)
     created_at: datetime = Field(default_factory=_utc_now, index=True)
     updated_at: datetime = Field(default_factory=_utc_now, index=True)
 
@@ -111,6 +113,7 @@ class ConversationStore:
     def init(self) -> None:
         SQLModel.metadata.create_all(self.engine)
         self._ensure_user_token_columns()
+        self._ensure_conversation_scenario_column()
 
     def _ensure_user_token_columns(self) -> None:
         """Add token_limit / tokens_used on existing DBs created before quotas existed."""
@@ -132,12 +135,41 @@ class ConversationStore:
         except Exception as exc:  # noqa: BLE001 — boot should continue if inspect fails
             print(f"[warn] Could not ensure user token columns: {exc}")
 
-    def create_conversation(self, first_prompt: Optional[str] = None, user_id: int = 0) -> Conversation:
-        title = "Untitled Conversation"
-        if first_prompt:
+    def _ensure_conversation_scenario_column(self) -> None:
+        """Add scenario_slug on existing DBs created before scenario-locked chats."""
+        from sqlalchemy import inspect, text
+
+        try:
+            insp = inspect(self.engine)
+            if "conversation" not in insp.get_table_names():
+                return
+            cols = {c["name"] for c in insp.get_columns("conversation")}
+            if "scenario_slug" in cols:
+                return
+            with self.engine.begin() as conn:
+                conn.execute(text("ALTER TABLE conversation ADD COLUMN scenario_slug VARCHAR"))
+        except Exception as exc:  # noqa: BLE001 — boot should continue if inspect fails
+            print(f"[warn] Could not ensure conversation.scenario_slug: {exc}")
+
+    def create_conversation(
+        self,
+        first_prompt: Optional[str] = None,
+        user_id: int = 0,
+        scenario_slug: Optional[str] = None,
+        title: Optional[str] = None,
+    ) -> Conversation:
+        resolved_title = (title or "").strip() or "Untitled Conversation"
+        if first_prompt and not (title or "").strip():
             compact = " ".join(first_prompt.strip().split())
-            title = (compact[:72] + "...") if len(compact) > 75 else compact
-        convo = Conversation(title=title, user_id=user_id, created_at=_utc_now(), updated_at=_utc_now())
+            resolved_title = (compact[:72] + "...") if len(compact) > 75 else compact
+        slug = (scenario_slug or "").strip() or None
+        convo = Conversation(
+            title=resolved_title,
+            user_id=user_id,
+            scenario_slug=slug,
+            created_at=_utc_now(),
+            updated_at=_utc_now(),
+        )
         with Session(self.engine) as session:
             session.add(convo)
             session.commit()
