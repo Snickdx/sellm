@@ -256,7 +256,8 @@
     personas.forEach((p) => {
       const opt = document.createElement("option");
       opt.value = p.id;
-      opt.textContent = `${p.display_name} — ${p.role}`;
+      opt.textContent = p.display_name || p.id;
+      if (p.role) opt.title = p.role;
       personaSelect.appendChild(opt);
     });
     if (preferredPersona && [...personaSelect.options].some((o) => o.value === preferredPersona)) {
