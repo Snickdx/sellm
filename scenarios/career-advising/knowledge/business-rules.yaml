@@ -1,0 +1,53 @@
+facts:
+  - id: CA-BR-001
+    statement: >-
+      Recommendation language must remain non-absolute: the system never asserts
+      that a learner must pursue one specific career.
+    category: constraint
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/166-1
+        start: "00:21:52.698"
+        end: "00:21:55.096"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/171-0
+        start: "00:22:13.341"
+        end: "00:22:16.680"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-BR-002
+    statement: >-
+      High-school / Form-level subject-choice pathways are out of scope for this
+      scenario package; knowledge and product focus on university course↔career
+      alignment for enrolled students.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-001
+    approved_by: instructor
+    approved_at: "2026-11-03T13:26:00Z"
+    rationale: >-
+      Instructor pivoted away from high-school audience despite VTT mentions.
+    known_by: [career_advisor]
+    disclosure: when_asked
+
+  - id: CA-BR-003
+    statement: >-
+      After missing course requirements are identified, the system does not
+      provide enrolment, provider, or booking workflows to obtain those courses.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-005
+    approved_by: instructor
+    approved_at: "2026-11-03T13:29:30Z"
+    rationale: >-
+      Instructor chose identify-only (option 1); stricter than transcript hints
+      about registering when already enrolled.
+    known_by: [career_advisor]
+    disclosure: when_relevant

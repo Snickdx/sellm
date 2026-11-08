@@ -1,0 +1,18 @@
+slug: thesis-tracker
+title: Thesis Tracker
+version: "0.1.0"
+status: approved
+brief: >-
+  Multi-role thesis tracker: students submit work; supervisors post in-app
+  feedback notes with due dates (overdue flagged for coordinator); freeform
+  progress notes (no structured milestones); coordinator oversees pairings and
+  can summarize progress for grad studies. Chat personas: pg_coordinator +
+  supervisor.
+source_status: transcript_received
+source_notes: >-
+  VTT: sources/Thesis Tracker Project - Brent Eversley.vtt (Dr Manohar).
+  DEC-TT-001 revised by DEC-TT-003 (pg_coordinator + supervisor; no
+  thesis_student chatbot). DEC-TT-002 multi-role app. DEC-TT-004 feedback notes
+  + due dates/overdue. DEC-TT-005 freeform progress notes only.
+approved_by: instructor
+approved_at: "2026-11-03T14:14:00Z"

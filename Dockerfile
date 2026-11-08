@@ -15,7 +15,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app \
     PORT=8000 \
     EXCEL_FILE=/app/data.xlsx \
-    CHROMA_PERSIST_DIRECTORY=/app/storage/chroma_db_v2
+    CHROMA_PERSIST_DIRECTORY=/app/storage/chroma_db_v2 \
+    SCENARIOS_ROOT=/app/scenarios
 
 # System deps: OpenMP for torch/sentence-transformers
 RUN apt-get update \

@@ -1,0 +1,19 @@
+scenario_slug: thesis-tracker
+persona_key: pg_coordinator
+use_package_facts: true
+title: Thesis tracker pilot (package facts)
+facts_for_review: []
+draft: |
+  Supervisors never write feedback in the system — email only is fine and there
+  are no due dates. The app requires a fixed 12-step milestone wizard for every
+  programme before any progress can be saved.
+expected_conflict_fact_ids:
+  - TT-ASM-004
+  - TT-REQ-003
+  - TT-REQ-007
+expected_conflict_substrings:
+  - feedback
+forbidden_in_response:
+  - EVAL-
+  - gaps.yaml
+  - rubric

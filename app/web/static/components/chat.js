@@ -70,6 +70,14 @@
   let authToken = localStorage.getItem("auth_token");
   let currentUser = null;
   let userApiKeys = {};
+  let quotaState = {
+    token_limit: null,
+    tokens_used: null,
+    tokens_remaining: null,
+    quota_exhausted: false,
+    has_byok: false,
+    billing_mode: "platform",
+  };
 
   function setAuth(token, username) {
     authToken = token;
@@ -109,11 +117,15 @@
   const chatInput = document.getElementById("chatInput");
   const sendButton = document.getElementById("sendButton");
   const responseMode = document.getElementById("responseMode");
+  const yamlScenarioRow = document.getElementById("yamlScenarioRow");
+  const scenarioSelect = document.getElementById("scenarioSelect");
+  const personaSelect = document.getElementById("personaSelect");
   const llmModelRow = document.getElementById("llmModelRow");
   const llmModelSelect = document.getElementById("llmModelSelect");
   const llmModelHint = document.getElementById("llmModelHint");
   const LLM_CHOICE_STORAGE_KEY = "sellm_llm_choice";
   let selectedLlmChoice = null;
+  let yamlScenarios = [];
   const conversationList = document.getElementById("conversationList");
   const newConversationBtn = document.getElementById("newConversationBtn");
   const settingsBtn = document.getElementById("settingsBtn");
@@ -159,13 +171,81 @@
     if (authed) {
       showApp();
       await loadUserConfig();
+      await refreshQuotaFromMe();
     } else {
       showLogin();
     }
     loadRuntimeConfig();
     loadConversations();
+    await loadYamlScenarios();
+    syncYamlModeVisibility();
     bindEvents();
     chatInput?.focus();
+  }
+
+  async function loadYamlScenarios() {
+    if (!scenarioSelect || !personaSelect) return;
+    try {
+      const r = await fetch("/api/scenarios", { headers: authHeaders() });
+      if (!r.ok) return;
+      yamlScenarios = await r.json();
+      scenarioSelect.innerHTML = "";
+      const excelOpt = document.createElement("option");
+      excelOpt.value = "excel";
+      excelOpt.textContent = "Excel (PowerPay workbook)";
+      scenarioSelect.appendChild(excelOpt);
+      yamlScenarios.forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s.slug;
+        opt.textContent = `${s.title} (${s.slug})`;
+        scenarioSelect.appendChild(opt);
+      });
+      // Prefer first YAML scenario when available so personas drive RAG by default
+      if (yamlScenarios.length) {
+        scenarioSelect.value = yamlScenarios[0].slug;
+      }
+      fillPersonaOptions(scenarioSelect.value);
+      syncPersonaAvailability();
+    } catch (e) {
+      console.error("Failed to load YAML scenarios", e);
+    }
+  }
+
+  function isExcelScenario(slug) {
+    return !slug || slug === "excel" || slug === "__excel__" || slug === "powerpay";
+  }
+
+  function fillPersonaOptions(slug) {
+    if (!personaSelect) return;
+    personaSelect.innerHTML = "";
+    if (isExcelScenario(slug)) {
+      personaSelect.innerHTML = '<option value="">(Excel — no persona)</option>';
+      personaSelect.disabled = true;
+      return;
+    }
+    personaSelect.disabled = false;
+    const scen = yamlScenarios.find((s) => s.slug === slug);
+    const personas = scen?.personas || [];
+    if (!personas.length) {
+      personaSelect.innerHTML = '<option value="">No personas</option>';
+      return;
+    }
+    personas.forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = `${p.display_name} — ${p.role}`;
+      personaSelect.appendChild(opt);
+    });
+  }
+
+  function syncPersonaAvailability() {
+    if (yamlScenarioRow) yamlScenarioRow.classList.remove("hidden");
+    fillPersonaOptions(scenarioSelect?.value);
+  }
+
+  function syncYamlModeVisibility() {
+    // Scenario + persona apply to every mode (vector/graph/direct/yaml/compare)
+    syncPersonaAvailability();
   }
 
   // ── Login / Logout ──────────────────────────────────────────
@@ -218,14 +298,142 @@
         return;
       }
       setAuth(data.token, data.username);
+      applyQuotaState(data);
       showApp();
       await loadUserConfig();
+      await refreshQuotaFromMe();
       loadRuntimeConfig();
       loadConversations();
     } catch {
       if (loginError) { loginError.textContent = "Network error"; loginError.hidden = false; }
     } finally {
       if (loginBtn) loginBtn.disabled = false;
+    }
+  }
+
+  function applyQuotaState(data) {
+    if (!data || typeof data !== "object") return;
+    quotaState = {
+      token_limit: data.token_limit ?? quotaState.token_limit,
+      tokens_used: data.tokens_used ?? quotaState.tokens_used,
+      tokens_remaining: data.tokens_remaining ?? quotaState.tokens_remaining,
+      quota_exhausted: Boolean(data.quota_exhausted ?? (data.billing === "byok" && data.tokens_remaining === 0)),
+      has_byok: Boolean(data.has_byok ?? Object.values(userApiKeys).some((k) => k.has_key)),
+      billing_mode: data.billing || data.billing_mode || quotaState.billing_mode || "platform",
+    };
+    renderQuotaBanner();
+  }
+
+  function _formatTokenCount(n) {
+    const v = Number(n) || 0;
+    if (v >= 1000) return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`;
+    return String(v);
+  }
+
+  function renderQuotaBanner() {
+    const meter = document.getElementById("budgetMeter");
+    const fill = document.getElementById("budgetMeterFill");
+    const bar = document.getElementById("budgetMeterBar");
+    const stats = document.getElementById("budgetMeterStats");
+    const pctEl = document.getElementById("budgetMeterPct");
+    const badge = document.getElementById("budgetMeterBadge");
+    const hint = document.getElementById("budgetMeterHint");
+    const settingsHint = document.getElementById("settingsQuotaHint");
+    if (!meter || !fill) return;
+
+    const limit = Number(quotaState.token_limit);
+    const used = Number(quotaState.tokens_used) || 0;
+    const remaining = quotaState.tokens_remaining == null
+      ? (Number.isFinite(limit) ? Math.max(0, limit - used) : null)
+      : Number(quotaState.tokens_remaining);
+    const hasByok = quotaState.has_byok || Object.values(userApiKeys).some((k) => k.has_key);
+    const onByok = quotaState.billing_mode === "byok" || quotaState.quota_exhausted;
+
+    if (!Number.isFinite(limit) || limit <= 0) {
+      meter.classList.remove("visible");
+      meter.hidden = true;
+      if (settingsHint) settingsHint.style.display = "none";
+      return;
+    }
+
+    meter.hidden = false;
+    meter.classList.add("visible");
+
+    const pctUsed = Math.min(100, Math.max(0, (used / limit) * 100));
+    const pctLeft = Math.max(0, 100 - pctUsed);
+    fill.style.width = `${pctUsed}%`;
+    if (bar) {
+      bar.setAttribute("aria-valuenow", String(Math.round(pctUsed)));
+      bar.setAttribute("aria-valuetext", `${Math.round(pctUsed)}% of shared budget used`);
+    }
+    if (pctEl) pctEl.textContent = `${Math.round(pctUsed)}% used`;
+    if (stats) {
+      stats.textContent = onByok && hasByok
+        ? `Pool exhausted · ${_formatTokenCount(used)} / ${_formatTokenCount(limit)}`
+        : `${_formatTokenCount(remaining)} left · ${_formatTokenCount(used)} / ${_formatTokenCount(limit)} used`;
+    }
+
+    let level = "ok";
+    if (onByok && hasByok) level = "byok";
+    else if (remaining <= 0 || pctUsed >= 100) level = "empty";
+    else if (pctLeft <= 15) level = "low";
+    else if (pctLeft <= 35) level = "warn";
+    meter.dataset.level = level;
+
+    if (badge) {
+      badge.className = "budget-meter-badge";
+      if (onByok && hasByok) {
+        badge.textContent = "Your key";
+        badge.classList.add("pool");
+      } else if (remaining <= 0) {
+        badge.textContent = "Budget out";
+        badge.classList.add("danger");
+      } else if (pctLeft <= 35) {
+        badge.textContent = "Running low";
+        badge.classList.add("warn");
+      } else {
+        badge.textContent = "Shared pool";
+        badge.classList.add("pool");
+      }
+    }
+
+    if (hint) {
+      if (onByok && hasByok) {
+        hint.innerHTML = "Shared interview budget used up — continuing on <strong>your API key</strong>.";
+      } else if (remaining <= 0) {
+        hint.innerHTML = `Budget used up. <button type="button" id="budgetOpenSettings">Add your API key</button> to keep interviewing.`;
+        const btn = document.getElementById("budgetOpenSettings");
+        if (btn) btn.onclick = () => openSettings();
+      } else if (pctLeft <= 35) {
+        hint.textContent = "Budget running low — enough for wrapping up base requirements, then add a key if you need more.";
+      } else {
+        hint.textContent = "Sized for one focused requirements interview. Usage updates after each reply.";
+      }
+    }
+
+    if (settingsHint) {
+      if (remaining <= 0 && !hasByok) {
+        settingsHint.style.display = "block";
+        settingsHint.style.color = "#b45309";
+        settingsHint.textContent = "Shared budget exhausted — save a key below to continue chatting.";
+      } else if (onByok && hasByok) {
+        settingsHint.style.display = "block";
+        settingsHint.style.color = "#047857";
+        settingsHint.textContent = "Using your saved API key (shared pool exhausted).";
+      } else {
+        settingsHint.style.display = "none";
+      }
+    }
+  }
+
+  async function refreshQuotaFromMe() {
+    try {
+      const r = await fetch("/api/auth/me", { headers: authHeaders() });
+      if (!r.ok) return;
+      const data = await r.json();
+      applyQuotaState(data);
+    } catch (_) {
+      /* ignore */
     }
   }
 
@@ -304,8 +512,9 @@
         if (settingsStatus) settingsStatus.textContent = detail;
         return;
       }
-      if (settingsStatus) settingsStatus.textContent = "Saved! Your API keys will be used for chat.";
+      if (settingsStatus) settingsStatus.textContent = "Saved! Your API keys will be used when the shared budget runs out (or when you select that provider).";
       await loadUserConfig();
+      await refreshQuotaFromMe();
       loadRuntimeConfig();
     } catch {
       if (settingsStatus) settingsStatus.textContent = "Network error";
@@ -740,11 +949,18 @@
       neo4j: "Neo4j RAG",
       direct: "Direct Model",
       compare: "Compare All",
+      yaml: "YAML Scenario",
     };
     if (modeUsed === "compare") return `${labels.compare}${llmPart}`;
     if (modeUsed === "direct") return `${labels.direct}${llmPart}`;
     if (modeUsed === "vector" || modeUsed === "neo4j") {
       return `${labels[modeUsed] || modeUsed}${llmPart}`;
+    }
+    if (modeUsed.startsWith("yaml:")) {
+      const parts = modeUsed.split(":");
+      const slug = parts[1] || "";
+      const persona = parts[2] || "";
+      return `YAML Scenario → ${slug}${persona ? ` / ${persona}` : ""}${llmPart}`;
     }
     if (modeUsed.startsWith("hybrid")) {
       const route = routing?.route || modeUsed.split(":")[1] || "";
@@ -818,6 +1034,8 @@
           response_mode: responseMode.value,
           conversation_id: currentConversationId,
           llm_choice: selectedLlmChoice || llmModelSelect?.value || null,
+          scenario_slug: scenarioSelect?.value || null,
+          persona_key: isExcelScenario(scenarioSelect?.value) ? null : (personaSelect?.value || null),
         }),
       });
       if (!r.ok) {
@@ -828,15 +1046,24 @@
         } catch (_) {
           /* ignore */
         }
+        if (r.status === 429) {
+          await refreshQuotaFromMe();
+          const wantsByok = /api key|token limit|budget/i.test(String(detail));
+          if (wantsByok) {
+            openSettings();
+          }
+        }
         throw new Error(detail);
       }
       const data = await r.json();
       removeTypingIndicator();
+      applyQuotaState(data);
       addMessage("assistant", data.response, null, data.mode_used || null, {
         prompt: message,
         response: data.response,
         mode: data.mode_used || null,
         routing: data.routing || null,
+        billing: data.billing || null,
         llm_used: data.llm_used || null,
       });
       conversationHistory.push({ role: "assistant", content: data.response });
@@ -898,6 +1125,23 @@
       });
     }
     if (newConversationBtn) newConversationBtn.addEventListener("click", resetConversationUi);
+    if (responseMode) {
+      responseMode.addEventListener("change", () => {
+        if (responseMode.value === "yaml" && isExcelScenario(scenarioSelect?.value) && yamlScenarios.length) {
+          scenarioSelect.value = yamlScenarios[0].slug;
+        }
+        syncYamlModeVisibility();
+      });
+    }
+    if (scenarioSelect) {
+      scenarioSelect.addEventListener("change", () => {
+        fillPersonaOptions(scenarioSelect.value);
+        if (responseMode?.value === "yaml" && isExcelScenario(scenarioSelect.value) && yamlScenarios.length) {
+          scenarioSelect.value = yamlScenarios[0].slug;
+          fillPersonaOptions(scenarioSelect.value);
+        }
+      });
+    }
 
     if (reflectBtn) reflectBtn.addEventListener("click", runReflection);
     if (viewReflectionThreadsBtn) viewReflectionThreadsBtn.addEventListener("click", openReflectionsForCurrentConversation);

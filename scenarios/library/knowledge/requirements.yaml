@@ -1,0 +1,96 @@
+facts:
+  - id: LIB-REQ-001
+    statement: Lecturers can request workshop bookings for their classes online.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/library-synthetic.vtt
+        cue_id: cue-0003
+        start: "00:00:17.500"
+        end: "00:00:26.000"
+        speaker: coordinator
+    known_by: [library_coordinator, lecturer]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - A lecturer can submit a workshop booking request without using email.
+
+  - id: LIB-REQ-002
+    statement: >-
+      A booking request must include course code, expected headcount, preferred date,
+      and resources to cover.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/library-synthetic.vtt
+        cue_id: cue-0004
+        start: "00:00:26.500"
+        end: "00:00:35.000"
+        speaker: coordinator
+    known_by: [library_coordinator]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Invalid or incomplete requests are rejected with field-level feedback.
+
+  - id: LIB-REQ-003
+    statement: >-
+      When two classes request the same slot, the earlier request wins unless the
+      coordinator overrides for a larger cohort.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/library-synthetic.vtt
+        cue_id: cue-0005
+        start: "00:00:35.500"
+        end: "00:00:44.000"
+        speaker: coordinator
+    known_by: [library_coordinator]
+    disclosure: when_asked
+    acceptance_criteria:
+      - Conflict resolution records which request was accepted and whether an override occurred.
+
+  - id: LIB-REQ-004
+    statement: The coordinator currently receives booking requests by email and checks a room calendar.
+    category: contextual
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/library-synthetic.vtt
+        cue_id: cue-0002
+        start: "00:00:08.500"
+        end: "00:00:17.000"
+        speaker: coordinator
+    known_by: [library_coordinator]
+    disclosure: when_relevant
+
+  - id: LIB-REQ-005
+    statement: Lecturers need a confirmation they can show students after a booking is accepted.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/library-synthetic.vtt
+        cue_id: cue-0006
+        start: "00:00:44.500"
+        end: "00:00:52.000"
+        speaker: lecturer
+    known_by: [lecturer]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - An accepted booking produces a shareable confirmation record.
+
+  - id: LIB-REQ-006
+    statement: Lecturers need a way to cancel a booking if the class is moved.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/library-synthetic.vtt
+        cue_id: cue-0006
+        start: "00:00:44.500"
+        end: "00:00:52.000"
+        speaker: lecturer
+    known_by: [lecturer]
+    disclosure: when_relevant

@@ -1,0 +1,48 @@
+version: "1"
+notes: >-
+  Instructor-only oracle for job-board. Never send to student LLM prompts or
+  student API responses.
+hidden_checks:
+  - id: EVAL-JB-001
+    competency: actors_and_roles
+    description: >-
+      SRS should identify graduates, employers, and administrators with distinct
+      responsibilities.
+    related_fact_ids: [JB-REQ-001, JB-REQ-002]
+
+  - id: EVAL-JB-002
+    competency: dual_apply_modes
+    description: >-
+      Student should discover external-link apply vs on-platform collect/forward.
+    related_fact_ids: [JB-REQ-004, JB-BR-003]
+
+  - id: EVAL-JB-003
+    competency: publish_lifecycle
+    description: >-
+      Listings require admin review before publish; publish notifies subscribers;
+      deadline auto-delists.
+    related_fact_ids: [JB-REQ-007, JB-REQ-008, JB-ASM-002, JB-WF-001]
+
+  - id: EVAL-JB-004
+    competency: application_status
+    description: >-
+      Target system should expose submitted/reviewed/shortlisted/rejected/hired;
+      only the listing employer updates status.
+    related_fact_ids: [JB-REQ-005, JB-ASM-001, JB-ASM-005]
+
+  - id: EVAL-JB-005
+    competency: eligibility
+    description: Only eligible programme students may subscribe/apply.
+    related_fact_ids: [JB-ASM-003, JB-REQ-006]
+
+  - id: EVAL-JB-006
+    competency: applicant_visibility
+    description: >-
+      Employers view applicants in-app; admins can export/forward packages.
+    related_fact_ids: [JB-ASM-004, JB-REQ-002]
+
+  - id: EVAL-JB-007
+    competency: trust_and_security
+    description: >-
+      Admin vetting of known employers; secure storage of applicant data.
+    related_fact_ids: [JB-BR-001, JB-REQ-009]

@@ -1,0 +1,96 @@
+facts:
+  - id: JB-ASM-001
+    statement: >-
+      On-platform applications use statuses: submitted, reviewed, shortlisted,
+      rejected, hired. Applicants can see the current status of their applications.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-002
+    approved_by: instructor
+    approved_at: "2026-11-02T20:23:00Z"
+    rationale: >-
+      Transcript confirms missing feedback loop as a pain point but does not
+      define target statuses; instructor chose a full pipeline.
+    known_by: [administrator, graduate_applicant, employer]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - An applicant can view status among the five defined values for each application.
+      - Status transitions are recorded and visible to the applicant.
+
+  - id: JB-ASM-002
+    statement: >-
+      Employers submit job listings that enter a pending state; an administrator
+      must approve before the listing is published to students.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-003
+    approved_by: instructor
+    approved_at: "2026-11-02T20:23:30Z"
+    rationale: >-
+      Transcript describes admin review-then-publish after form intake; instructor
+      chose employer self-serve submit with admin approval for the student project.
+    known_by: [administrator, employer]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Pending listings are not visible to graduate applicants.
+      - Only an admin approval/publish action makes a listing visible.
+
+  - id: JB-ASM-003
+    statement: >-
+      Only eligible programme students (currently DCIT) may subscribe and apply;
+      ineligible accounts cannot complete those actions.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-004
+    approved_by: instructor
+    approved_at: "2026-11-02T20:23:45Z"
+    rationale: >-
+      Transcript states the platform is released specifically for DCIT students;
+      instructor confirmed this as a hard eligibility constraint.
+    known_by: [administrator, graduate_applicant]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Subscribe and apply are rejected for users outside the eligible programme.
+
+  - id: JB-ASM-004
+    statement: >-
+      For on-platform collected applications, employers can view applicants for
+      their own listings in-app, and administrators can also export or forward
+      an applicant package.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-005
+    approved_by: instructor
+    approved_at: "2026-11-02T20:24:00Z"
+    rationale: >-
+      Transcript mentions forwarding short lists / sending applicants to employers
+      without specifying in-app employer access; instructor chose both.
+    known_by: [administrator, employer]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - An employer can list applicants for a listing they own.
+      - An admin can export or forward applicants for a listing.
+
+  - id: JB-ASM-005
+    statement: >-
+      Only the employer who owns a listing may update application statuses
+      (submitted, reviewed, shortlisted, rejected, hired) for applications to
+      that listing. Administrators do not change application status.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-006
+    approved_by: instructor
+    approved_at: "2026-11-02T20:26:00Z"
+    rationale: >-
+      Completes the status pipeline decision; transcript leaves updater role
+      unspecified. Instructor chose employer-only.
+    known_by: [administrator, graduate_applicant, employer]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Employer can transition status on applications to their own listings.
+      - Admin attempts to change application status are rejected or unavailable.

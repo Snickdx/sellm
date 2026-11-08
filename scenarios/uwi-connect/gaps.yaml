@@ -1,0 +1,258 @@
+open_questions:
+  - id: GAP-UC-001
+    priority: critical
+    prompt: |
+      Stakeholder is Miss Sophia Francis (fundraising and alumni department) for
+      UE/UWI Connect — an alumni reconnect platform with managed registration,
+      job board, events, directory, email, mentorship, messaging, and groups.
+      Which personas should the student-facing scenario include?
+    citations:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/8-1
+        start: "00:00:08.137"
+        end: "00:00:11.835"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/14-2
+        start: "00:01:06.850"
+        end: "00:01:11.754"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-4
+        start: "00:01:31.271"
+        end: "00:01:35.114"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/27-3
+        start: "00:04:24.173"
+        end: "00:04:28.791"
+        speaker: null
+    why_it_matters: Personas bound known_fact_ids.
+    alternatives:
+      - alumni_admin only (transcript-faithful)
+      - alumni_admin + alumnus
+      - alumni_admin + alumnus + current_student
+      - Defer — decide after pilot
+    recommended_default: alumni_admin + alumnus
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-UC-002
+    priority: critical
+    prompt: |
+      With alumni_admin-only chat (DEC-UC-001), what is the graded product
+      boundary? The live platform is feature-heavy; stakeholder also wants
+      simplicity and notes email is the primary engagement channel today.
+    citations:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-2
+        start: "00:01:22.803"
+        end: "00:01:27.286"
+        speaker: null
+        note: Staff manage/approve registration
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-0
+        start: "00:01:43.034"
+        end: "00:01:46.084"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-1
+        start: "00:01:46.084"
+        end: "00:01:50.590"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/18-3
+        start: "00:02:16.940"
+        end: "00:02:20.000"
+        speaker: null
+        note: Email primary engagement today
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/27-3
+        start: "00:04:24.173"
+        end: "00:04:28.791"
+        speaker: null
+        note: Jobs most important to alumni
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/52-2
+        start: "00:10:08.045"
+        end: "00:10:13.091"
+        speaker: null
+        note: Keep clear/simple; focus on one or two things
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/20-2
+        start: "00:02:51.786"
+        end: "00:02:56.415"
+        speaker: null
+        note: Feature surface is quite a lot
+    why_it_matters: Prevents cloning the entire production suite as student MVP scope.
+    alternatives:
+      - MVP core — admin approves alumni registration; alumni browse job + events boards; admin can post/broadcast announcements (directory/mentorship/groups/email-builder out or elicitation)
+      - Broad clone — jobs, events, directory, messaging, groups, mentorship, email campaigns all required
+      - Admin registration approval + announcement email only (no boards)
+      - Defer for student elicitation
+    recommended_default: >-
+      MVP core — admin approves alumni registration; alumni browse job + events
+      boards; admin can post/broadcast announcements
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-UC-003
+    priority: critical
+    prompt: |
+      Registration is staff-managed: applicants register, staff verify alumni
+      status, then approve. How strict is that for the graded MVP?
+    citations:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-2
+        start: "00:01:22.803"
+        end: "00:01:27.286"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-3
+        start: "00:01:27.286"
+        end: "00:01:31.271"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-4
+        start: "00:01:31.271"
+        end: "00:01:35.114"
+        speaker: null
+    why_it_matters: Auth/access control for a closed alumni community.
+    alternatives:
+      - Hard gate — pending until alumni_admin approves; unapproved users cannot access boards
+      - Soft gate — auto-activate; admin can revoke later
+      - Open registration with no admin review
+      - Defer for student elicitation
+    recommended_default: >-
+      Hard gate — pending until alumni_admin approves; unapproved users cannot
+      access boards
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-UC-004
+    priority: critical
+    prompt: |
+      Who may post job (and event) listings on the graded boards?
+    citations:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-0
+        start: "00:01:43.034"
+        end: "00:01:46.084"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/27-3
+        start: "00:04:24.173"
+        end: "00:04:28.791"
+        speaker: null
+        note: Jobs most important to alumni
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/122-0
+        start: "00:21:55.514"
+        end: "00:22:02.359"
+        speaker: null
+        note: Possible company recruiting partnerships
+    why_it_matters: Content moderation and alumni trust for opportunities.
+    alternatives:
+      - alumni_admin posts all jobs/events (alumni read-only on boards)
+      - Alumni may submit jobs/events pending admin publish
+      - Alumni publish jobs/events directly; admin can take down
+      - Defer for student elicitation
+    recommended_default: alumni_admin posts all jobs/events (alumni read-only on boards)
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-UC-005
+    priority: critical
+    prompt: |
+      DEC-UC-002 includes alumni_admin announcements/broadcasts. How should
+      those reach alumni in the graded MVP?
+    citations:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/18-3
+        start: "00:02:16.940"
+        end: "00:02:20.000"
+        speaker: null
+        note: Email primary engagement today
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/48-2
+        start: "00:09:22.008"
+        end: "00:09:25.055"
+        speaker: null
+        note: Campus announcements among engagement topics
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/52-2
+        start: "00:10:08.045"
+        end: "00:10:13.091"
+        speaker: null
+        note: Keep clear/simple
+    why_it_matters: Bounds admin broadcast scope (in-app vs real email campaigns).
+    alternatives:
+      - In-app announcements feed only (no outbound email required)
+      - In-app feed + optional email notification stub (no full campaign builder)
+      - Full email campaign builder required
+      - Defer for student elicitation
+    recommended_default: In-app announcements feed only (no outbound email required)
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+decisions:
+  - decision_id: DEC-UC-001
+    gap_id: GAP-UC-001
+    action: accept
+    chosen: alumni_admin only
+    modified_text: null
+    rationale: Instructor chose admin-only persona.
+    approved_by: instructor
+    approved_at: "2026-11-03T14:16:00Z"
+    resulting_fact_ids: [UC-ASM-001]
+  - decision_id: DEC-UC-002
+    gap_id: GAP-UC-002
+    action: accept
+    chosen: >-
+      MVP core — admin approves alumni registration; alumni browse job + events
+      boards; admin can post/broadcast announcements
+    modified_text: >-
+      Registration gate clarified by DEC-UC-003 (UWI email verification) rather
+      than manual alumni approval as the primary gate.
+    rationale: Instructor accepted option 1; registration mechanism modified in DEC-UC-003.
+    approved_by: instructor
+    approved_at: "2026-11-03T14:18:00Z"
+    resulting_fact_ids: [UC-ASM-002, UC-BR-003]
+  - decision_id: DEC-UC-003
+    gap_id: GAP-UC-003
+    action: modify
+    chosen: >-
+      Access gated by verification of a UWI email address (not manual
+      staff alumni-status review as the primary gate)
+    modified_text: >-
+      Registrants must verify via a UWI email before accessing boards/
+      announcements. Manual alumni_admin approve-after-lookup is not the
+      graded primary gate (admin may still manage posts/broadcasts and
+      account hygiene).
+    rationale: >-
+      Instructor directed UWI email verification. Note: transcript also says
+      many alumni no longer use student email — treat as known tension /
+      elicitation opportunity.
+    approved_by: instructor
+    approved_at: "2026-11-03T14:19:00Z"
+    resulting_fact_ids: [UC-ASM-003, UC-BR-001, UC-WF-001, UC-REQ-006]
+  - decision_id: DEC-UC-004
+    gap_id: GAP-UC-004
+    action: accept
+    chosen: Alumni may submit jobs/events pending admin publish
+    modified_text: null
+    rationale: Instructor accepted option 2 (submit → admin publish).
+    approved_by: instructor
+    approved_at: "2026-11-03T14:20:00Z"
+    resulting_fact_ids: [UC-ASM-004, UC-BR-002, UC-WF-002]
+  - decision_id: DEC-UC-005
+    gap_id: GAP-UC-005
+    action: accept
+    chosen: Full email campaign builder required
+    modified_text: null
+    rationale: >-
+      Instructor accepted option 3 (full email campaign builder), overriding
+      recommended in-app-only default.
+    approved_by: instructor
+    approved_at: "2026-11-03T14:22:00Z"
+    resulting_fact_ids: [UC-ASM-005, UC-REQ-005, UC-WF-003]

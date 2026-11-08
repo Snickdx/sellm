@@ -1,0 +1,20 @@
+slug: job-board
+title: Job Board
+version: "0.1.1"
+status: approved
+brief: >-
+  Eligible programme graduates browse and apply to jobs; employers submit
+  listings for admin approval; admins publish, notify subscribers, and can
+  export applicant packages. Applications support external-link or on-platform
+  collect modes, with a full status pipeline updated by the listing employer.
+source_status: transcript_received
+source_notes: >-
+  Real interview VTT under sources/Job Board Project Interview - Jacob Ramsoobhag.vtt.
+  180 cues; all speakers unlabeled (speaker: null). Confirmed knowledge from
+  university-admin answers. Personas: administrator, graduate_applicant, employer
+  (DEC-JB-001). Instructor assumptions: status pipeline (DEC-JB-002),
+  employer-submit/admin-publish (DEC-JB-003), programme eligibility (DEC-JB-004),
+  employer in-app view + admin export (DEC-JB-005), employer-only status updates
+  (DEC-JB-006).
+approved_by: instructor
+approved_at: "2026-11-02T20:29:00Z"

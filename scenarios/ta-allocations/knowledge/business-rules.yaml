@@ -1,0 +1,59 @@
+facts:
+  - id: TA-BR-001
+    statement: >-
+      The system must hard-block any course assignment that would cause a TA's
+      planned weekly hours to exceed 20.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-003
+    approved_by: instructor
+    approved_at: "2026-11-03T13:52:00Z"
+    rationale: Instructor chose hard 20h/week cap.
+    known_by: [hod]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - An assignment that would push a TA over 20 planned hours/week is rejected.
+
+  - id: TA-BR-002
+    statement: >-
+      Prior course experience is a soft preference (highlighted), not a hard
+      eligibility filter; HOD may assign any eligible TA under budget/hours.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-004
+    approved_by: instructor
+    approved_at: "2026-11-03T14:01:00Z"
+    rationale: Instructor chose soft preference.
+    known_by: [hod]
+    disclosure: when_relevant
+
+  - id: TA-BR-003
+    statement: >-
+      Graded MVP does not require task-level lecturer progress tracking,
+      timesheets, or a TA self-service portal — only course assignments and
+      hour/budget constraints.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-005
+    approved_by: instructor
+    approved_at: "2026-11-03T14:03:00Z"
+    rationale: Instructor narrowed DEC-TA-002 via option 3.
+    known_by: [hod]
+    disclosure: when_asked
+
+  - id: TA-BR-004
+    statement: >-
+      HR approval, contracts, and payroll steps are out of the graded system
+      (recorded as external process knowledge only).
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-002
+    approved_by: instructor
+    approved_at: "2026-11-03T13:51:00Z"
+    rationale: Product boundary excludes HR/contracts.
+    known_by: [hod]
+    disclosure: when_asked

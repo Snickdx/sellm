@@ -1,0 +1,17 @@
+version: "1"
+notes: >-
+  Instructor-only oracle for the synthetic library pilot. Never send to student
+  LLM prompts or student API responses.
+hidden_checks:
+  - id: EVAL-LIB-001
+    competency: requirements_coverage
+    description: Student SRS should mention course code, headcount, date, and resources.
+    related_fact_ids: [LIB-REQ-002]
+  - id: EVAL-LIB-002
+    competency: conflict_policy
+    description: Student should discover earlier-request-wins with coordinator override.
+    related_fact_ids: [LIB-REQ-003]
+  - id: EVAL-LIB-003
+    competency: capacity
+    description: Overbooking must be forbidden; default capacity assumption if elicited.
+    related_fact_ids: [LIB-BR-001, LIB-ASM-001]

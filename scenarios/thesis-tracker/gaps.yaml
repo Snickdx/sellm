@@ -1,0 +1,256 @@
+open_questions:
+  - id: GAP-TT-001
+    priority: critical
+    prompt: |
+      Stakeholder is Dr Manohar, postgraduate coordinator. The VTT describes
+      students initiating supervisor relationships, supervisors giving feedback,
+      milestones/progress, and summaries for grad studies. Which personas should
+      the student-facing scenario include?
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/34-0
+        start: "00:01:55.922"
+        end: "00:01:59.180"
+        speaker: null
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/50-1
+        start: "00:03:53.570"
+        end: "00:03:59.118"
+        speaker: null
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/107-2
+        start: "00:11:02.249"
+        end: "00:11:07.412"
+        speaker: null
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/325-3
+        start: "00:34:40.762"
+        end: "00:34:45.382"
+        speaker: null
+    why_it_matters: Personas bound known_fact_ids.
+    alternatives:
+      - pg_coordinator only (transcript-faithful)
+      - pg_coordinator + thesis_student + supervisor
+      - pg_coordinator + thesis_student only
+      - Defer — decide after pilot
+    recommended_default: pg_coordinator + thesis_student + supervisor
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TT-002
+    priority: critical
+    prompt: |
+      With a single pg_coordinator persona (DEC-TT-001), what is the graded
+      product boundary for the thesis tracker?
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/46-1
+        start: "00:03:30.389"
+        end: "00:03:33.842"
+        speaker: null
+        note: Milestones, submissions, feedback
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/72-2
+        start: "00:07:19.235"
+        end: "00:07:24.162"
+        speaker: null
+        note: Track progress and record milestones
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/234-0
+        start: "00:25:15.842"
+        end: "00:25:20.957"
+        speaker: null
+        note: Progress and feedback documented in notes
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/325-3
+        start: "00:34:40.762"
+        end: "00:34:45.382"
+        speaker: null
+        note: Progress summary for grad studies
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/340-1
+        start: "00:36:28.739"
+        end: "00:36:34.028"
+        speaker: null
+        note: Low friction for coordinator
+    why_it_matters: Keeps MVP coordinator-centric without building full multi-role portals.
+    alternatives:
+      - Coordinator dashboard — record student–supervisor pairing, milestones, progress notes/feedback log; export summary for grad studies (no student/supervisor self-service portals required)
+      - Full multi-role app — student submits work, supervisor posts feedback in-app, coordinator oversees
+      - Milestone checklist only — no feedback notes or grad-studies export
+      - Defer for student elicitation
+    recommended_default: >-
+      Coordinator dashboard — pairing, milestones, progress/feedback log; export
+      summary for grad studies (no self-service portals required)
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TT-003
+    priority: critical
+    prompt: |
+      DEC-TT-002 requires a multi-role app, but DEC-TT-001 keeps the *chatbot*
+      persona as pg_coordinator only. Confirm how student/supervisor knowledge
+      is represented for elicitation.
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-2
+        start: "00:04:42.326"
+        end: "00:04:46.381"
+        speaker: null
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/107-2
+        start: "00:11:02.249"
+        end: "00:11:07.412"
+        speaker: null
+    why_it_matters: >-
+      Avoids empty student/supervisor chatbots while still requiring their
+      workflows in the SRS/product.
+    alternatives:
+      - Keep chatbot as pg_coordinator only; student/supervisor behaviours are product requirements the coordinator can describe (assumed/clarified facts on coordinator)
+      - Add thesis_student + supervisor personas now (revise DEC-TT-001)
+      - Defer student/supervisor UX details entirely to classroom elicitation
+      - Defer this decision
+    recommended_default: >-
+      Keep chatbot as pg_coordinator only; student/supervisor behaviours are
+      product requirements the coordinator can describe
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TT-004
+    priority: critical
+    prompt: |
+      A major pain is delayed supervisor feedback. What should the graded system
+      require for feedback on student submissions?
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/107-2
+        start: "00:11:02.249"
+        end: "00:11:07.412"
+        speaker: null
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/234-0
+        start: "00:25:15.842"
+        end: "00:25:20.957"
+        speaker: null
+        note: Feedback documented in notes
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/290-3
+        start: "00:31:32.999"
+        end: "00:31:37.703"
+        speaker: null
+        note: Delaying feedback is a major blocker
+    why_it_matters: Defines supervisor workflow and coordinator visibility into stalls.
+    alternatives:
+      - Required in-app feedback notes on submissions; no hard SLA deadline (overdue visibility only)
+      - Required feedback notes + configurable due date with overdue flags for coordinator
+      - Email/offline feedback OK — system only stores milestone checkmarks
+      - Defer for student elicitation
+    recommended_default: >-
+      Required feedback notes + configurable due date with overdue flags for
+      coordinator
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TT-005
+    priority: important
+    prompt: |
+      Coordinators need progress visibility and summaries for grad studies.
+      What milestone model is required in the graded MVP?
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/46-1
+        start: "00:03:30.389"
+        end: "00:03:33.842"
+        speaker: null
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/72-2
+        start: "00:07:19.235"
+        end: "00:07:24.162"
+        speaker: null
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/78-3
+        start: "00:07:56.677"
+        end: "00:08:00.230"
+        speaker: null
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/325-3
+        start: "00:34:40.762"
+        end: "00:34:45.382"
+        speaker: null
+        note: Progress summary for grad studies
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/230-1
+        start: "00:24:23.817"
+        end: "00:24:28.578"
+        speaker: null
+        note: Supervisor capacity mentioned
+    why_it_matters: Structures progress tracking without over-prescribing every department ritual.
+    alternatives:
+      - Configurable milestone checklist per programme + coordinator progress export/summary
+      - Fixed universal milestone set hard-coded for all programmes
+      - Freeform progress notes only — no structured milestones
+      - Defer for student elicitation
+    recommended_default: >-
+      Configurable milestone checklist per programme + coordinator progress
+      export/summary
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+decisions:
+  - decision_id: DEC-TT-001
+    gap_id: GAP-TT-001
+    action: accept
+    chosen: pg_coordinator only
+    modified_text: >-
+      Later revised by DEC-TT-003 to pg_coordinator + supervisor (no
+      thesis_student chatbot persona).
+    rationale: Instructor initially chose coordinator-only; revised in DEC-TT-003.
+    approved_by: instructor
+    approved_at: "2026-11-03T14:07:00Z"
+    resulting_fact_ids: []
+  - decision_id: DEC-TT-002
+    gap_id: GAP-TT-002
+    action: accept
+    chosen: >-
+      Full multi-role app — student submits work, supervisor posts feedback
+      in-app, coordinator oversees
+    modified_text: null
+    rationale: Instructor accepted option 2.
+    approved_by: instructor
+    approved_at: "2026-11-03T14:08:00Z"
+    resulting_fact_ids: [TT-ASM-002, TT-REQ-001]
+  - decision_id: DEC-TT-003
+    gap_id: GAP-TT-003
+    action: modify
+    chosen: pg_coordinator + supervisor chatbot personas (no thesis_student persona)
+    modified_text: >-
+      Student-facing chatbots are pg_coordinator and supervisor. Student
+      submitter role remains a product actor (DEC-TT-002) described via
+      coordinator/supervisor facts; no separate thesis_student persona.
+    rationale: Instructor requested supervisor and coordinator (not student chatbot).
+    approved_by: instructor
+    approved_at: "2026-11-03T14:09:00Z"
+    resulting_fact_ids: [TT-ASM-001, TT-ASM-003]
+  - decision_id: DEC-TT-004
+    gap_id: GAP-TT-004
+    action: accept
+    chosen: >-
+      Required feedback notes + configurable due date with overdue flags for
+      coordinator
+    modified_text: null
+    rationale: Instructor accepted option 2.
+    approved_by: instructor
+    approved_at: "2026-11-03T14:10:00Z"
+    resulting_fact_ids: [TT-ASM-004, TT-BR-002]
+  - decision_id: DEC-TT-005
+    gap_id: GAP-TT-005
+    action: accept
+    chosen: Freeform progress notes only — no structured milestones
+    modified_text: null
+    rationale: >-
+      Instructor accepted option 3 — progress via freeform notes; no structured
+      milestone checklist in graded MVP (grad-studies summary can still derive
+      from notes/status).
+    approved_by: instructor
+    approved_at: "2026-11-03T14:11:00Z"
+    resulting_fact_ids: [TT-ASM-005, TT-BR-003]

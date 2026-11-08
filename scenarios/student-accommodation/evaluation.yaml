@@ -1,0 +1,36 @@
+version: "1"
+notes: >-
+  Instructor-only oracle for student-accommodation. Never send to student LLM
+  prompts or student API responses.
+hidden_checks:
+  - id: EVAL-SA-001
+    competency: closed_referral
+    description: >-
+      Closed student platform; referral not sales; optional messages OK; no
+      payments/contracts.
+    related_fact_ids: [SA-REQ-008, SA-BR-001, SA-BR-003, SA-ASM-003]
+
+  - id: EVAL-SA-002
+    competency: eligibility_and_geography
+    description: >-
+      St. Augustine FT/PT + provisional incoming; listings St. Augustine / Mount
+      Hope.
+    related_fact_ids: [SA-ASM-002, SA-BR-002]
+
+  - id: EVAL-SA-003
+    competency: verify_then_publish
+    description: >-
+      Landlord submit → pending → admin verify → active/inactive; pending hidden
+      from students.
+    related_fact_ids: [SA-REQ-007, SA-ASM-004, SA-BR-004, SA-WF-002, SA-WF-003]
+
+  - id: EVAL-SA-004
+    competency: student_browse_filters
+    description: >-
+      Students filter by location, price, and amenities; see contact info.
+    related_fact_ids: [SA-REQ-004, SA-REQ-006, SA-ASM-005, SA-WF-001]
+
+  - id: EVAL-SA-005
+    competency: landlord_listing_management
+    description: Landlords update photos/details and toggle availability.
+    related_fact_ids: [SA-REQ-003, SA-REQ-005]

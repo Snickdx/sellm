@@ -1,0 +1,17 @@
+scenario_slug: ta-allocations
+persona_key: hod
+use_package_facts: true
+title: TA allocations pilot (package facts)
+facts_for_review: []
+draft: |
+  The system lets a TA be assigned 35 hours in one week across courses with no
+  warning. Prior experience is ignored completely. Every lab minute must be
+  clocked in a TA timesheet portal before allocation is valid.
+expected_conflict_fact_ids: []
+expected_conflict_substrings: []
+# Heuristic currently surfaces coverage questions for this draft rather than
+# keyword conflicts; keep the draft as a pilot question probe.
+forbidden_in_response:
+  - EVAL-
+  - gaps.yaml
+  - rubric

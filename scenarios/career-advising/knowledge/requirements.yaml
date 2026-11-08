@@ -1,0 +1,278 @@
+facts:
+  - id: CA-REQ-001
+    statement: >-
+      Many learners lack clear career direction and need guidance connecting
+      education choices to jobs and expectations; the advising tool exists to
+      reduce that uncertainty.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/18-0
+        start: "00:01:19.501"
+        end: "00:01:23.723"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/18-2
+        start: "00:01:27.066"
+        end: "00:01:31.934"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/22-0
+        start: "00:01:45.181"
+        end: "00:01:47.634"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-REQ-002
+    statement: >-
+      Learners explore from two angles: (A) choose a desired career/end-state and
+      work out how to get there, and (B) start from subjects/courses they have or
+      like and discover matching careers.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/40-1
+        start: "00:05:09.437"
+        end: "00:05:13.432"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/43-0
+        start: "00:05:54.141"
+        end: "00:05:58.430"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/43-2
+        start: "00:06:03.177"
+        end: "00:06:05.751"
+        speaker: null
+        note: Explicitly framed as two angles
+    known_by: [career_advisor]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - A user can start from a target career and see related course/path guidance.
+      - A user can start from a course/subject set and see suited careers.
+
+  - id: CA-REQ-003
+    statement: >-
+      Career information should include credible details such as salaries and
+      longer-term achievements or progression associated with careers.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/49-0
+        start: "00:06:20.781"
+        end: "00:06:24.699"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/49-1
+        start: "00:06:24.699"
+        end: "00:06:31.824"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_asked
+
+  - id: CA-REQ-004
+    statement: >-
+      The system must support individuals changing their minds (including mid-
+      degree), providing tools to re-align courses and career options after a
+      change of direction.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/70-1
+        start: "00:09:17.327"
+        end: "00:09:21.237"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/70-4
+        start: "00:09:26.662"
+        end: "00:09:30.230"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/232-0
+        start: "00:29:02.541"
+        end: "00:29:05.315"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-REQ-005
+    statement: >-
+      Recommendations must not dictate a single mandatory career; they present
+      careers best suited to the information entered and are never absolute.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/166-0
+        start: "00:21:48.381"
+        end: "00:21:52.698"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/166-1
+        start: "00:21:52.698"
+        end: "00:21:55.096"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/166-5
+        start: "00:22:04.635"
+        end: "00:22:06.661"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/171-0
+        start: "00:22:13.341"
+        end: "00:22:16.680"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - UI/copy does not force a single required career outcome.
+      - Results are presented as suited options given inputs.
+
+  - id: CA-REQ-006
+    statement: >-
+      Users provide inputs such as courses they have (and related interests); the
+      system produces career/path outputs from those inputs.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/175-0
+        start: "00:22:50.781"
+        end: "00:22:54.621"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/198-0
+        start: "00:25:21.341"
+        end: "00:25:26.414"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/198-1
+        start: "00:25:26.414"
+        end: "00:25:29.181"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-REQ-007
+    statement: >-
+      Users can edit their inputs (for example liked courses/subjects) so
+      recommendations update when interests or plans change.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/229-1
+        start: "00:28:49.751"
+        end: "00:28:54.736"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/229-2
+        start: "00:28:54.736"
+        end: "00:28:56.781"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-REQ-008
+    statement: >-
+      Career portrayals should start at realistic entry-level outcomes rather
+      than glamorized top-of-ladder positions.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/260-0
+        start: "00:32:34.221"
+        end: "00:32:38.468"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/260-1
+        start: "00:32:38.468"
+        end: "00:32:42.546"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_asked
+
+  - id: CA-REQ-009
+    statement: >-
+      When a desired path requires courses the learner does not have, the system
+      identifies the missing requirements (gap detection).
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/273-0
+        start: "00:34:25.741"
+        end: "00:34:31.333"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/287-0
+        start: "00:35:46.061"
+        end: "00:35:47.981"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/288-0
+        start: "00:35:49.061"
+        end: "00:35:52.977"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/288-1
+        start: "00:35:52.977"
+        end: "00:35:55.604"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Missing required courses for a selected path are listed to the user.
+
+  - id: CA-REQ-010
+    statement: >-
+      An enrolled student mid-programme can enter current degree and courses; the
+      system may assume earlier programme prerequisites are covered and should
+      ask when additional information is still needed.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/348-4
+        start: "00:42:56.397"
+        end: "00:42:59.866"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/348-7
+        start: "00:43:06.141"
+        end: "00:43:07.621"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/352-0
+        start: "00:43:23.661"
+        end: "00:43:26.141"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/354-0
+        start: "00:43:27.981"
+        end: "00:43:31.166"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/354-1
+        start: "00:43:31.166"
+        end: "00:43:34.521"
+        speaker: null
+    known_by: [career_advisor]
+    disclosure: when_relevant

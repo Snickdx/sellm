@@ -1,0 +1,17 @@
+scenario_slug: uwi-connect
+persona_key: alumni_admin
+use_package_facts: true
+title: UWI Connect — open registration without verification
+facts_for_review: []
+draft: |
+  Anyone can register with any personal email and immediately post live job
+  listings to the public board with no admin review. Email campaigns are out
+  of scope; staff only leave notes in an internal spreadsheet.
+expected_conflict_fact_ids:
+  - UC-BR-001
+  - UC-BR-002
+  - UC-ASM-005
+forbidden_in_response:
+  - EVAL-
+  - gaps.yaml
+  - rubric

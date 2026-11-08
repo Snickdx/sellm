@@ -1,0 +1,17 @@
+scenario_slug: career-advising
+persona_key: career_advisor
+use_package_facts: true
+title: Career advising pilot (package facts)
+facts_for_review: []
+draft: |
+  The app tells each student exactly one career they must pursue based on their
+  courses. Missing calculus for architecture is ignored; students are auto-
+  enrolled in every gap course by the system.
+expected_conflict_fact_ids:
+  - CA-REQ-010
+expected_conflict_substrings:
+  - prerequisite
+forbidden_in_response:
+  - EVAL-
+  - gaps.yaml
+  - rubric

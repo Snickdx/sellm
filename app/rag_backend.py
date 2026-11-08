@@ -48,6 +48,11 @@ class RequirementsRAG:
             name="requirements",
             metadata={"hnsw:space": "cosine"}
         )
+        # Persona-scoped YAML scenario facts (separate from Excel workbook)
+        self.scenario_collection = self.client.get_or_create_collection(
+            name="scenario_facts",
+            metadata={"hnsw:space": "cosine"},
+        )
         
         # Load data if collection is empty
         if self.collection.count() == 0:
@@ -55,6 +60,7 @@ class RequirementsRAG:
             self._load_requirements()
         else:
             print(f"Found {self.collection.count()} existing documents in database")
+        print(f"Scenario fact collection: {self.scenario_collection.count()} documents")
     
     def _load_requirements(self):
         """Load requirements from Excel file and create embeddings"""
@@ -177,8 +183,99 @@ class RequirementsRAG:
         
         return keywords
     
-    def search(self, query: str, n_results: int = 5, filter_by_sheet_type: bool = True) -> List[Dict]:
-        """Search for relevant requirements with intelligent sheet matching"""
+    def upsert_scenario_documents(
+        self,
+        documents: List[str],
+        metadatas: List[Dict],
+        ids: List[str],
+    ) -> None:
+        """Replace/add persona-scoped YAML facts in the scenario_facts collection."""
+        if not documents:
+            return
+        # Clear previous YAML index so retired facts disappear
+        try:
+            existing = self.scenario_collection.get()
+            old_ids = existing.get("ids") or []
+            if old_ids:
+                self.scenario_collection.delete(ids=old_ids)
+        except Exception as e:
+            print(f"⚠ Could not clear scenario_facts collection: {e}")
+
+        print(f"Indexing {len(documents)} YAML scenario persona facts into Chroma...")
+        embeddings = self.embedding_model.encode(documents, show_progress_bar=True)
+        batch_size = 100
+        for i in range(0, len(documents), batch_size):
+            end_idx = min(i + batch_size, len(documents))
+            self.scenario_collection.add(
+                documents=documents[i:end_idx],
+                embeddings=embeddings[i:end_idx].tolist(),
+                metadatas=metadatas[i:end_idx],
+                ids=ids[i:end_idx],
+            )
+        print(f"✓ Scenario fact collection now has {self.scenario_collection.count()} documents")
+
+    def search_scenario(
+        self,
+        query: str,
+        *,
+        scenario_slug: str,
+        persona_key: str,
+        n_results: int = 5,
+    ) -> List[Dict]:
+        """Vector search restricted to one scenario persona's YAML facts."""
+        query_embedding = self.embedding_model.encode([query]).tolist()[0]
+        where_filter = {
+            "$and": [
+                {"scenario_slug": {"$eq": scenario_slug}},
+                {"persona_key": {"$eq": persona_key}},
+            ]
+        }
+        try:
+            results = self.scenario_collection.query(
+                query_embeddings=[query_embedding],
+                n_results=n_results,
+                where=where_filter,
+            )
+        except Exception as e:
+            print(f"⚠ Scenario search failed ({e}); falling back without filter")
+            results = self.scenario_collection.query(
+                query_embeddings=[query_embedding],
+                n_results=max(n_results * 4, 20),
+            )
+
+        formatted_results: List[Dict] = []
+        if results.get("documents") and results["documents"][0]:
+            for i in range(len(results["documents"][0])):
+                meta = results["metadatas"][0][i] if results.get("metadatas") else {}
+                if meta.get("scenario_slug") != scenario_slug or meta.get("persona_key") != persona_key:
+                    continue
+                formatted_results.append(
+                    {
+                        "document": results["documents"][0][i],
+                        "metadata": meta,
+                        "distance": results["distances"][0][i] if results.get("distances") else None,
+                    }
+                )
+        formatted_results.sort(key=lambda x: x["distance"] if x["distance"] is not None else 1.0)
+        return formatted_results[:n_results]
+
+    def search(
+        self,
+        query: str,
+        n_results: int = 5,
+        filter_by_sheet_type: bool = True,
+        scenario_slug: str | None = None,
+        persona_key: str | None = None,
+    ) -> List[Dict]:
+        """Search Excel requirements, or persona-scoped YAML facts when both filters are set."""
+        if scenario_slug and persona_key:
+            return self.search_scenario(
+                query,
+                scenario_slug=scenario_slug,
+                persona_key=persona_key,
+                n_results=n_results,
+            )
+
         query_lower = query.lower()
         
         # First, try to find sheet-specific matches

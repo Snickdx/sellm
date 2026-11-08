@@ -1,0 +1,16 @@
+slug: library
+title: Library Workshop Booking
+version: "0.1.0"
+status: approved
+brief: >-
+  Lecturers book workshop sessions for classes on library resources.
+  Coordinator manages availability, capacity, and confirmations.
+source_status: transcript_received_plus_synthetic_pilot
+source_notes: >-
+  Real interview VTT now present: sources/Library Project Interview - Kriston Latoo.vtt.
+  Current approved package 0.1.0 is still grounded on the SYNTHETIC pilot
+  (library-synthetic.vtt) for tooling. Re-author with scenario-author against the
+  real transcript and bump version before classroom use; do not treat 0.1.0 facts
+  as real-interview ground truth.
+approved_by: instructor@example.com
+approved_at: "2026-11-02T16:00:00Z"

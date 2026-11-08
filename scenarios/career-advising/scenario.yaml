@@ -1,0 +1,19 @@
+slug: career-advising
+title: Career Based Advising
+version: "0.1.0"
+status: approved
+brief: >-
+  Advisor-guided career tool for enrolled university students: align declared
+  courses (and programme context) with career options in both directions
+  (career→courses and courses→careers); support changing goals via editable
+  inputs; show realistic entry-level career info; identify missing courses
+  without enrolment/booking workflows. High-school scope is out (DEC-CA-001).
+source_status: transcript_received
+source_notes: >-
+  VTT: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+  (stakeholder Dr Terry Mohammed). 899 cues; speakers unlabeled. Persona:
+  career_advisor (DEC-CA-001). Assumptions: enrolled university end users
+  (DEC-CA-002), both exploration modes in MVP (DEC-CA-003), non-absolute ranked
+  recommendations (DEC-CA-004), identify-only missing courses (DEC-CA-005).
+approved_by: instructor
+approved_at: "2026-11-03T13:33:00Z"

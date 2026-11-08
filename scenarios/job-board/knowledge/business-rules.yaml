@@ -1,0 +1,70 @@
+facts:
+  - id: JB-BR-001
+    statement: >-
+      Staff will not publish arbitrary unknown jobs; listings are expected to come
+      from known companies/stakeholders.
+    category: constraint
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/45-0
+        start: "00:06:40.622"
+        end: "00:06:43.742"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/46-0
+        start: "00:06:44.902"
+        end: "00:06:48.575"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/46-1
+        start: "00:06:48.575"
+        end: "00:06:49.582"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_asked
+    acceptance_criteria:
+      - Unpublished or rejected postings from unknown employers are not shown to students.
+
+  - id: JB-BR-002
+    statement: >-
+      After applicants leave the platform to connect with an employer, subsequent
+      recruitment outcomes (including abandonment) are outside admin visibility.
+    category: constraint
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/42-0
+        start: "00:06:17.662"
+        end: "00:06:21.775"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/42-1
+        start: "00:06:21.775"
+        end: "00:06:26.403"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_asked
+
+  - id: JB-BR-003
+    statement: >-
+      For external-link applications, staff have no means to know whether any
+      applicants responded.
+    category: constraint
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/39-2
+        start: "00:05:51.746"
+        end: "00:05:54.433"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/39-3
+        start: "00:05:54.433"
+        end: "00:05:56.862"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_asked

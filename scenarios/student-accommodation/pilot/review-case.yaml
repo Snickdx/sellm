@@ -1,0 +1,17 @@
+scenario_slug: student-accommodation
+persona_key: campus_admin
+use_package_facts: true
+title: Student accommodation pilot (package facts)
+facts_for_review: []
+draft: |
+  Anyone on the internet can browse all apartments without logging in. Students
+  pay rent through the app checkout. Landlords publish unverified units that
+  appear immediately as available.
+expected_conflict_fact_ids:
+  - SA-REQ-007
+expected_conflict_substrings:
+  - verif
+forbidden_in_response:
+  - EVAL-
+  - gaps.yaml
+  - rubric

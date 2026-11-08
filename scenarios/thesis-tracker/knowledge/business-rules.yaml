@@ -1,0 +1,45 @@
+facts:
+  - id: TT-BR-001
+    statement: >-
+      There is no separate thesis_student chatbot persona; student behaviours are
+      product requirements described by coordinator/supervisor knowledge.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-003
+    approved_by: instructor
+    approved_at: "2026-11-03T14:09:00Z"
+    rationale: Instructor chose coordinator + supervisor chatbots only.
+    known_by: [pg_coordinator]
+    disclosure: never_student
+
+  - id: TT-BR-002
+    statement: >-
+      Supervisor feedback on a submission must be recorded in-app as notes, with
+      a configurable due date; overdue items are flagged for the coordinator.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-004
+    approved_by: instructor
+    approved_at: "2026-11-03T14:10:00Z"
+    rationale: Instructor accepted feedback notes + due dates/overdue flags.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Feedback without notes is insufficient for closing a feedback request.
+      - Overdue feedback is visible to the coordinator.
+
+  - id: TT-BR-003
+    statement: >-
+      Graded MVP uses freeform progress notes rather than a structured milestone
+      checklist (programme milestone templates are out of required scope).
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-005
+    approved_by: instructor
+    approved_at: "2026-11-03T14:11:00Z"
+    rationale: Instructor chose freeform notes only.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant

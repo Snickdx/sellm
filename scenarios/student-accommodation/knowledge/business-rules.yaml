@@ -1,0 +1,63 @@
+facts:
+  - id: SA-BR-001
+    statement: >-
+      Student-facing browse is a closed platform for eligible campus students;
+      the public cannot freely browse authenticated listing details.
+    category: constraint
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-3
+        start: "00:05:14.172"
+        end: "00:05:18.221"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/213-0
+        start: "00:31:22.271"
+        end: "00:31:26.460"
+        speaker: null
+    known_by: [campus_admin, student_seeker]
+    disclosure: when_relevant
+
+  - id: SA-BR-002
+    statement: >-
+      Graded geography focuses on St. Augustine campus students and listings
+      around St. Augustine / Mount Hope.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-002
+    approved_by: instructor
+    approved_at: "2026-11-03T13:40:00Z"
+    rationale: Instructor accepted St. Augustine / Mount Hope scope.
+    known_by: [campus_admin, student_seeker, landlord]
+    disclosure: when_asked
+
+  - id: SA-BR-003
+    statement: >-
+      No payments, contracts, or booking checkout on the platform; deals happen
+      off-platform between student and landlord (optional in-app messaging only).
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-003
+    approved_by: instructor
+    approved_at: "2026-11-03T13:41:00Z"
+    rationale: Instructor chose referral + optional messages; no marketplace checkout.
+    known_by: [campus_admin, student_seeker, landlord]
+    disclosure: when_relevant
+
+  - id: SA-BR-004
+    statement: >-
+      Unverified / pending listings are not visible to student seekers as active
+      open listings.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-004
+    approved_by: instructor
+    approved_at: "2026-11-03T13:42:00Z"
+    rationale: Follows verify-before-publish lifecycle.
+    known_by: [campus_admin, landlord, student_seeker]
+    disclosure: when_relevant

@@ -1,0 +1,28 @@
+open_questions:
+  - id: GAP-LIB-001
+    priority: important
+    prompt: How late may a lecturer cancel a confirmed workshop booking?
+    citations:
+      - file: sources/library-synthetic.vtt
+        cue_id: cue-0007
+        start: "00:00:52.500"
+        end: "00:01:01.000"
+        speaker: coordinator
+        note: Coordinator states cancellation deadline is fuzzy
+    why_it_matters: Affects fairness, room reuse, and student notifications.
+    alternatives:
+      - Up to 24 hours before start
+      - Up to 2 hours before start
+      - Any time before start
+      - Defer for student elicitation
+    recommended_default: Up to 24 hours before start
+    status: open
+decisions:
+  - decision_id: DEC-LIB-001
+    gap_id: GAP-LIB-000
+    action: accept
+    chosen: Default capacity 30 seats
+    rationale: Needed numeric default for capacity checks in the synthetic pilot.
+    approved_by: instructor@example.com
+    approved_at: "2026-11-02T15:30:00Z"
+    resulting_fact_ids: [LIB-ASM-001]

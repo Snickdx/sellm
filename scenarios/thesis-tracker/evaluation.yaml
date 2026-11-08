@@ -1,0 +1,31 @@
+version: "1"
+notes: >-
+  Instructor-only oracle for thesis-tracker. Never send to student LLM prompts
+  or student API responses.
+hidden_checks:
+  - id: EVAL-TT-001
+    competency: multi_role_product
+    description: >-
+      Product has student submit, supervisor feedback, coordinator oversight
+      even with only two chat personas.
+    related_fact_ids: [TT-REQ-007, TT-ASM-002, TT-ASM-003, TT-WF-002]
+
+  - id: EVAL-TT-002
+    competency: feedback_due_overdue
+    description: In-app feedback notes with due dates; overdue visible to coordinator.
+    related_fact_ids: [TT-BR-002, TT-ASM-004, TT-REQ-004]
+
+  - id: EVAL-TT-003
+    competency: freeform_progress
+    description: Progress via freeform notes; no required structured milestones.
+    related_fact_ids: [TT-ASM-005, TT-BR-003, TT-WF-003]
+
+  - id: EVAL-TT-004
+    competency: pairing_and_capacity
+    description: Student–supervisor pairing recorded; supervisor capacity acknowledged.
+    related_fact_ids: [TT-REQ-002, TT-REQ-006, TT-WF-001]
+
+  - id: EVAL-TT-005
+    competency: grad_studies_summary
+    description: Coordinator can produce a progress summary for grad studies.
+    related_fact_ids: [TT-REQ-005, TT-WF-003]

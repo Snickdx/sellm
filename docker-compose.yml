@@ -12,6 +12,7 @@ services:
       PORT: ${PORT:-8000}
       EXCEL_FILE: ${EXCEL_FILE:-/app/data.xlsx}
       CHROMA_PERSIST_DIRECTORY: ${CHROMA_PERSIST_DIRECTORY:-/app/storage/chroma_db_v2}
+      SCENARIOS_ROOT: ${SCENARIOS_ROOT:-/app/scenarios}
       CONVERSATION_DB_URL: ${CONVERSATION_DB_URL:-sqlite:////app/storage/conversations.db}
       LLM_BACKEND: ${LLM_BACKEND:-openai}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}

@@ -5,6 +5,9 @@ Examples:
   python -m setup.users.manage_users seed
   python -m setup.users.manage_users list
   python -m setup.users.manage_users add snick mySecretPass
+
+Cohort of 20 trainees (credentials CSV):
+  python -m setup.users.seed_cohort
 """
 
 from __future__ import annotations
@@ -54,7 +57,11 @@ def cmd_list(_: argparse.Namespace) -> int:
         print("No users in database. Run: python -m setup.users.manage_users seed")
         return 0
     for user in users:
-        print(f"{user.id}\t{user.username}\t{user.created_at.isoformat()}")
+        limit = getattr(user, "token_limit", None)
+        used = getattr(user, "tokens_used", None)
+        print(
+            f"{user.id}\t{user.username}\tlimit={limit}\tused={used}\t{user.created_at.isoformat()}"
+        )
     return 0
 
 

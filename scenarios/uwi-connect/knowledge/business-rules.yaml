@@ -1,0 +1,50 @@
+facts:
+  - id: UC-BR-001
+    statement: >-
+      Graded MVP gates board/campaign access by verified UWI email; unverified
+      accounts cannot browse published jobs/events or receive campaign sends as
+      registered alumni. Manual staff alumni-lookup approval is not the primary
+      gate (admin may still revoke or manage accounts).
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-003
+    approved_by: instructor
+    approved_at: "2026-11-03T14:19:00Z"
+    rationale: Instructor modified hard-gate default to UWI email verification.
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Unverified accounts are denied board browse and campaign audience inclusion.
+      - Verifying a UWI email unlocks alumni board access without a separate staff approve step.
+
+  - id: UC-BR-002
+    statement: >-
+      Alumni may submit job and event listings, but listings remain unpublished
+      until alumni_admin publishes them; alumni cannot publish directly.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-004
+    approved_by: instructor
+    approved_at: "2026-11-03T14:20:00Z"
+    rationale: Instructor chose submit-pending-admin-publish.
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Submitted listings are not visible on public boards until admin publishes.
+      - Admin can publish or reject a pending submission.
+
+  - id: UC-BR-003
+    statement: >-
+      Graded MVP does not require alumni directory, mentorship matching,
+      direct messaging, or groups — those remain out of scope or elicitation.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-002
+    approved_by: instructor
+    approved_at: "2026-11-03T14:18:00Z"
+    rationale: Instructor accepted MVP core boundary.
+    known_by: [alumni_admin]
+    disclosure: when_asked

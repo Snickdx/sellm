@@ -1,0 +1,20 @@
+slug: uwi-connect
+title: UWI Connect
+version: "0.1.0"
+status: approved
+brief: >-
+  Alumni reconnect MVP with alumni_admin chatbot only: UWI-email verification
+  gate; alumni browse jobs/events and submit listings for admin publish;
+  alumni_admin publishes boards content and builds/sends email campaigns.
+  Directory, mentorship, messaging, and groups are out of graded MVP (or
+  student elicitation).
+source_status: transcript_received
+source_notes: >-
+  VTT: sources/UWI Connect Project Interview - Adrian Chatoor.vtt (Miss Sophia
+  Francis / fundraising & alumni). DEC-UC-001 alumni_admin only; DEC-UC-002 MVP
+  core; DEC-UC-003 UWI email verification (transcript tension: many alumni leave
+  student email); DEC-UC-004 alumni submit → admin publish; DEC-UC-005 full
+  email campaign builder.
+approved_by: instructor
+approved_at: "2026-11-03T14:24:00Z"
+

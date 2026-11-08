@@ -17,6 +17,10 @@ class ChatRequest(BaseModel):
     conversation_id: Optional[str] = None
     llm_choice: Optional[str] = None  # e.g. openai:gpt-4o-mini, ollama:llama3.2
     debug: Optional[bool] = False  # include retrieval/routing metadata for instructors
+    # YAML scenario mode (peer to vector / neo4j)
+    scenario_slug: Optional[str] = None
+    scenario_version: Optional[str] = None
+    persona_key: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -27,6 +31,10 @@ class ChatResponse(BaseModel):
     routing: Optional[Dict[str, Any]] = None
     llm_used: Optional[Dict[str, Any]] = None
     debug: Optional[Dict[str, Any]] = None
+    billing: Optional[str] = None  # platform | byok
+    token_limit: Optional[int] = None
+    tokens_used: Optional[int] = None
+    tokens_remaining: Optional[int] = None
 
 
 class FeedbackRequest(BaseModel):
@@ -104,6 +112,12 @@ class LoginResponse(BaseModel):
     token: str
     user_id: int
     username: str
+    token_limit: Optional[int] = None
+    tokens_used: Optional[int] = None
+    tokens_remaining: Optional[int] = None
+    has_byok: Optional[bool] = None
+    quota_exhausted: Optional[bool] = None
+    billing_mode: Optional[str] = None  # platform | byok
 
 class ProviderKeyEntry(BaseModel):
     provider: str

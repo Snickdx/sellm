@@ -4,6 +4,9 @@
 !.env.example
 !app/.env.example
 app/.env
+**/cohort_credentials.csv
+**/*credentials*.csv
+!setup/users/cohort_credentials.example.csv
 
 # Python build/cache
 __pycache__/

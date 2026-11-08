@@ -16,10 +16,23 @@ class HybridRetrievalResult:
     routing: Dict[str, object] = field(default_factory=dict)
 
 
-def _search_backend(rag: Any, query: str, n_results: int) -> List[Dict]:
+def _search_backend(
+    rag: Any,
+    query: str,
+    n_results: int,
+    *,
+    scenario_slug: Optional[str] = None,
+    persona_key: Optional[str] = None,
+) -> List[Dict]:
     if not rag:
         return []
-    return rag.search(query, n_results=n_results, filter_by_sheet_type=True)
+    return rag.search(
+        query,
+        n_results=n_results,
+        filter_by_sheet_type=True,
+        scenario_slug=scenario_slug,
+        persona_key=persona_key,
+    )
 
 
 def _merge_results(
@@ -60,16 +73,24 @@ class HybridKnowledgeService:
         self.hybrid_top_k = hybrid_top_k
         self.hybrid_route_margin = hybrid_route_margin
 
-    def retrieve(self, query: str, top_k: Optional[int] = None) -> HybridRetrievalResult:
+    def retrieve(
+        self,
+        query: str,
+        top_k: Optional[int] = None,
+        *,
+        scenario_slug: Optional[str] = None,
+        persona_key: Optional[str] = None,
+    ) -> HybridRetrievalResult:
         k = top_k or self.hybrid_top_k
         decision = route_query(query, margin=self.hybrid_route_margin)
+        search_kw = {"scenario_slug": scenario_slug, "persona_key": persona_key}
 
         if decision.route == QueryRoute.NEO4J:
-            results = _search_backend(self.neo4j_rag, query, k)
+            results = _search_backend(self.neo4j_rag, query, k, **search_kw)
             _tag_backend(results, "neo4j")
             routing = route_to_dict(decision)
             if not results:
-                results = _search_backend(self.chroma_rag, query, k)
+                results = _search_backend(self.chroma_rag, query, k, **search_kw)
                 _tag_backend(results, "chroma")
                 routing["fallback"] = "chroma"
             return HybridRetrievalResult(
@@ -80,11 +101,11 @@ class HybridKnowledgeService:
             )
 
         if decision.route == QueryRoute.CHROMA:
-            results = _search_backend(self.chroma_rag, query, k)
+            results = _search_backend(self.chroma_rag, query, k, **search_kw)
             _tag_backend(results, "chroma")
             routing = route_to_dict(decision)
             if not results:
-                results = _search_backend(self.neo4j_rag, query, k)
+                results = _search_backend(self.neo4j_rag, query, k, **search_kw)
                 _tag_backend(results, "neo4j")
                 routing["fallback"] = "neo4j"
             return HybridRetrievalResult(
@@ -96,15 +117,15 @@ class HybridKnowledgeService:
 
         # Blend — primary by score, enrich from secondary
         if decision.neo4j_score >= decision.chroma_score:
-            primary = _search_backend(self.neo4j_rag, query, k)
+            primary = _search_backend(self.neo4j_rag, query, k, **search_kw)
             _tag_backend(primary, "neo4j")
-            secondary = _search_backend(self.chroma_rag, query, max(1, k // 2))
+            secondary = _search_backend(self.chroma_rag, query, max(1, k // 2), **search_kw)
             _tag_backend(secondary, "chroma")
             primary_name, secondary_name = "neo4j", "chroma"
         else:
-            primary = _search_backend(self.chroma_rag, query, k)
+            primary = _search_backend(self.chroma_rag, query, k, **search_kw)
             _tag_backend(primary, "chroma")
-            secondary = _search_backend(self.neo4j_rag, query, max(1, k // 2))
+            secondary = _search_backend(self.neo4j_rag, query, max(1, k // 2), **search_kw)
             _tag_backend(secondary, "neo4j")
             primary_name, secondary_name = "chroma", "neo4j"
 

@@ -1,0 +1,16 @@
+facts:
+  - id: LIB-ASM-001
+    statement: Default workshop room capacity is 30 seats unless a room override is configured.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-LIB-001
+    approved_by: instructor@example.com
+    approved_at: "2026-11-02T15:30:00Z"
+    rationale: >-
+      Synthetic pilot needs a numeric capacity for conflict checks; transcript only
+      stated that rooms are capped.
+    known_by: [library_coordinator, administrator]
+    disclosure: when_asked
+    acceptance_criteria:
+      - Capacity checks use 30 when no room-specific capacity is set.

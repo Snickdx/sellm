@@ -1,0 +1,31 @@
+version: "1"
+notes: >-
+  Instructor-only oracle for uwi-connect. Never send to student LLM prompts
+  or student API responses.
+hidden_checks:
+  - id: EVAL-UC-001
+    competency: admin_only_persona
+    description: Chatbot persona set is alumni_admin only (no alumnus chatbot).
+    related_fact_ids: [UC-ASM-001]
+
+  - id: EVAL-UC-002
+    competency: mvp_boundary
+    description: >-
+      Graded product covers verified alumni boards + submit/publish + email
+      campaigns; directory/mentorship/messaging/groups out.
+    related_fact_ids: [UC-ASM-002, UC-BR-003, UC-REQ-003]
+
+  - id: EVAL-UC-003
+    competency: uwi_email_gate
+    description: Access gated by UWI email verification (not manual approve as primary).
+    related_fact_ids: [UC-ASM-003, UC-BR-001, UC-WF-001]
+
+  - id: EVAL-UC-004
+    competency: submit_then_publish
+    description: Alumni submit jobs/events; admin publishes before board visibility.
+    related_fact_ids: [UC-ASM-004, UC-BR-002, UC-WF-002]
+
+  - id: EVAL-UC-005
+    competency: email_campaign_builder
+    description: Full email campaign builder required for alumni_admin.
+    related_fact_ids: [UC-ASM-005, UC-REQ-005, UC-WF-003]

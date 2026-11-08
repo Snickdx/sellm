@@ -1,0 +1,206 @@
+facts:
+  - id: SA-REQ-001
+    statement: >-
+      The platform showcases off-campus accommodation options so students can
+      find places and engage landlords for rentals (referral, not campus-run
+      housing assignment).
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/31-1
+        start: "00:02:05.766"
+        end: "00:02:15.555"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/35-1
+        start: "00:03:04.350"
+        end: "00:03:12.591"
+        speaker: null
+    known_by: [campus_admin, student_seeker, landlord]
+    disclosure: when_relevant
+
+  - id: SA-REQ-002
+    statement: >-
+      Authenticated students browse listings and contact the landlord directly
+      (phone/email) to arrange visits; the platform is for campus students only.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-0
+        start: "00:05:03.431"
+        end: "00:05:06.669"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-2
+        start: "00:05:09.746"
+        end: "00:05:14.172"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-3
+        start: "00:05:14.172"
+        end: "00:05:18.221"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/44-0
+        start: "00:05:27.071"
+        end: "00:05:31.367"
+        speaker: null
+    known_by: [campus_admin, student_seeker]
+    disclosure: when_relevant
+
+  - id: SA-REQ-003
+    statement: >-
+      Landlords can update listing content such as pictures and availability once
+      they have access.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/44-3
+        start: "00:05:37.638"
+        end: "00:05:41.876"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/220-0
+        start: "00:32:03.951"
+        end: "00:32:08.627"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/221-0
+        start: "00:32:11.431"
+        end: "00:32:15.967"
+        speaker: null
+    known_by: [campus_admin, landlord]
+    disclosure: when_relevant
+
+  - id: SA-REQ-004
+    statement: >-
+      Students can narrow listings by location and price and obtain landlord
+      contact information from a listing.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/45-3
+        start: "00:05:57.579"
+        end: "00:06:01.861"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-0
+        start: "00:31:39.871"
+        end: "00:31:44.643"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-1
+        start: "00:31:44.643"
+        end: "00:31:49.906"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-3
+        start: "00:31:53.274"
+        end: "00:31:55.871"
+        speaker: null
+    known_by: [campus_admin, student_seeker]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Active listings can be filtered by location and price.
+      - A listing exposes landlord contact details to authenticated students.
+
+  - id: SA-REQ-005
+    statement: >-
+      Listings can be turned on/off (active/inactive) based on availability so
+      unavailable units are not shown as open listings.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/110-0
+        start: "00:16:07.311"
+        end: "00:16:13.295"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/201-1
+        start: "00:30:26.612"
+        end: "00:30:30.702"
+        speaker: null
+    known_by: [campus_admin, landlord, student_seeker]
+    disclosure: when_relevant
+
+  - id: SA-REQ-006
+    statement: >-
+      Listings specify amenities such as private bathroom, kitchen, and wash
+      facilities; students can filter using these amenity attributes.
+    category: functional
+    status: clarified
+    origin: instructor
+    decision_id: DEC-SA-005
+    approved_by: instructor
+    approved_at: "2026-11-03T13:44:00Z"
+    rationale: >-
+      Transcript discusses amenities; instructor required amenity fields/filters
+      in graded MVP.
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/87-3
+        start: "00:12:37.096"
+        end: "00:12:41.930"
+        speaker: null
+    known_by: [campus_admin, student_seeker, landlord]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Amenity fields are stored on listings.
+      - Students can filter by amenity attributes.
+
+  - id: SA-REQ-007
+    statement: >-
+      Campus verifies landlord units (site check / checklist) for suitability
+      before they are treated as verified for students.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-0
+        start: "00:20:58.791"
+        end: "00:21:03.182"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
+        start: "00:21:03.182"
+        end: "00:21:08.191"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/147-1
+        start: "00:21:46.460"
+        end: "00:21:49.311"
+        speaker: null
+    known_by: [campus_admin, landlord]
+    disclosure: when_relevant
+
+  - id: SA-REQ-008
+    statement: >-
+      The system is a referral platform, not a sales marketplace; campus does not
+      sell or engage rental deals on behalf of students.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/208-2
+        start: "00:31:12.589"
+        end: "00:31:16.301"
+        speaker: null
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/213-0
+        start: "00:31:22.271"
+        end: "00:31:26.460"
+        speaker: null
+    known_by: [campus_admin, student_seeker, landlord]
+    disclosure: when_relevant

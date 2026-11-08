@@ -219,30 +219,109 @@ class RequirementsRAGNeo4j:
             print(f"Error loading requirements: {e}")
             raise
     
-    def search(self, query: str, n_results: int = 5, filter_by_sheet_type: bool = True) -> List[Dict]:
+    def upsert_scenario_graph(self, packages) -> int:
+        """Load YAML scenario personas/facts into Neo4j. Returns KNOWS edge count."""
+        from app.seproject.scenarios.filter import facts_for_persona
+
+        edges = 0
+        with self.driver.session() as session:
+            session.run("MATCH (n:YamlFact) DETACH DELETE n")
+            session.run("MATCH (n:YamlPersona) DETACH DELETE n")
+            session.run("MATCH (n:YamlScenario) DETACH DELETE n")
+
+            for package in packages:
+                session.run(
+                    """
+                    MERGE (s:YamlScenario {slug: $slug, version: $version})
+                    SET s.title = $title, s.brief = $brief
+                    """,
+                    slug=package.meta.slug,
+                    version=package.meta.version,
+                    title=package.meta.title,
+                    brief=package.meta.brief or "",
+                )
+                for persona in package.personas:
+                    session.run(
+                        """
+                        MATCH (s:YamlScenario {slug: $slug, version: $version})
+                        MERGE (p:YamlPersona {key: $key, scenario_slug: $slug, scenario_version: $version})
+                        SET p.display_name = $display_name, p.role = $role
+                        MERGE (s)-[:HAS_PERSONA]->(p)
+                        """,
+                        slug=package.meta.slug,
+                        version=package.meta.version,
+                        key=persona.id,
+                        display_name=persona.display_name,
+                        role=persona.role,
+                    )
+                    for fact in facts_for_persona(package, persona.id, include_never_student=False):
+                        node_id = f"yaml:{package.meta.slug}:{fact.id}"
+                        text = (
+                            f"Scenario: {package.meta.title}\n"
+                            f"Category: {fact.category}\n"
+                            f"Statement: {fact.statement}"
+                        )
+                        embedding = self.embedding_model.encode([text]).tolist()[0]
+                        session.run(
+                            """
+                            MATCH (p:YamlPersona {key: $persona_key, scenario_slug: $slug, scenario_version: $version})
+                            MERGE (f:YamlFact {node_id: $node_id})
+                            SET f.text = $text,
+                                f.sheet = 'Knowledge',
+                                f.fact_id = $fact_id,
+                                f.scenario_slug = $slug,
+                                f.scenario_version = $version,
+                                f.category = $category,
+                                f.embedding = $embedding
+                            MERGE (p)-[:KNOWS]->(f)
+                            """,
+                            persona_key=persona.id,
+                            slug=package.meta.slug,
+                            version=package.meta.version,
+                            node_id=node_id,
+                            text=text,
+                            fact_id=fact.id,
+                            category=fact.category,
+                            embedding=embedding,
+                        )
+                        edges += 1
+        print(f"✓ Indexed {edges} YAML persona→fact edges into Neo4j")
+        return edges
+
+    def search(
+        self,
+        query: str,
+        n_results: int = 5,
+        filter_by_sheet_type: bool = True,
+        scenario_slug: str | None = None,
+        persona_key: str | None = None,
+    ) -> List[Dict]:
         """
-        Hybrid search: vector similarity + graph traversal
-        
-        Args:
-            query: Search query
-            n_results: Number of results to return
-            filter_by_sheet_type: Whether to filter by detected intent
-        
-        Returns:
-            List of search results with document, metadata, and distance
+        Hybrid search: vector similarity + graph traversal.
+        When scenario_slug + persona_key are set, search YamlFact nodes that persona KNOWS.
         """
-        query_lower = query.lower()
-        
-        # Detect intent
-        detected_sheets = self._detect_sheet_intent(query_lower)
-        
-        # Generate query embedding
         query_embedding = self.embedding_model.encode([query]).tolist()[0]
-        
-        # Vector search using cosine similarity
+
+        if scenario_slug and persona_key:
+            results = self._vector_search_scenario(
+                query_embedding,
+                scenario_slug=scenario_slug,
+                persona_key=persona_key,
+                n_results=n_results * 2,
+            )
+            enhanced = []
+            for result in results[:n_results]:
+                node_id = result["metadata"].get("node_id")
+                if node_id:
+                    related = self._get_related_nodes(node_id, limit=2)
+                    result["metadata"]["related"] = related
+                enhanced.append(result)
+            return enhanced
+
+        query_lower = query.lower()
+        detected_sheets = self._detect_sheet_intent(query_lower) if filter_by_sheet_type else []
         results = self._vector_search(query_embedding, detected_sheets, n_results * 2)
-        
-        # Enhance with graph traversal - get related nodes
+
         enhanced_results = []
         for result in results[:n_results]:
             node_id = result["metadata"].get("node_id")
@@ -250,48 +329,91 @@ class RequirementsRAGNeo4j:
                 related = self._get_related_nodes(node_id, limit=2)
                 result["metadata"]["related"] = related
             enhanced_results.append(result)
-        
+
         return enhanced_results
-    
-    def _vector_search(self, query_embedding: List[float], detected_sheets: List[str], n_results: int) -> List[Dict]:
-        """Vector search using cosine similarity on stored embeddings"""
+
+    def _vector_search_scenario(
+        self,
+        query_embedding: List[float],
+        *,
+        scenario_slug: str,
+        persona_key: str,
+        n_results: int,
+    ) -> List[Dict]:
+        """Vector search over YamlFact nodes known by a persona."""
         with self.driver.session() as session:
-            # Build label filter if needed
-            label_filter = ""
+            result = session.run(
+                """
+                MATCH (p:YamlPersona {key: $persona_key, scenario_slug: $scenario_slug})-[:KNOWS]->(n:YamlFact)
+                RETURN n
+                """,
+                persona_key=persona_key,
+                scenario_slug=scenario_slug,
+            )
+            similarities = []
+            for record in result:
+                node = record["n"]
+                if "embedding" not in node:
+                    continue
+                node_embedding = node["embedding"]
+                similarity = np.dot(query_embedding, node_embedding) / (
+                    np.linalg.norm(query_embedding) * np.linalg.norm(node_embedding) + 1e-9
+                )
+                similarities.append((similarity, node))
+
+            similarities.sort(key=lambda x: x[0], reverse=True)
+            results = []
+            for similarity, node in similarities[:n_results]:
+                results.append(
+                    {
+                        "document": node.get("text", ""),
+                        "metadata": {
+                            "node_id": node.get("node_id"),
+                            "sheet": node.get("sheet", "Knowledge"),
+                            "sheet_type": "requirements",
+                            "scenario_slug": node.get("scenario_slug"),
+                            "fact_id": node.get("fact_id"),
+                            "persona_key": persona_key,
+                            "source": "yaml",
+                        },
+                        "distance": 1 - similarity,
+                    }
+                )
+            return results
+
+    def _vector_search(self, query_embedding: List[float], detected_sheets: List[str], n_results: int) -> List[Dict]:
+        """Vector search using cosine similarity on stored Excel embeddings (excludes Yaml*)."""
+        with self.driver.session() as session:
+            label_filter = "WHERE NOT n:YamlFact AND NOT n:YamlPersona AND NOT n:YamlScenario"
             if detected_sheets:
                 labels = [self._get_sheet_type(sheet) for sheet in detected_sheets]
-                label_filter = f"WHERE n:{':'.join(labels)}"
-            
-            # Get all nodes (or filtered by label)
+                # Prefer labeled Excel nodes when intent is detected
+                or_labels = " OR ".join(f"n:{label}" for label in labels)
+                label_filter = f"WHERE ({or_labels}) AND NOT n:YamlFact"
+
             query = f"""
             MATCH (n)
             {label_filter}
             RETURN n
             LIMIT 1000
             """
-            
+
             result = session.run(query)
-            
-            # Calculate cosine similarity for each node
+
             similarities = []
             for record in result:
                 node = record["n"]
                 if "embedding" not in node:
                     continue
-                
+
                 node_embedding = node["embedding"]
-                
-                # Calculate cosine similarity
                 similarity = np.dot(query_embedding, node_embedding) / (
-                    np.linalg.norm(query_embedding) * np.linalg.norm(node_embedding)
+                    np.linalg.norm(query_embedding) * np.linalg.norm(node_embedding) + 1e-9
                 )
-                
                 similarities.append((similarity, node))
-            
-            # Sort by similarity (highest first)
+
             similarities.sort(key=lambda x: x[0], reverse=True)
-            
-            # Format results
+
             results = []
             for similarity, node in similarities[:n_results]:
                 results.append({
@@ -302,31 +424,32 @@ class RequirementsRAGNeo4j:
                         "sheet_type": self._get_sheet_type(node.get("sheet", "")),
                         "properties": dict(node)
                     },
-                    "distance": 1 - similarity  # Convert similarity to distance
+                    "distance": 1 - similarity
                 })
-            
+
             return results
-    
+
     def _get_related_nodes(self, node_id: str, limit: int = 2) -> List[Dict]:
         """Get related nodes via graph traversal"""
         with self.driver.session() as session:
             query = """
             MATCH (n {node_id: $node_id})-[r]-(related)
+            WHERE NOT related:YamlPersona AND NOT related:YamlScenario
             RETURN related, type(r) as rel_type
             LIMIT $limit
             """
-            
+
             result = session.run(query, node_id=node_id, limit=limit)
-            
+
             related = []
             for record in result:
                 node = record["related"]
                 related.append({
                     "node_id": node.get("node_id"),
                     "sheet": node.get("sheet", ""),
-                    "text": node.get("text", "")[:100]  # Truncate for display
+                    "text": node.get("text", "")[:100]
                 })
-            
+
             return related
     
     def _detect_sheet_intent(self, query: str) -> List[str]:

@@ -1,0 +1,26 @@
+# Instructor-written M3 pilot case — deliberately incorrect draft claims.
+scenario_slug: library
+persona_key: library_coordinator
+use_package_facts: true
+title: Library incorrect conflict / fields / overbooking
+draft: |
+  # Library workshop booking — draft SRS
+
+  Lecturers book workshops by emailing a preferred date only.
+  Course code and headcount are optional.
+
+  When two classes request the same slot, the later request always wins.
+
+  Rooms may be overbooked if the lecturer insists on the session.
+
+  Confirmation emails are nice-to-have but not required.
+expected_conflict_fact_ids:
+  - LIB-REQ-002
+  - LIB-REQ-003
+  - LIB-BR-001
+forbidden_in_response:
+  - EVAL-LIB
+  - gaps.yaml
+  - evaluation.yaml
+  - hidden_checks
+  - rubric

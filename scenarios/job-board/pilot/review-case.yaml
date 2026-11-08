@@ -1,0 +1,19 @@
+scenario_slug: job-board
+persona_key: administrator
+use_package_facts: true
+title: Job board wrong publisher role
+draft: |
+  # Job Board draft
+
+  Anyone, including students, may publish openings without admin involvement.
+  Employers do not create positions; students invent listings themselves.
+expected_conflict_substrings:
+  - publish
+forbidden_in_response:
+  - EVAL-
+  - gaps.yaml
+  - evaluation.yaml
+  - hidden_checks
+  - rubric
+expected_conflict_fact_ids:
+  - JB-REQ-002

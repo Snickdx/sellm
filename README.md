@@ -19,9 +19,10 @@ This system is designed for **requirements gathering training**. It simulates a 
 ## Features
 
 - **Stakeholder simulation**: Role-plays as a non-technical stakeholder with plain, informal language
-- **Comparison modes**: Vector RAG, Neo4j RAG, Hybrid RAG, **Direct Model** (full scenario in prompt), and **Compare All**
+- **Comparison modes**: Vector RAG, Neo4j RAG, Hybrid RAG, **Direct Model** (Excel pack in prompt), **YAML Scenario** (COMP 3613 persona packages), and **Compare All**
 - **Dual RAG**: ChromaDB (vector) and Neo4j (vector + graph), usable separately or via **hybrid** auto-routing
-- **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Gemini, Groq, OpenRouter); stakeholder chat requires a real LLM
+- **YAML scenarios**: Seven seproject packages under `scenarios/` — pick scenario + persona like choosing Vector vs Neo4j
+- **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Gemini, Groq, OpenRouter); RAG/direct chat requires a real LLM; YAML mode defaults to heuristic persona replies
 - **Scenario pack**: `data.xlsx` compiled into structured context for direct mode and optional RAG prompt enrichment
 - **Auth + persistence**: Login, per-user conversations (SQLite/Postgres), reflection threads for meta-review
 - **Responsive UI**: Collapsible side nav on mobile (conversations, new chat, API config)
@@ -101,12 +102,16 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 http://localhost:8000
 ```
 
-1. **Sign in** — default training users are seeded on startup (`nick`, `wayne`, `claudine`, `snick`; password `badPassword1`). Add more:
+1. **Sign in** — default training users are seeded on startup (`nick`, `wayne`, `claudine`, `snick`; password `badPassword1`). Seed a 20-user cohort with token quotas:
 
 ```bash
-python -m setup.users.manage_users add myuser mypassword
+python -m setup.users.seed_cohort
+# writes setup/users/cohort_credentials.csv (gitignored)
 python -m setup.users.manage_users list
+python -m setup.users.manage_users add myuser mypassword
 ```
+
+Each cohort user gets `USER_TOKEN_LIMIT` tokens (default **15000**, ~one focused elicitation). While under budget, chat bills the shared pool. When the budget is exhausted, chat **switches to the user’s own API key** (Settings ⚙️); if none is configured, it returns **429** and prompts them to add one. The chat header shows a live budget meter.
 
 1. Start practicing requirements gathering!
   - Ask questions as you would in a real stakeholder interview
@@ -246,8 +251,9 @@ End-to-end flow for `POST /api/chat`:
    - `vector` — Chroma retrieval → stakeholder LLM
    - `neo4j` — Neo4j retrieval → stakeholder LLM
    - `hybrid` — Auto-route to **chroma**, **neo4j**, or **blend**
-   - `direct` — Full scenario pack in prompt (no retrieval) — baseline for comparison
-   - `compare` — All four modes side by side in one message
+   - `direct` — Full Excel scenario pack in prompt (no retrieval) — baseline for comparison
+   - `yaml` — Persona chat from a COMP 3613 YAML package (`scenario_slug` + `persona_key`)
+   - `compare` — Vector / Neo4j / Hybrid / Direct side by side in one message
 
 4. **Context** — RAG modes retrieve top-k workbook chunks; direct mode uses the compiled scenario pack from `app/scenario/scenario_pack.py`. All modes share `app/scenario/stakeholder_prompt.py`.
 
@@ -534,7 +540,8 @@ Popular alternatives:
 │   ├── fix_pytree.py        # Torch/pytree compatibility shim
 │   ├── security/
 │   │   └── secret_store.py   # Fernet-encrypted API key storage
-│   ├── scenario/            # scenario_pack, stakeholder_prompt, direct_model
+│   ├── scenario/            # Excel scenario_pack, stakeholder_prompt, direct_model
+│   ├── seproject/           # YAML scenario loader, persona chat, scenario APIs
 │   ├── llm_wrapper.py       # Stakeholder LLM generation (no template fallback)
 │   ├── llm_registry.py      # Model discovery, dropdown, Ollama name resolution
 │   ├── stakeholder_tone.py  # Plain-language post-processing for stakeholders
@@ -578,7 +585,10 @@ Popular alternatives:
 
 ├── requirements.txt         # Python dependencies
 ├── .env.example             # Env template (copy to app/.env for local dev)
-├── data.xlsx                # Knowledge base (stakeholder information)
+├── data.xlsx                # Excel knowledge base (RAG / direct modes)
+├── scenarios/               # COMP 3613 YAML scenario packages (yaml mode)
+├── scripts/
+│   └── sync-scenarios.ps1   # Refresh scenarios/ from sibling seproject repo
 ├── storage/
 │   ├── chroma_db_v2/        # ChromaDB database (gitignored)
 │   └── conversations.db     # SQLite chat history (gitignored)
@@ -821,8 +831,9 @@ Per-message `response_mode` (dropdown in the chat input area):
 | `vector` | Chroma only | Stakeholder persona |
 | `neo4j` | Neo4j only | Stakeholder persona |
 | `hybrid` | Auto-route (`chroma` / `neo4j` / `blend`) | Stakeholder persona |
-| `direct` | None (full scenario pack) | Baseline without RAG |
-| `compare` | All four independently | Side-by-side labels in one reply |
+| `direct` | None (full Excel scenario pack) | Baseline without RAG |
+| `yaml` | YAML package facts by persona | COMP 3613 scenarios under `scenarios/` |
+| `compare` | Vector / Neo4j / Hybrid / Direct | Side-by-side labels in one reply |
 
 Assistant messages show a badge (`Vector RAG`, `hybrid → chroma`, `Direct Model`, etc.) and which LLM was used when applicable.
 

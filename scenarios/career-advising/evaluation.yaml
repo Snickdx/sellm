@@ -1,0 +1,43 @@
+version: "1"
+notes: >-
+  Instructor-only oracle for career-advising. Never send to student LLM prompts
+  or student API responses. High-school scope is intentionally excluded
+  (DEC-CA-001).
+hidden_checks:
+  - id: EVAL-CA-001
+    competency: dual_exploration_modes
+    description: >-
+      SRS/product should support career→courses and courses→careers exploration.
+    related_fact_ids: [CA-REQ-002, CA-ASM-003, CA-WF-001, CA-WF-002]
+
+  - id: EVAL-CA-002
+    competency: non_absolute_recommendations
+    description: >-
+      Recommendations are ranked/suited options, never a single forced career.
+    related_fact_ids: [CA-REQ-005, CA-BR-001, CA-ASM-004]
+
+  - id: EVAL-CA-003
+    competency: editable_inputs_and_change
+    description: >-
+      Students can edit course/interest inputs and re-align after changing goals.
+    related_fact_ids: [CA-REQ-004, CA-REQ-007, CA-WF-003]
+
+  - id: EVAL-CA-004
+    competency: missing_course_identification
+    description: >-
+      System identifies missing courses for a path; no enrolment/provider booking.
+    related_fact_ids: [CA-REQ-009, CA-BR-003, CA-WF-004]
+
+  - id: EVAL-CA-005
+    competency: enrolled_university_scope
+    description: >-
+      Graded scope is enrolled university students and course↔career alignment;
+      high-school pathways are out of scope.
+    related_fact_ids: [CA-ASM-002, CA-BR-002, CA-REQ-010]
+
+  - id: EVAL-CA-006
+    competency: realistic_career_info
+    description: >-
+      Career info includes credible progression/salary-style context and
+      entry-level realism rather than glamorized endpoints.
+    related_fact_ids: [CA-REQ-003, CA-REQ-008]

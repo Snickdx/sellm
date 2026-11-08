@@ -1,0 +1,257 @@
+facts:
+  - id: JB-REQ-001
+    statement: >-
+      Primary users are graduated students seeking jobs, industry employers
+      creating job positions, and administrators who publish openings and expose
+      opportunities to students.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/9-0
+        start: "00:00:24.382"
+        end: "00:00:28.531"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/9-1
+        start: "00:00:28.531"
+        end: "00:00:34.184"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/9-3
+        start: "00:00:40.122"
+        end: "00:00:43.342"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/12-0
+        start: "00:00:46.702"
+        end: "00:00:50.471"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_relevant
+
+  - id: JB-REQ-002
+    statement: >-
+      Administrators publish openings, forward short lists, and expose
+      opportunities to students.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/12-1
+        start: "00:00:50.471"
+        end: "00:00:56.702"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_relevant
+
+  - id: JB-REQ-003
+    statement: >-
+      Graduates maintain a profile with a resume/CV, receive notifications when
+      jobs aligning to their preferences or field are published, and apply with
+      a cover letter and a resume for that application.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/16-0
+        start: "00:01:15.542"
+        end: "00:01:19.825"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/17-1
+        start: "00:01:30.673"
+        end: "00:01:34.380"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/17-3
+        start: "00:01:37.256"
+        end: "00:01:40.451"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/17-4
+        start: "00:01:40.451"
+        end: "00:01:44.542"
+        speaker: null
+    known_by: [administrator, graduate_applicant]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - A graduate can attach a cover letter and resume when applying to a listing.
+
+  - id: JB-REQ-004
+    statement: >-
+      A listing may either send applicants to an external employer application
+      link, or collect applicants on-platform (currently via an Airtable form)
+      for staff to forward to the employer.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/26-0
+        start: "00:03:06.302"
+        end: "00:03:12.198"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/26-1
+        start: "00:03:12.198"
+        end: "00:03:17.629"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/27-0
+        start: "00:03:25.102"
+        end: "00:03:28.884"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/27-1
+        start: "00:03:28.884"
+        end: "00:03:32.557"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Each listing indicates whether apply is external-link or on-platform collect.
+
+  - id: JB-REQ-005
+    statement: >-
+      Applicants currently lack a feedback loop: after applying they often do not
+      know whether the employer reviewed the application.
+    category: contextual
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/30-2
+        start: "00:04:11.783"
+        end: "00:04:16.499"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/30-3
+        start: "00:04:16.499"
+        end: "00:04:19.462"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/62-0
+        start: "00:10:02.862"
+        end: "00:10:05.819"
+        speaker: null
+    known_by: [administrator, graduate_applicant]
+    disclosure: when_relevant
+
+  - id: JB-REQ-006
+    statement: >-
+      The current audience is specifically DCIT students / university graduates
+      who subscribe, receive email, view listings, then apply via on-platform form
+      or an external employer link.
+    category: contextual
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/54-1
+        start: "00:07:54.845"
+        end: "00:08:00.791"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/54-2
+        start: "00:08:00.791"
+        end: "00:08:06.737"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/55-1
+        start: "00:08:13.003"
+        end: "00:08:17.111"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/55-3
+        start: "00:08:21.219"
+        end: "00:08:26.388"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_relevant
+
+  - id: JB-REQ-007
+    statement: >-
+      After a listing deadline passes, the listing is automatically hidden
+      (delisted) from students.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/58-2
+        start: "00:09:04.378"
+        end: "00:09:09.084"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/58-3
+        start: "00:09:09.084"
+        end: "00:09:11.302"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Listings past their deadline are not shown to student applicants.
+
+  - id: JB-REQ-008
+    statement: >-
+      Admin reviews a submitted job posting before publishing, then separately
+      notifies subscribers; automatic notify-on-publish is desired.
+    category: functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/66-1
+        start: "00:10:45.983"
+        end: "00:10:50.398"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/66-2
+        start: "00:10:50.398"
+        end: "00:10:55.063"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/66-3
+        start: "00:10:55.063"
+        end: "00:11:00.062"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/67-0
+        start: "00:11:00.982"
+        end: "00:11:04.782"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - A posting is not visible to students until an admin publishes it.
+      - Publishing triggers subscriber notification without a separate manual send.
+
+  - id: JB-REQ-009
+    statement: >-
+      Admins review job listings as a trust/legitimacy control; the platform
+      should encrypt and store applicant personal information securely.
+    category: non_functional
+    status: confirmed
+    origin: transcript
+    source_refs:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/46-0
+        start: "00:06:44.902"
+        end: "00:06:48.575"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/70-0
+        start: "00:11:22.582"
+        end: "00:11:26.509"
+        speaker: null
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/70-2
+        start: "00:11:30.853"
+        end: "00:11:36.702"
+        speaker: null
+    known_by: [administrator]
+    disclosure: when_asked

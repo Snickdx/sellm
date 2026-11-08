@@ -1,0 +1,269 @@
+open_questions:
+  - id: GAP-CA-001
+    priority: critical
+    prompt: |
+      The VTT is an HCI interview with Dr Terry Mohammed (former Deputy Dean of
+      Outreach, FST). Which stakeholder personas should the student-facing
+      scenario include?
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/15-3
+        start: "00:00:37.800"
+        end: "00:00:41.181"
+        speaker: null
+        note: Named stakeholder Doctor Terry Mohammed
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/18-0
+        start: "00:01:19.501"
+        end: "00:01:23.723"
+        speaker: null
+        note: Stakeholder background — Deputy Dean of Outreach, FST
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/326-1
+        start: "00:39:57.581"
+        end: "00:40:01.261"
+        speaker: null
+        note: High-school students called out as users
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/326-2
+        start: "00:40:01.261"
+        end: "00:40:07.021"
+        speaker: null
+        note: Working adults changing careers also called out
+    why_it_matters: >-
+      Personas bound known_fact_ids. Learner voices (Form 3 / undergrad /
+      career-changer) are described by the stakeholder but are not separate
+      interviewees in this VTT.
+    alternatives:
+      - career_advisor only (transcript-faithful single voice)
+      - career_advisor + high_school_student + university_student
+      - career_advisor + high_school_student + university_student + career_changer
+      - Defer — decide after first classroom pilot
+    recommended_default: >-
+      career_advisor + high_school_student + university_student (career-changer
+      facts assumed/clarified under advisor or deferred)
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-CA-002
+    priority: critical
+    prompt: |
+      After DEC-CA-001 (advisor persona; no high-school scope; focus on
+      course↔career alignment), who is the *primary end user* of the graded
+      system?
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/175-0
+        start: "00:22:50.781"
+        end: "00:22:54.621"
+        speaker: null
+        note: Inputs described as courses you have
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/348-4
+        start: "00:42:56.397"
+        end: "00:42:59.866"
+        speaker: null
+        note: Mid-degree biochemistry + courses example
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/70-4
+        start: "00:09:26.662"
+        end: "00:09:30.230"
+        speaker: null
+        note: Can change mind mid-degree (FST advantage)
+    why_it_matters: >-
+      Sets programme/course profile model and which transcript examples become
+      confirmed FRs vs elicitation.
+    alternatives:
+      - Enrolled university students only (declare programme + courses; align to careers)
+      - University students + alumni / recent grads exploring next steps
+      - Any authenticated adult learner entering a course list (no enrolment required)
+      - Defer for student elicitation
+    recommended_default: >-
+      Enrolled university students only (declare programme + courses; align to
+      careers)
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-CA-003
+    priority: critical
+    prompt: |
+      Dual exploration modes are strongly stated — (A) start from a desired
+      career/end-state and work backwards, (B) start from liked subjects/skills
+      and discover careers. Must the graded system support both in MVP?
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/40-1
+        start: "00:05:09.437"
+        end: "00:05:13.432"
+        speaker: null
+        note: End-state / career-first angle
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/43-0
+        start: "00:05:54.141"
+        end: "00:05:58.430"
+        speaker: null
+        note: Subject-first angle
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/43-2
+        start: "00:06:03.177"
+        end: "00:06:08.861"
+        speaker: null
+        note: Explicitly framed as two angles
+    why_it_matters: Core UX and data model (career graph vs subject→career index).
+    alternatives:
+      - Both modes required in MVP
+      - Career-first only; subject-first is Phase 2 / elicitation
+      - Subject-first only; career-first is Phase 2 / elicitation
+      - Defer — students choose one mode after discovery
+    recommended_default: Both modes required in MVP
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-CA-004
+    priority: critical
+    prompt: |
+      Recommendation tone — stakeholder rejects absolute “this is the career you
+      must pursue”; output should be suitability based on inputs. How strict
+      should the graded product requirement be?
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/166-0
+        start: "00:21:48.381"
+        end: "00:21:52.698"
+        speaker: null
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/166-1
+        start: "00:21:52.698"
+        end: "00:21:55.096"
+        speaker: null
+        note: Must not say this is the career you have to go after
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/166-5
+        start: "00:22:04.635"
+        end: "00:22:07.541"
+        speaker: null
+        note: Phrase as careers best suited given inputs
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/171-0
+        start: "00:22:13.341"
+        end: "00:22:16.000"
+        speaker: null
+        note: Never an absolute
+    why_it_matters: NFR for UX copy, ranking UI, and anti-deterministic grading traps.
+    alternatives:
+      - Hard rule — ranked suggestions with explicit non-absolute wording; no single forced career
+      - Soft guidance only in evaluation rubric; product may show a primary match
+      - Leave wording as student elicitation (unresolved in package)
+      - Defer
+    recommended_default: >-
+      Hard rule — ranked suggestions with explicit non-absolute wording; no
+      single forced career
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-CA-005
+    priority: critical
+    prompt: |
+      When a learner is missing a required subject/course for a path (e.g.
+      architecture needing calculus), the stakeholder says the system should
+      *identify* the gap but not prescribe how to obtain it. Confirm the MVP
+      behaviour.
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/273-0
+        start: "00:34:25.741"
+        end: "00:34:31.333"
+        speaker: null
+        note: Architecture degree missing calculus example
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/287-0
+        start: "00:35:46.061"
+        end: "00:35:49.061"
+        speaker: null
+        note: Identifies what you're missing
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/288-0
+        start: "00:35:49.061"
+        end: "00:35:52.977"
+        speaker: null
+        note: Not intended to tell you how to go about fulfilling it
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/288-3
+        start: "00:35:59.472"
+        end: "00:36:03.341"
+        speaker: null
+        note: Situational hint — register if already enrolled
+    why_it_matters: Bounds gap-detection vs enrolment/advising workflow scope.
+    alternatives:
+      - Identify missing requirements only; no enrolment/provider workflow
+      - Identify gaps + light contextual hints (e.g. register if enrolled) but no booking
+      - Full “how to obtain” pathways (providers, schedules) in MVP
+      - Defer for student elicitation
+    recommended_default: >-
+      Identify gaps + light contextual hints (e.g. register if enrolled) but no
+      booking
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+decisions:
+  - decision_id: DEC-CA-001
+    gap_id: GAP-CA-001
+    action: modify
+    chosen: >-
+      Single persona career_advisor; ignore high-school scope; scenario focus is
+      aligning university courses with careers
+    modified_text: >-
+      Student chatbot exposes career_advisor only. High-school / Form-3 pathways
+      are out of scenario scope even where the VTT mentions them. Product and
+      knowledge emphasize course lists ↔ career alignment (and changing goals
+      within that frame).
+    rationale: >-
+      Instructor directed a pivot away from high-school audience toward
+      course–career alignment with an advisor voice.
+    approved_by: instructor
+    approved_at: "2026-11-03T13:26:00Z"
+    resulting_fact_ids: [CA-ASM-001, CA-BR-002]
+  - decision_id: DEC-CA-002
+    gap_id: GAP-CA-002
+    action: accept
+    chosen: >-
+      Enrolled university students only (declare programme + courses; align to
+      careers)
+    modified_text: null
+    rationale: Instructor accepted recommended default (option 1).
+    approved_by: instructor
+    approved_at: "2026-11-03T13:27:00Z"
+    resulting_fact_ids: [CA-ASM-002]
+  - decision_id: DEC-CA-003
+    gap_id: GAP-CA-003
+    action: accept
+    chosen: Both modes required in MVP
+    modified_text: null
+    rationale: >-
+      Instructor accepted option 1 — career→courses and courses→careers both
+      required.
+    approved_by: instructor
+    approved_at: "2026-11-03T13:28:00Z"
+    resulting_fact_ids: [CA-ASM-003, CA-REQ-002]
+  - decision_id: DEC-CA-004
+    gap_id: GAP-CA-004
+    action: accept
+    chosen: >-
+      Hard rule — ranked suggestions with explicit non-absolute wording; no
+      single forced career
+    modified_text: null
+    rationale: Instructor accepted option 1.
+    approved_by: instructor
+    approved_at: "2026-11-03T13:29:00Z"
+    resulting_fact_ids: [CA-ASM-004, CA-REQ-005, CA-BR-001]
+  - decision_id: DEC-CA-005
+    gap_id: GAP-CA-005
+    action: accept
+    chosen: Identify missing requirements only; no enrolment/provider workflow
+    modified_text: null
+    rationale: >-
+      Instructor chose option 1 (stricter than recommended default) — identify
+      gaps only; no how-to-obtain or booking.
+    approved_by: instructor
+    approved_at: "2026-11-03T13:29:30Z"
+    resulting_fact_ids: [CA-BR-003, CA-WF-004, CA-REQ-009]

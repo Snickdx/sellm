@@ -55,6 +55,9 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(unique=True, index=True)
     password_hash: str
+    # ~15k ≈ one focused requirements interview (≈12–20 stakeholder turns)
+    token_limit: int = Field(default=15_000, index=True)
+    tokens_used: int = Field(default=0, index=True)
     created_at: datetime = Field(default_factory=_utc_now, index=True)
 
 class AuthSession(SQLModel, table=True):
@@ -107,6 +110,27 @@ class ConversationStore:
 
     def init(self) -> None:
         SQLModel.metadata.create_all(self.engine)
+        self._ensure_user_token_columns()
+
+    def _ensure_user_token_columns(self) -> None:
+        """Add token_limit / tokens_used on existing DBs created before quotas existed."""
+        from sqlalchemy import inspect, text
+
+        try:
+            insp = inspect(self.engine)
+            if "user" not in insp.get_table_names():
+                return
+            cols = {c["name"] for c in insp.get_columns("user")}
+            with self.engine.begin() as conn:
+                if "token_limit" not in cols:
+                    default_limit = int(os.getenv("USER_TOKEN_LIMIT", "15000"))
+                    conn.execute(
+                        text(f"ALTER TABLE user ADD COLUMN token_limit INTEGER DEFAULT {default_limit}")
+                    )
+                if "tokens_used" not in cols:
+                    conn.execute(text("ALTER TABLE user ADD COLUMN tokens_used INTEGER DEFAULT 0"))
+        except Exception as exc:  # noqa: BLE001 — boot should continue if inspect fails
+            print(f"[warn] Could not ensure user token columns: {exc}")
 
     def create_conversation(self, first_prompt: Optional[str] = None, user_id: int = 0) -> Conversation:
         title = "Untitled Conversation"
@@ -276,24 +300,40 @@ class ConversationStore:
         ("snick", "badPassword1"),
     )
 
-    def create_user(self, username: str, password: str) -> User:
+    def create_user(
+        self,
+        username: str,
+        password: str,
+        *,
+        token_limit: Optional[int] = None,
+        reset_usage: bool = False,
+    ) -> User:
         """Create a user or update password if username already exists."""
         username = username.strip().lower()
         if not username:
             raise ValueError("Username is required")
         if not password:
             raise ValueError("Password is required")
+        limit = int(token_limit if token_limit is not None else os.getenv("USER_TOKEN_LIMIT", "15000"))
         with Session(self.engine) as session:
             existing = session.exec(
                 select(User).where(User.username == username)
             ).first()
             if existing:
                 existing.password_hash = hash_password(password)
+                existing.token_limit = limit
+                if reset_usage:
+                    existing.tokens_used = 0
                 session.add(existing)
                 session.commit()
                 session.refresh(existing)
                 return existing
-            user = User(username=username, password_hash=hash_password(password))
+            user = User(
+                username=username,
+                password_hash=hash_password(password),
+                token_limit=limit,
+                tokens_used=0,
+            )
             session.add(user)
             session.commit()
             session.refresh(user)
@@ -316,15 +356,45 @@ class ConversationStore:
                     select(User).where(User.username == uname)
                 ).first()
                 if not existing:
+                    default_limit = int(os.getenv("USER_TOKEN_LIMIT", "15000"))
                     session.add(
                         User(
                             username=uname,
                             password_hash=hash_password(password),
+                            token_limit=default_limit,
+                            tokens_used=0,
                         )
                     )
                     created.append(uname)
             session.commit()
         return created
+
+    def check_token_quota(self, user_id: int, upcoming_tokens: int = 0) -> User:
+        """Raise ValueError if the user has exhausted their token limit."""
+        with Session(self.engine) as session:
+            user = session.get(User, user_id)
+            if user is None:
+                raise ValueError("User not found")
+            used = int(user.tokens_used or 0)
+            limit = int(user.token_limit or 0)
+            if limit > 0 and used + upcoming_tokens > limit:
+                raise ValueError(
+                    f"Token limit reached ({used}/{limit}). Contact an instructor to raise your quota."
+                )
+            return user
+
+    def add_tokens_used(self, user_id: int, tokens: int) -> User:
+        """Increment tokens_used (clamped at zero). Returns updated user."""
+        tokens = max(0, int(tokens or 0))
+        with Session(self.engine) as session:
+            user = session.get(User, user_id)
+            if user is None:
+                raise ValueError("User not found")
+            user.tokens_used = int(user.tokens_used or 0) + tokens
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+            return user
 
     def get_user_by_credentials(self, username: str, password: str) -> Optional[User]:
         with Session(self.engine) as session:

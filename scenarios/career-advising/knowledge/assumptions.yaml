@@ -1,0 +1,60 @@
+facts:
+  - id: CA-ASM-001
+    statement: >-
+      The only student-facing chatbot persona is career_advisor (fictionalized
+      from the outreach/advising stakeholder voice).
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-001
+    approved_by: instructor
+    approved_at: "2026-11-03T13:26:00Z"
+    rationale: Instructor selected advisor-only persona set.
+    known_by: [career_advisor]
+    disclosure: never_student
+
+  - id: CA-ASM-002
+    statement: >-
+      Primary end users of the graded system are enrolled university students who
+      declare programme context and course lists for career alignment.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-002
+    approved_by: instructor
+    approved_at: "2026-11-03T13:27:00Z"
+    rationale: Instructor accepted enrolled university students only.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - A student profile can record programme and current/completed courses.
+      - High-school-only profiles are not a graded MVP requirement.
+
+  - id: CA-ASM-003
+    statement: >-
+      Both career-first and course-first exploration modes are required in the
+      graded MVP (not optional phase-2 work).
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-003
+    approved_by: instructor
+    approved_at: "2026-11-03T13:28:00Z"
+    rationale: >-
+      Transcript describes both angles; instructor required both in MVP.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-ASM-004
+    statement: >-
+      Product requirement: show ranked suited careers with explicit non-absolute
+      wording; never present a single forced career outcome.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-004
+    approved_by: instructor
+    approved_at: "2026-11-03T13:29:00Z"
+    rationale: Instructor accepted hard-rule tone for graded product.
+    known_by: [career_advisor]
+    disclosure: when_relevant

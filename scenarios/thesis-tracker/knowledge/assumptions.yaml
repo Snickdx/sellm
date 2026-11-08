@@ -1,0 +1,70 @@
+facts:
+  - id: TT-ASM-001
+    statement: >-
+      Chatbot personas are pg_coordinator and supervisor only (no thesis_student
+      persona).
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-003
+    approved_by: instructor
+    approved_at: "2026-11-03T14:09:00Z"
+    rationale: Instructor specified supervisor and coordinator.
+    known_by: [pg_coordinator]
+    disclosure: never_student
+
+  - id: TT-ASM-002
+    statement: >-
+      Graded application includes student, supervisor, and coordinator roles even
+      though only coordinator and supervisor are interview chatbots.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-002
+    approved_by: instructor
+    approved_at: "2026-11-03T14:08:00Z"
+    rationale: Instructor required multi-role product.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant
+
+  - id: TT-ASM-003
+    statement: >-
+      Student submitter UX is still required in the product; coordinator and
+      supervisor personas can speak to what students must be able to do.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-003
+    approved_by: instructor
+    approved_at: "2026-11-03T14:09:00Z"
+    rationale: Bridges multi-role product with two chat personas.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_asked
+
+  - id: TT-ASM-004
+    statement: >-
+      Feedback due dates are configurable; overdue feedback is flagged to the
+      coordinator (no single hard-coded institutional SLA required).
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-004
+    approved_by: instructor
+    approved_at: "2026-11-03T14:10:00Z"
+    rationale: Instructor accepted configurable due dates + overdue flags.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant
+
+  - id: TT-ASM-005
+    statement: >-
+      Progress is captured as freeform notes; structured milestone templates are
+      not a graded MVP requirement.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-005
+    approved_by: instructor
+    approved_at: "2026-11-03T14:11:00Z"
+    rationale: Instructor chose freeform notes only.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant

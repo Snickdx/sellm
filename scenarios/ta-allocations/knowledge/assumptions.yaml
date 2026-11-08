@@ -1,0 +1,71 @@
+facts:
+  - id: TA-ASM-001
+    statement: >-
+      The only student-facing chatbot persona is hod (head of department /
+      allocating authority voice).
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-001
+    approved_by: instructor
+    approved_at: "2026-11-03T13:50:00Z"
+    rationale: Instructor chose hod-only.
+    known_by: [hod]
+    disclosure: never_student
+
+  - id: TA-ASM-002
+    statement: >-
+      Graded system supports HOD allocation of TAs to courses under budget and
+      weekly-hour constraints, with assignment records visible to the HOD; HR
+      hiring/contracts are out of system.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-002
+    approved_by: instructor
+    approved_at: "2026-11-03T13:51:00Z"
+    rationale: Instructor product-boundary decision (later narrowed by DEC-TA-005).
+    known_by: [hod]
+    disclosure: when_relevant
+
+  - id: TA-ASM-003
+    statement: >-
+      Enforcing the 20 hours/week maximum is a hard system rule (block, not
+      warn-only).
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-003
+    approved_by: instructor
+    approved_at: "2026-11-03T13:52:00Z"
+    rationale: Instructor accepted hard cap.
+    known_by: [hod]
+    disclosure: when_relevant
+
+  - id: TA-ASM-004
+    statement: >-
+      The UI/system highlights prior course experience as a soft preference when
+      the HOD assigns TAs.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-004
+    approved_by: instructor
+    approved_at: "2026-11-03T14:01:00Z"
+    rationale: Instructor accepted soft preference.
+    known_by: [hod]
+    disclosure: when_relevant
+
+  - id: TA-ASM-005
+    statement: >-
+      Graded MVP does not include lecturer task lists, progress tracking, or TA
+      timesheets — only course-level assignments and hour budgets/caps.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-005
+    approved_by: instructor
+    approved_at: "2026-11-03T14:03:00Z"
+    rationale: Instructor chose assignment-only tracking.
+    known_by: [hod]
+    disclosure: when_relevant

@@ -1,0 +1,77 @@
+facts:
+  - id: UC-ASM-001
+    statement: >-
+      The only student-facing chatbot persona is alumni_admin (fundraising /
+      alumni staff voice). There is no alumnus chatbot persona.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-001
+    approved_by: instructor
+    approved_at: "2026-11-03T14:16:00Z"
+    rationale: Instructor chose alumni_admin only.
+    known_by: [alumni_admin]
+    disclosure: never_student
+
+  - id: UC-ASM-002
+    statement: >-
+      Graded MVP product boundary: UWI-email-verified alumni browse job and
+      events boards; alumni may submit listings for admin publish; alumni_admin
+      publishes boards content and builds/sends email campaigns. Directory,
+      mentorship, messaging, and groups are out of graded MVP.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-002
+    approved_by: instructor
+    approved_at: "2026-11-03T14:18:00Z"
+    rationale: >-
+      Instructor accepted MVP core; registration mechanism later set by
+      DEC-UC-003; posting by DEC-UC-004; campaigns by DEC-UC-005.
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+
+  - id: UC-ASM-003
+    statement: >-
+      Primary access gate for graded MVP is verification of a UWI email address,
+      not manual staff alumni-status approval after lookup.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-003
+    approved_by: instructor
+    approved_at: "2026-11-03T14:19:00Z"
+    rationale: >-
+      Instructor modified recommended hard admin-approve gate. Tension with
+      UC-REQ-006 (alumni often leave student email) is intentional elicitation
+      material.
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+
+  - id: UC-ASM-004
+    statement: >-
+      Alumni may submit job and event listings that remain pending until
+      alumni_admin publishes them.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-004
+    approved_by: instructor
+    approved_at: "2026-11-03T14:20:00Z"
+    rationale: Instructor accepted option 2.
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+
+  - id: UC-ASM-005
+    statement: >-
+      Graded MVP requires a full email campaign builder (compose, audience,
+      send) for alumni_admin — not in-app announcements alone.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-005
+    approved_by: instructor
+    approved_at: "2026-11-03T14:22:00Z"
+    rationale: Instructor accepted option 3 over recommended in-app-only default.
+    known_by: [alumni_admin]
+    disclosure: when_relevant

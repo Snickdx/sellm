@@ -1,0 +1,21 @@
+slug: student-accommodation
+title: Student Accommodation
+version: "0.1.0"
+status: approved
+brief: >-
+  Closed campus referral platform for off-campus housing near St. Augustine /
+  Mount Hope: eligible students (registered ID or provisional incoming) browse
+  and filter listings (location, price, amenities), contact or optionally
+  message landlords; landlords submit units for campus verification then manage
+  active listings. Not a sales/payments marketplace.
+source_status: transcript_received
+source_notes: >-
+  VTT: sources/Student Accommodation Project - Sy'rai Simon.vtt (Kevin Snaggs,
+  Kobe Sandy). 536 cues; speakers unlabeled. Personas: campus_admin,
+  student_seeker, landlord (DEC-SA-001). Assumptions: St. Augustine FT/PT +
+  provisional incoming and St. Augustine/Mount Hope listings (DEC-SA-002);
+  referral + optional in-app messages without payments (DEC-SA-003); landlord
+  submit → admin verify → active/inactive (DEC-SA-004); amenities required in
+  MVP (DEC-SA-005).
+approved_by: instructor
+approved_at: "2026-11-03T13:48:00Z"

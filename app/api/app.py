@@ -65,6 +65,14 @@ from app.api.schemas import (
 from app.storage.conversation_store import ConversationStore, User
 from app.tweaks.behavior_tweaks import BehaviorTweaksStore
 from app.llm_wrapper import LLMWrapper
+from app.seproject.seed import seed_scenarios
+from app.seproject.scenarios.registry import scenario_registry
+from app.seproject.chat.persona_service import generate_validated_reply, get_persona
+from app.seproject.api.scenarios import router as scenarios_router
+from app.seproject.indexing import index_all_scenarios
+from app.seproject.scenario_pack_adapter import pack_from_persona
+from app.seproject.db_models import Scenario, ScenarioPersona, ScenarioFact, RequirementsSession, Message  # noqa: F401
+from sqlmodel import SQLModel as _SESQLModel
 from app.llm_registry import (
     choice_label,
     default_choice_id,
@@ -74,7 +82,7 @@ from app.llm_registry import (
     resolve_llm_wrapper,
     stakeholder_llm_available,
     validate_choice_id,
-)
+)  # list_llm_choices used for BYOK model preference
 from app.scenario.scenario_pack import ScenarioPack, load_scenario_pack
 from app.scenario.stakeholder_prompt import STAKEHOLDER_LLM_REQUIRED_MSG
 from app.security.secret_store import (
@@ -129,6 +137,24 @@ async def _app_lifespan(_app: FastAPI):
         hybrid_route_margin=hybrid_route_margin,
     )
     conversation_store.seed_users()
+    # Ensure YAML scenario tables exist on the shared conversation DB engine
+    _SESQLModel.metadata.create_all(conversation_store.engine)
+    seed_info = seed_scenarios(engine=conversation_store.engine)
+    print(
+        f"✓ YAML scenarios loaded: {seed_info['loaded']} "
+        f"from {seed_info['root']} ({', '.join(seed_info['slugs']) or 'none'})"
+    )
+    for err in seed_info.get("errors") or []:
+        print(f"⚠ Scenario load: {err}")
+    index_info = index_all_scenarios(
+        vector_rag=rag_systems.get("vector"),
+        neo4j_rag=rag_systems.get("neo4j"),
+    )
+    print(
+        f"✓ Indexed YAML personas into RAG: "
+        f"{index_info['vector_docs']} vector docs, {index_info['neo4j_edges']} graph edges "
+        f"across {index_info['packages']} packages"
+    )
     yield
 
 
@@ -154,6 +180,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(scenarios_router)
 
 excel_file = os.getenv("EXCEL_FILE", "data.xlsx")
 print(f"Using Excel file: {excel_file}")
@@ -342,6 +369,26 @@ def _debug_chunks(results: Optional[List[Dict]]) -> List[Dict[str, Any]]:
     return chunks
 
 
+def _resolve_persona_scope(
+    scenario_slug: Optional[str],
+    persona_key: Optional[str],
+    scenario_version: Optional[str] = None,
+) -> tuple[Optional[str], Optional[str], Optional[Any]]:
+    """Return (slug, persona_key, package) when YAML persona knowledge should drive RAG/direct."""
+    slug = (scenario_slug or "").strip()
+    persona = (persona_key or "").strip()
+    if not slug or slug in ("excel", "__excel__", "powerpay"):
+        return None, None, None
+    if not persona:
+        raise ValueError("Select a persona for the chosen YAML scenario")
+    package = scenario_registry.get(slug, scenario_version)
+    if package is None:
+        raise ValueError(f"Scenario '{slug}' not loaded")
+    if get_persona(package, persona) is None:
+        raise ValueError(f"Persona '{persona}' not found in scenario '{slug}'")
+    return slug, persona, package
+
+
 def _generate_rag_response(
     mode: str,
     message: str,
@@ -349,6 +396,8 @@ def _generate_rag_response(
     *,
     user: Optional[User] = None,
     llm_choice: Optional[str] = None,
+    scenario_slug: Optional[str] = None,
+    persona_key: Optional[str] = None,
 ) -> tuple[str, str, str, Optional[Dict[str, Any]]]:
     """Returns (response, mode_label, choice_id, debug)."""
     rag = _rag_for_mode(mode)
@@ -359,16 +408,35 @@ def _generate_rag_response(
     llm, resolved_choice, user_override = _resolve_llm_for_user(
         user, llm_choice, mode=mode
     )
-    results = rag.search(message, n_results=llm.rag_top_k, filter_by_sheet_type=True)
+    results = rag.search(
+        message,
+        n_results=llm.rag_top_k,
+        filter_by_sheet_type=True,
+        scenario_slug=scenario_slug,
+        persona_key=persona_key,
+    )
+    active_pack = scenario_pack
+    if scenario_slug and persona_key:
+        package = scenario_registry.get(scenario_slug)
+        if package is not None:
+            active_pack = pack_from_persona(package, persona_key) or scenario_pack
     response = llm.generate_stakeholder_from_results(
         message,
         results,
         conversation_history=history,
-        scenario_pack=scenario_pack,
+        scenario_pack=active_pack,
         **user_override,
     )
-    debug = {"mode": mode, "retrieved_chunks": _debug_chunks(results)}
-    return response, mode, resolved_choice, debug
+    mode_label = mode
+    if scenario_slug and persona_key:
+        mode_label = f"{mode}:{scenario_slug}:{persona_key}"
+    debug = {
+        "mode": mode_label,
+        "scenario_slug": scenario_slug,
+        "persona_key": persona_key,
+        "retrieved_chunks": _debug_chunks(results),
+    }
+    return response, mode_label, resolved_choice, debug
 
 
 def _generate_hybrid_response(
@@ -377,6 +445,8 @@ def _generate_hybrid_response(
     *,
     user: Optional[User] = None,
     llm_choice: Optional[str] = None,
+    scenario_slug: Optional[str] = None,
+    persona_key: Optional[str] = None,
 ) -> tuple[str, str, str, Dict[str, Any], Optional[Dict[str, Any]]]:
     if not hybrid_service:
         raise ValueError("Hybrid service is not initialized")
@@ -386,18 +456,32 @@ def _generate_hybrid_response(
     llm, resolved_choice, user_override = _resolve_llm_for_user(
         user, llm_choice, mode="hybrid"
     )
-    handoff = hybrid_service.retrieve(message, top_k=hybrid_top_k)
+    handoff = hybrid_service.retrieve(
+        message,
+        top_k=hybrid_top_k,
+        scenario_slug=scenario_slug,
+        persona_key=persona_key,
+    )
+    active_pack = scenario_pack
+    if scenario_slug and persona_key:
+        package = scenario_registry.get(scenario_slug)
+        if package is not None:
+            active_pack = pack_from_persona(package, persona_key) or scenario_pack
     response = llm.generate_stakeholder_from_results(
         message,
         handoff.results,
         conversation_history=history,
-        scenario_pack=scenario_pack,
+        scenario_pack=active_pack,
         **user_override,
     )
     mode_label = f"hybrid:{handoff.route}"
+    if scenario_slug and persona_key:
+        mode_label = f"{mode_label}:{scenario_slug}:{persona_key}"
     routing_payload = {**handoff.routing, "backends_used": handoff.backends_used}
     debug = {
         "mode": mode_label,
+        "scenario_slug": scenario_slug,
+        "persona_key": persona_key,
         "retrieved_chunks": _debug_chunks(handoff.results),
         "routing": routing_payload,
     }
@@ -410,28 +494,121 @@ def _generate_direct_response(
     *,
     user: Optional[User] = None,
     llm_choice: Optional[str] = None,
+    scenario_slug: Optional[str] = None,
+    persona_key: Optional[str] = None,
 ) -> tuple[str, str, str, Optional[Dict[str, Any]]]:
-    if not scenario_pack:
-        raise ValueError("Direct mode requires a compiled scenario pack from data.xlsx")
+    active_pack = scenario_pack
+    mode_label = "direct"
+    if scenario_slug and persona_key:
+        package = scenario_registry.get(scenario_slug)
+        if package is None:
+            raise ValueError(f"Scenario '{scenario_slug}' not loaded")
+        yaml_pack = pack_from_persona(package, persona_key)
+        if yaml_pack is None:
+            raise ValueError(f"Persona '{persona_key}' not found in scenario '{scenario_slug}'")
+        active_pack = yaml_pack
+        mode_label = f"direct:{scenario_slug}:{persona_key}"
+    if not active_pack:
+        raise ValueError("Direct mode requires Excel data.xlsx or a YAML scenario persona")
     _require_stakeholder_llm(user)
     llm, resolved_choice, user_override = _resolve_llm_for_user(
         user, llm_choice, mode="direct"
     )
     response = llm.generate_stakeholder_direct(
         message,
-        scenario_pack,
+        active_pack,
         conversation_history=history,
         **user_override,
     )
     debug = {
-        "mode": "direct",
-        "scenario_sections": list(scenario_pack.sections.keys()),
+        "mode": mode_label,
+        "scenario_slug": scenario_slug,
+        "persona_key": persona_key,
+        "scenario_sections": list(getattr(active_pack, "sections", {}).keys()),
         "retrieved_chunks": [],
     }
-    return response, "direct", resolved_choice, debug
+    return response, mode_label, resolved_choice, debug
 
 
 # ── Auth endpoints ────────────────────────────────────────────
+
+BYOK_REQUIRED_MSG = (
+    "Platform token limit reached. Add your own LLM API key in Settings (⚙️) "
+    "to keep chatting — usage will bill to your key, not the shared pool."
+)
+
+
+def _user_has_byok(user: Optional[User]) -> bool:
+    if not user:
+        return False
+    return bool(_user_api_overrides(user).get("user_providers"))
+
+
+def _quota_exhausted(user: User) -> bool:
+    limit = int(getattr(user, "token_limit", 0) or 0)
+    used = int(getattr(user, "tokens_used", 0) or 0)
+    return limit > 0 and used >= limit
+
+
+def _token_quota_payload(user: User) -> dict:
+    limit = int(getattr(user, "token_limit", 0) or 0)
+    used = int(getattr(user, "tokens_used", 0) or 0)
+    remaining = max(0, limit - used) if limit > 0 else None
+    exhausted = _quota_exhausted(user)
+    has_byok = _user_has_byok(user)
+    return {
+        "token_limit": limit,
+        "tokens_used": used,
+        "tokens_remaining": remaining,
+        "quota_exhausted": exhausted,
+        "has_byok": has_byok,
+        "billing_mode": "byok" if exhausted and has_byok else ("platform" if not exhausted else "blocked"),
+    }
+
+
+def _estimate_tokens(*parts: str) -> int:
+    """Rough token estimate when provider usage is unavailable (~4 chars/token)."""
+    total_chars = sum(len(p or "") for p in parts)
+    return max(1, total_chars // 4)
+
+
+def _resolve_quota_gate(user: User) -> str:
+    """
+    Decide how this request is billed.
+    Returns 'platform' or 'byok'. Raises HTTPException if blocked.
+    """
+    if not _quota_exhausted(user):
+        return "platform"
+    if _user_has_byok(user) or ollama_reachable():
+        return "byok"
+    raise HTTPException(status_code=429, detail=BYOK_REQUIRED_MSG)
+
+
+def _record_tokens_if_platform(
+    user: User,
+    *,
+    billing: str,
+    prompt: str,
+    response: str,
+    usage_tokens: int = 0,
+) -> None:
+    if billing != "platform":
+        return
+    est = usage_tokens if usage_tokens > 0 else _estimate_tokens(prompt, response)
+    conversation_store.add_tokens_used(user.id, est)
+
+
+def _chat_quota_fields(user: User, billing: str) -> dict:
+    # Refresh usage after possible recording
+    fresh = conversation_store.get_user_by_id(user.id) or user
+    payload = _token_quota_payload(fresh)
+    return {
+        "billing": billing,
+        "token_limit": payload["token_limit"],
+        "tokens_used": payload["tokens_used"],
+        "tokens_remaining": payload["tokens_remaining"],
+    }
+
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
@@ -439,7 +616,18 @@ async def login(request: LoginRequest):
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
     token = conversation_store.create_session(user.id)
-    return LoginResponse(token=token, user_id=user.id, username=user.username)
+    quota = _token_quota_payload(user)
+    return LoginResponse(
+        token=token,
+        user_id=user.id,
+        username=user.username,
+        token_limit=quota["token_limit"],
+        tokens_used=quota["tokens_used"],
+        tokens_remaining=quota["tokens_remaining"],
+        has_byok=quota["has_byok"],
+        quota_exhausted=quota["quota_exhausted"],
+        billing_mode=quota["billing_mode"],
+    )
 
 @app.post("/api/auth/logout")
 async def logout(request: Request):
@@ -453,7 +641,12 @@ async def me(request: Request):
     user = _get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    return {"user_id": user.id, "username": user.username}
+    return {
+        "user_id": user.id,
+        "username": user.username,
+        **_token_quota_payload(user),
+        "byok_hint": BYOK_REQUIRED_MSG if _quota_exhausted(user) and not _user_has_byok(user) else None,
+    }
 
 # ── User API config ───────────────────────────────────────────
 
@@ -520,6 +713,11 @@ async def chat(request: ChatRequest, req: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
+        billing = _resolve_quota_gate(user)
+        # After platform quota is exhausted, require BYOK / local Ollama for LLM modes
+        if billing == "byok" and not _user_has_byok(user) and not ollama_reachable():
+            raise HTTPException(status_code=429, detail=BYOK_REQUIRED_MSG)
+
         conversation_id = request.conversation_id
         if conversation_id:
             convo = conversation_store.get_conversation(conversation_id)
@@ -536,10 +734,30 @@ async def chat(request: ChatRequest, req: Request):
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
         mode = (request.response_mode or "vector").lower()
         user_provider = _user_llm_provider(user, request.llm_choice)
+        if billing == "byok" and not user_provider and ollama_reachable():
+            user_provider = "ollama"
         llm_choice = validate_choice_id(request.llm_choice, user_provider=user_provider)
+        # After quota exhaustion, prefer the user's configured cloud provider when no model picked
+        if billing == "byok" and user_provider and user_provider != "ollama" and not (request.llm_choice or "").strip():
+            for choice in list_llm_choices(user_provider=user_provider):
+                cid = str(choice.get("id") or "")
+                if cid.startswith(f"{user_provider}:") and choice.get("available", True):
+                    llm_choice = cid
+                    break
+        # Using a stored cloud key (even under quota) bills to BYOK and skips the shared pool
+        if billing == "platform" and user_provider and user_provider != "ollama":
+            override = _get_user_provider_override(user, user_provider)
+            if override.get("api_key_override"):
+                billing = "byok"
 
         debug_out: Optional[Dict[str, Any]] = None
         llm_payload = _llm_used_payload(llm_choice)
+        scope_slug, scope_persona, scope_package = _resolve_persona_scope(
+            request.scenario_slug,
+            request.persona_key,
+            request.scenario_version,
+        )
+        scope_kw = {"scenario_slug": scope_slug, "persona_key": scope_persona}
 
         if mode == "compare":
             _require_stakeholder_llm(user)
@@ -556,19 +774,19 @@ async def chat(request: ChatRequest, req: Request):
                 try:
                     if key == "vector":
                         resp, _, resolved_choice, dbg = _generate_rag_response(
-                            "vector", request.message, history, user=user, llm_choice=llm_choice
+                            "vector", request.message, history, user=user, llm_choice=llm_choice, **scope_kw
                         )
                     elif key == "neo4j":
                         resp, _, resolved_choice, dbg = _generate_rag_response(
-                            "neo4j", request.message, history, user=user, llm_choice=llm_choice
+                            "neo4j", request.message, history, user=user, llm_choice=llm_choice, **scope_kw
                         )
                     elif key == "hybrid":
                         resp, _, resolved_choice, _, dbg = _generate_hybrid_response(
-                            request.message, history, user=user, llm_choice=llm_choice
+                            request.message, history, user=user, llm_choice=llm_choice, **scope_kw
                         )
                     else:
                         resp, _, resolved_choice, dbg = _generate_direct_response(
-                            request.message, history, user=user, llm_choice=llm_choice
+                            request.message, history, user=user, llm_choice=llm_choice, **scope_kw
                         )
                     compare_debug[key] = dbg
                     sections.append((title, resp))
@@ -584,6 +802,7 @@ async def chat(request: ChatRequest, req: Request):
                 content=combined,
                 mode_used="compare",
             )
+            _record_tokens_if_platform(user, billing=billing, prompt=request.message, response=combined)
             if request.debug:
                 debug_out = {"compare": compare_debug}
             llm_payload = _llm_used_payload(resolved_choice or llm_choice)
@@ -594,11 +813,12 @@ async def chat(request: ChatRequest, req: Request):
                 conversation_id=conversation_id,
                 llm_used=llm_payload,
                 debug=debug_out,
+                **_chat_quota_fields(user, billing),
             )
 
         if mode == "hybrid":
             response, mode_label, resolved, routing_payload, debug_out = _generate_hybrid_response(
-                request.message, history, user=user, llm_choice=llm_choice
+                request.message, history, user=user, llm_choice=llm_choice, **scope_kw
             )
             conversation_store.add_message(
                 conversation_id=conversation_id,
@@ -606,6 +826,7 @@ async def chat(request: ChatRequest, req: Request):
                 content=response,
                 mode_used=mode_label,
             )
+            _record_tokens_if_platform(user, billing=billing, prompt=request.message, response=response)
             return ChatResponse(
                 response=response,
                 sources=None,
@@ -614,11 +835,12 @@ async def chat(request: ChatRequest, req: Request):
                 routing=routing_payload,
                 llm_used=_llm_used_payload(resolved),
                 debug=debug_out if request.debug else None,
+                **_chat_quota_fields(user, billing),
             )
 
         if mode == "direct":
             response, mode_label, resolved, debug_out = _generate_direct_response(
-                request.message, history, user=user, llm_choice=llm_choice
+                request.message, history, user=user, llm_choice=llm_choice, **scope_kw
             )
             conversation_store.add_message(
                 conversation_id=conversation_id,
@@ -626,6 +848,7 @@ async def chat(request: ChatRequest, req: Request):
                 content=response,
                 mode_used=mode_label,
             )
+            _record_tokens_if_platform(user, billing=billing, prompt=request.message, response=response)
             return ChatResponse(
                 response=response,
                 sources=None,
@@ -633,15 +856,67 @@ async def chat(request: ChatRequest, req: Request):
                 conversation_id=conversation_id,
                 llm_used=_llm_used_payload(resolved),
                 debug=debug_out if request.debug else None,
+                **_chat_quota_fields(user, billing),
+            )
+
+        if mode in ("yaml", "scenario"):
+            if not scope_slug or not scope_persona or scope_package is None:
+                raise ValueError("YAML mode requires a YAML scenario and persona (not Excel)")
+            reply = await generate_validated_reply(
+                package=scope_package,
+                persona_key=scope_persona,
+                history=history,
+                student_message=request.message,
+            )
+            mode_label = f"yaml:{scope_slug}:{scope_persona}"
+            conversation_store.add_message(
+                conversation_id=conversation_id,
+                role="assistant",
+                content=reply.answer,
+                mode_used=mode_label,
+            )
+            usage_tokens = int((reply.usage or {}).get("total_tokens") or 0)
+            provider = str((reply.usage or {}).get("provider") or "")
+            # Heuristic / guard replies are free; only bill platform for real LLM usage
+            yaml_billing = billing
+            if provider in ("heuristic", "guard"):
+                yaml_billing = "byok"  # skip platform metering for offline persona replies
+            _record_tokens_if_platform(
+                user,
+                billing=yaml_billing,
+                prompt=request.message,
+                response=reply.answer,
+                usage_tokens=usage_tokens,
+            )
+            yaml_debug = {
+                "scenario_slug": scope_slug,
+                "scenario_version": scope_package.meta.version,
+                "persona_key": scope_persona,
+                "used_fact_ids": reply.used_fact_ids,
+                "uncertainties": reply.uncertainties,
+                "handoff_suggestion": reply.handoff_suggestion,
+                "model_version": reply.model_version,
+            }
+            return ChatResponse(
+                response=reply.answer,
+                sources=[{"fact_id": fid} for fid in reply.used_fact_ids] or None,
+                mode_used=mode_label,
+                conversation_id=conversation_id,
+                llm_used={
+                    "provider": (reply.usage or {}).get("provider", "scenario"),
+                    "model": reply.model_version,
+                },
+                debug=yaml_debug if request.debug else None,
+                **_chat_quota_fields(user, yaml_billing if provider in ("heuristic", "guard") else billing),
             )
 
         if mode not in ("vector", "neo4j"):
             raise ValueError(
-                "Invalid response_mode. Use: vector, neo4j, hybrid, direct, or compare"
+                "Invalid response_mode. Use: vector, neo4j, hybrid, direct, compare, or yaml"
             )
 
         response, mode_label, resolved, debug_out = _generate_rag_response(
-            mode, request.message, history, user=user, llm_choice=llm_choice
+            mode, request.message, history, user=user, llm_choice=llm_choice, **scope_kw
         )
         conversation_store.add_message(
             conversation_id=conversation_id,
@@ -649,6 +924,7 @@ async def chat(request: ChatRequest, req: Request):
             content=response,
             mode_used=mode_label,
         )
+        _record_tokens_if_platform(user, billing=billing, prompt=request.message, response=response)
         return ChatResponse(
             response=response,
             sources=None,
@@ -656,10 +932,15 @@ async def chat(request: ChatRequest, req: Request):
             conversation_id=conversation_id,
             llm_used=_llm_used_payload(resolved),
             debug=debug_out if request.debug else None,
+            **_chat_quota_fields(user, billing),
         )
+    except HTTPException:
+        raise
     except ValueError as e:
         detail = str(e)
         status = 503 if "unavailable" in detail.lower() else 400
+        if "token limit" in detail.lower() or "api key" in detail.lower():
+            status = 429
         raise HTTPException(status_code=status, detail=detail)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -698,10 +979,13 @@ async def modes():
                 scenario_pack is not None
                 and (llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None)
             ),
+            "yaml": scenario_registry.count > 0,
         },
         "engine_status": engine_status,
         "hybrid_routing": "neo4j | chroma | blend per query",
         "direct_mode": "full scenario pack in prompt (no retrieval)",
+        "yaml_mode": "persona chat grounded in seproject YAML scenario packages",
+        "yaml_scenarios": scenario_registry.count,
     }
 
 

@@ -1,0 +1,226 @@
+open_questions:
+  - id: GAP-JB-001
+    priority: critical
+    prompt: |
+      The VTT is a single interview with university staff who administer the
+      current Airtable/email job board. Which stakeholder personas should the
+      student-facing scenario include?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/9-0
+        start: "00:00:24.382"
+        end: "00:00:43.342"
+        speaker: null
+        note: Stakeholder names graduates, industry, and administrators as users
+    why_it_matters: >-
+      Personas bound known_fact_ids and what students can elicit. Employer and
+      graduate voices are thin/absent in the transcript.
+    alternatives:
+      - Administrator only (transcript-faithful)
+      - Administrator + graduate_applicant + employer (employer/graduate facts mostly assumed/clarified)
+      - Administrator + graduate_applicant only
+      - Defer — decide after first classroom pilot
+    recommended_default: >-
+      Administrator + graduate_applicant + employer (with assumed/clarified tags
+      for non-admin knowledge)
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-JB-002
+    priority: critical
+    prompt: |
+      Applicants currently get no review/status feedback (confirmed pain). What
+      should the *target* student system require for application status?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/30-2
+        start: "00:04:11.783"
+        end: "00:04:19.462"
+        speaker: null
+        note: No feedback loop after apply
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/62-0
+        start: "00:10:02.862"
+        end: "00:10:15.822"
+        speaker: null
+        note: Applicants only know next step if they hear from staff
+    why_it_matters: >-
+      Drives core FRs (status states, who updates them) vs leaving as an
+      elicitation opportunity.
+    alternatives:
+      - Minimal statuses — submitted / under review / closed; admin or employer can update
+      - Submitted only — no status beyond confirmation of receipt (leave pain for students to discover)
+      - Full pipeline — submitted / reviewed / shortlisted / rejected / hired
+      - Defer for student elicitation (mark unresolved in evaluation)
+    recommended_default: >-
+      Minimal statuses — submitted / under review / closed; admin or employer can update
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-JB-003
+    priority: critical
+    prompt: |
+      Who creates job listings in the student project — employers self-serve with
+      admin approval, or admin-only entry after offline intake (closer to today's
+      Airtable form)?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/66-1
+        start: "00:10:45.983"
+        end: "00:11:00.062"
+        speaker: null
+        note: Admin reviews form submission then publishes
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/35-1
+        start: "00:04:59.200"
+        end: "00:05:07.484"
+        speaker: null
+        note: Employers currently reach staff via email
+    why_it_matters: Determines auth roles, listing lifecycle, and employer persona scope.
+    alternatives:
+      - Employer submits listing → pending → admin approve/publish
+      - Admin creates/publishes all listings (no employer accounts)
+      - Employer publishes directly; admin can take down
+      - Defer for student elicitation
+    recommended_default: Employer submits listing → pending → admin approve/publish
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-JB-004
+    priority: important
+    prompt: |
+      Transcript says the platform is specifically for DCIT students. Should the
+      scenario constrain eligibility to DCIT (or a programme), or treat that as
+      current-context only?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/54-1
+        start: "00:07:54.845"
+        end: "00:08:07.782"
+        speaker: null
+        note: Released specifically for DCIT students
+    why_it_matters: Affects registration, eligibility checks, and NFR scope.
+    alternatives:
+      - Hard constraint — only eligible programme students may subscribe/apply
+      - Soft context — any authenticated graduate student; DCIT is historical context
+      - Open browse, authenticated apply for enrolled students
+      - Defer for student elicitation
+    recommended_default: Hard constraint — only eligible programme students may subscribe/apply
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-JB-005
+    priority: important
+    prompt: |
+      Admin "forwarding short lists" is named but not specified. What should
+      happen after on-platform applications are collected?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/12-1
+        start: "00:00:50.471"
+        end: "00:00:56.702"
+        speaker: null
+        note: Admins forward short lists
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/27-1
+        start: "00:03:28.884"
+        end: "00:03:33.422"
+        speaker: null
+        note: Staff send collected applicants to the employer
+    why_it_matters: Defines post-apply admin workflow and employer visibility.
+    alternatives:
+      - Admin exports/forwards applicant package to employer (email or download)
+      - Employer account can view applicants for their listings after publish
+      - Both — employer views in-app; admin can also export/forward
+      - Defer for student elicitation
+    recommended_default: Both — employer views in-app; admin can also export/forward
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-JB-006
+    priority: critical
+    prompt: |
+      Who may update an application's status along the full pipeline
+      (submitted → reviewed → shortlisted → rejected → hired)?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/30-0
+        start: "00:04:03.862"
+        end: "00:04:19.462"
+        speaker: null
+        note: Employer decides whether to contact; no feedback loop today
+    why_it_matters: Completes DEC-JB-002; without this, status transitions are underspecified.
+    alternatives:
+      - Employer only (for their listings)
+      - Admin only
+      - Employer or admin
+      - Defer for student elicitation
+    recommended_default: Employer or admin
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+decisions:
+  - decision_id: DEC-JB-001
+    gap_id: GAP-JB-001
+    action: accept
+    chosen: Administrator + graduate_applicant + employer
+    modified_text: null
+    rationale: >-
+      Instructor accepted recommended default; non-admin knowledge will be
+      tagged assumed/clarified where transcript coverage is thin.
+    approved_by: instructor
+    approved_at: "2026-11-02T20:22:00Z"
+    resulting_fact_ids: []
+  - decision_id: DEC-JB-002
+    gap_id: GAP-JB-002
+    action: modify
+    chosen: Full pipeline — submitted / reviewed / shortlisted / rejected / hired
+    modified_text: >-
+      Application statuses are submitted, reviewed, shortlisted, rejected, hired.
+    rationale: >-
+      Instructor chose fuller status model than the recommended minimal set;
+      will be recorded as instructor-origin assumed/clarified fact.
+    approved_by: instructor
+    approved_at: "2026-11-02T20:23:00Z"
+    resulting_fact_ids: [JB-ASM-001]
+  - decision_id: DEC-JB-003
+    gap_id: GAP-JB-003
+    action: accept
+    chosen: Employer submits listing → pending → admin approve/publish
+    modified_text: null
+    rationale: Instructor accepted recommended default for listing lifecycle.
+    approved_by: instructor
+    approved_at: "2026-11-02T20:23:30Z"
+    resulting_fact_ids: [JB-ASM-002]
+  - decision_id: DEC-JB-004
+    gap_id: GAP-JB-004
+    action: accept
+    chosen: Hard constraint — only eligible programme students may subscribe/apply
+    modified_text: null
+    rationale: Instructor accepted DCIT/programme eligibility as a hard constraint.
+    approved_by: instructor
+    approved_at: "2026-11-02T20:23:45Z"
+    resulting_fact_ids: [JB-ASM-003]
+  - decision_id: DEC-JB-005
+    gap_id: GAP-JB-005
+    action: accept
+    chosen: Both — employer views in-app; admin can also export/forward
+    modified_text: null
+    rationale: Instructor accepted dual visibility for collected applications.
+    approved_by: instructor
+    approved_at: "2026-11-02T20:24:00Z"
+    resulting_fact_ids: [JB-ASM-004]
+  - decision_id: DEC-JB-006
+    gap_id: GAP-JB-006
+    action: modify
+    chosen: Employer only (for their listings)
+    modified_text: >-
+      Only the employer who owns a listing may update application statuses on
+      that listing.
+    rationale: >-
+      Instructor chose employer-only updates rather than the recommended
+      employer-or-admin default.
+    approved_by: instructor
+    approved_at: "2026-11-02T20:26:00Z"
+    resulting_fact_ids: [JB-ASM-005]
+

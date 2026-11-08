@@ -1,0 +1,73 @@
+facts:
+  - id: SA-ASM-001
+    statement: >-
+      Student-facing personas are campus_admin, student_seeker, and landlord.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-001
+    approved_by: instructor
+    approved_at: "2026-11-03T13:39:00Z"
+    rationale: Instructor accepted three-persona set.
+    known_by: [campus_admin]
+    disclosure: never_student
+
+  - id: SA-ASM-002
+    statement: >-
+      Eligible student seekers are St. Augustine full-time or part-time
+      registered students authenticating with a student ID, plus a provisional
+      incoming-student path for those who need housing before an ID is issued.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-002
+    approved_by: instructor
+    approved_at: "2026-11-03T13:40:00Z"
+    rationale: Instructor accepted option 2 including provisional path.
+    known_by: [campus_admin, student_seeker]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Registered students can authenticate with student ID.
+      - A provisional/incoming pathway exists before ID issuance.
+
+  - id: SA-ASM-003
+    statement: >-
+      Students may optionally message landlords in-app; contact details remain
+      available; no payments or contracts are handled by the system.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-003
+    approved_by: instructor
+    approved_at: "2026-11-03T13:41:00Z"
+    rationale: Instructor accepted referral + optional messaging.
+    known_by: [campus_admin, student_seeker, landlord]
+    disclosure: when_relevant
+
+  - id: SA-ASM-004
+    statement: >-
+      Listing lifecycle is landlord submit → pending → campus_admin
+      verify/approve → landlord controls active/inactive visibility.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-004
+    approved_by: instructor
+    approved_at: "2026-11-03T13:42:00Z"
+    rationale: Instructor accepted option 1.
+    known_by: [campus_admin, landlord]
+    disclosure: when_relevant
+
+  - id: SA-ASM-005
+    statement: >-
+      Graded MVP requires amenity fields and amenity filters in addition to
+      location/price filters; automated matching is out of required scope.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-005
+    approved_by: instructor
+    approved_at: "2026-11-03T13:44:00Z"
+    rationale: Instructor accepted baseline + amenities.
+    known_by: [campus_admin, student_seeker, landlord]
+    disclosure: when_relevant
