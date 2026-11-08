@@ -1,18 +1,14 @@
+.env
+.env.*
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+storage/
+chroma_db_v2/
 .git
 .gitignore
 .dockerignore
-.cursor
-**/__pycache__
-**/*.py[cod]
-**/.pytest_cache
-**/.ruff_cache
-*.dump
-
-# Secrets — use EasyPanel Environment tab instead
-.env
-.env.*
-!.env.example
-app/.env
-
-# Local runtime data — mount as volumes in production
-storage/
+README.md
+docker-compose.yml
+.python-version
