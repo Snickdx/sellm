@@ -1027,7 +1027,8 @@ async def create_conversation(body: CreateConversationRequest, request: Request)
         raise HTTPException(status_code=400, detail=f"Unknown scenario '{slug}'")
     title = (body.title or "").strip() or None
     if not title:
-        title = f"{package.title} interview"
+        pkg_title = getattr(getattr(package, "meta", None), "title", None) or slug
+        title = f"{pkg_title} interview"
     convo = conversation_store.create_conversation(
         user_id=user.id,
         scenario_slug=slug,

@@ -31,7 +31,7 @@
         }
         .master-detail {
             display: grid;
-            grid-template-columns: minmax(200px, 0.95fr) minmax(0, 5fr) minmax(250px, 1.05fr);
+            grid-template-columns: minmax(200px, 0.95fr) minmax(0, 5fr);
             width: 100%;
             height: 100vh;
             background: white;
@@ -73,6 +73,14 @@
         }
         .side-nav-toggle:hover,
         .controls-pane-toggle:hover { background: rgba(255, 255, 255, 0.22); }
+        .chat-body {
+            flex: 1;
+            min-height: 0;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+            overflow: hidden;
+        }
         .controls-pane {
             display: flex;
             flex-direction: column;
@@ -80,7 +88,7 @@
             min-height: 0;
             background: #f8fafc;
             border-left: 1px solid #e2e8f0;
-            z-index: 1600;
+            z-index: 5;
         }
         .controls-pane-header {
             padding: 10px 12px;
@@ -257,6 +265,7 @@
             flex-direction: column;
             min-width: 0;
             min-height: 0;
+            position: relative;
         }
         .chat-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -547,6 +556,9 @@
                 grid-template-columns: 1fr;
                 height: 100dvh;
             }
+            .chat-body {
+                grid-template-columns: 1fr;
+            }
             .conversations-pane {
                 position: fixed;
                 top: 0;
@@ -559,21 +571,23 @@
                 transform: translateX(-105%);
                 transition: transform 0.25s ease;
                 box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+                z-index: 1600;
             }
             .conversations-pane.open {
                 transform: translateX(0);
             }
             .controls-pane {
-                position: fixed;
+                position: absolute;
                 top: 0;
                 right: 0;
                 bottom: 0;
-                width: min(320px, 88vw);
+                width: min(300px, 88vw);
                 max-width: 88vw;
                 border-left: 1px solid #e2e8f0;
                 transform: translateX(105%);
                 transition: transform 0.25s ease;
                 box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+                z-index: 20;
             }
             .controls-pane.open {
                 transform: translateX(0);
@@ -682,14 +696,65 @@
                     </div>
                     <button type="button" id="controlsPaneToggle" class="controls-pane-toggle" aria-label="Open controls" aria-expanded="false" aria-controls="controlsPane">⚙</button>
                 </div>
-                <div class="chat-messages" id="chatMessages">
-                    <div class="message assistant">
-                        <div class="message-content">
-                            Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.
-                            <br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.
-                            <br><br>Start with <strong>+ New chat</strong> and pick a scenario (locked for that chat). Switch personas, mode, and model from the right panel anytime.
+                <div class="chat-body">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message assistant">
+                            <div class="message-content">
+                                Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.
+                                <br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.
+                                <br><br>Start with <strong>+ New chat</strong> and pick a scenario (locked for that chat). Switch personas, mode, and model from the right panel anytime.
+                            </div>
                         </div>
                     </div>
+                    <aside id="controlsPane" class="controls-pane" aria-label="Chat controls">
+                        <div class="controls-pane-header">
+                            <h2>Controls</h2>
+                            <button type="button" id="controlsPaneClose" class="controls-pane-close" aria-label="Close controls">&times;</button>
+                        </div>
+                        <div class="controls-pane-body">
+                            <div id="budgetMeter" class="budget-meter" aria-live="polite" hidden>
+                                <div class="budget-meter-top">
+                                    <span class="budget-meter-title">Shared interview budget</span>
+                                    <span id="budgetMeterBadge" class="budget-meter-badge pool">Pool</span>
+                                </div>
+                                <div class="budget-meter-track" role="progressbar" id="budgetMeterBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                    <div id="budgetMeterFill" class="budget-meter-fill"></div>
+                                </div>
+                                <div class="budget-meter-top" style="margin-top:6px;margin-bottom:0;">
+                                    <span id="budgetMeterStats" class="budget-meter-stats">—</span>
+                                    <span id="budgetMeterPct" class="budget-meter-stats">0%</span>
+                                </div>
+                                <p id="budgetMeterHint" class="budget-meter-hint"></p>
+                            </div>
+                            <div class="controls-field">
+                                <label>Scenario</label>
+                                <div id="scenarioLockedLabel" class="scenario-locked">
+                                    No chat yet
+                                    <span class="scenario-locked-meta">Chosen when you start a new chat</span>
+                                </div>
+                            </div>
+                            <div class="controls-field" id="personaField">
+                                <label for="personaSelect">Persona</label>
+                                <select id="personaSelect" class="mode-select" title="Stakeholder persona for this scenario"></select>
+                            </div>
+                            <div class="controls-field">
+                                <label for="responseMode">Mode</label>
+                                <select id="responseMode" class="mode-select">
+                                    <option value="vector">Vector RAG</option>
+                                    <option value="neo4j">Neo4j RAG</option>
+                                    <option value="hybrid">Hybrid RAG</option>
+                                    <option value="direct">Direct Model</option>
+                                    <option value="yaml">YAML Persona</option>
+                                    <option value="compare">Compare All</option>
+                                </select>
+                            </div>
+                            <div class="controls-field hidden" id="llmModelRow">
+                                <label for="llmModelSelect">LLM model</label>
+                                <select id="llmModelSelect" class="mode-select" title="Switch model when API keys or Ollama are configured"></select>
+                                <span class="llm-hint" id="llmModelHint"></span>
+                            </div>
+                        </div>
+                    </aside>
                 </div>
                 <div class="chat-input-container">
                     <div class="reflection-row" id="reflectionRow">
@@ -704,55 +769,6 @@
                     </form>
                 </div>
             </main>
-            <aside id="controlsPane" class="controls-pane" aria-label="Chat controls">
-                <div class="controls-pane-header">
-                    <h2>Controls</h2>
-                    <button type="button" id="controlsPaneClose" class="controls-pane-close" aria-label="Close controls">&times;</button>
-                </div>
-                <div class="controls-pane-body">
-                    <div id="budgetMeter" class="budget-meter" aria-live="polite" hidden>
-                        <div class="budget-meter-top">
-                            <span class="budget-meter-title">Shared interview budget</span>
-                            <span id="budgetMeterBadge" class="budget-meter-badge pool">Pool</span>
-                        </div>
-                        <div class="budget-meter-track" role="progressbar" id="budgetMeterBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                            <div id="budgetMeterFill" class="budget-meter-fill"></div>
-                        </div>
-                        <div class="budget-meter-top" style="margin-top:6px;margin-bottom:0;">
-                            <span id="budgetMeterStats" class="budget-meter-stats">—</span>
-                            <span id="budgetMeterPct" class="budget-meter-stats">0%</span>
-                        </div>
-                        <p id="budgetMeterHint" class="budget-meter-hint"></p>
-                    </div>
-                    <div class="controls-field">
-                        <label>Scenario</label>
-                        <div id="scenarioLockedLabel" class="scenario-locked">
-                            No chat yet
-                            <span class="scenario-locked-meta">Chosen when you start a new chat</span>
-                        </div>
-                    </div>
-                    <div class="controls-field" id="personaField">
-                        <label for="personaSelect">Persona</label>
-                        <select id="personaSelect" class="mode-select" title="Stakeholder persona for this scenario"></select>
-                    </div>
-                    <div class="controls-field">
-                        <label for="responseMode">Mode</label>
-                        <select id="responseMode" class="mode-select">
-                            <option value="vector">Vector RAG</option>
-                            <option value="neo4j">Neo4j RAG</option>
-                            <option value="hybrid">Hybrid RAG</option>
-                            <option value="direct">Direct Model</option>
-                            <option value="yaml">YAML Persona</option>
-                            <option value="compare">Compare All</option>
-                        </select>
-                    </div>
-                    <div class="controls-field hidden" id="llmModelRow">
-                        <label for="llmModelSelect">LLM model</label>
-                        <select id="llmModelSelect" class="mode-select" title="Switch model when API keys or Ollama are configured"></select>
-                        <span class="llm-hint" id="llmModelHint"></span>
-                    </div>
-                </div>
-            </aside>
         </div>
     </div>
     <div id="newChatBackdrop" class="reflection-backdrop" aria-hidden="true">
@@ -797,6 +813,6 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/chat.js?v=14"></script>
+    <script src="/static/components/chat.js?v=15"></script>
 </body>
 </html>
