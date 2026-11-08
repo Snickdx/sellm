@@ -1019,18 +1019,15 @@ async def create_conversation(body: CreateConversationRequest, request: Request)
     user = _get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    slug = (body.scenario_slug or "").strip() or "excel"
-    if slug not in ("excel", "__excel__", "powerpay"):
-        package = scenario_registry.get(slug)
-        if package is None:
-            raise HTTPException(status_code=400, detail=f"Unknown scenario '{slug}'")
+    slug = (body.scenario_slug or "").strip()
+    if not slug:
+        raise HTTPException(status_code=400, detail="scenario_slug is required")
+    package = scenario_registry.get(slug)
+    if package is None:
+        raise HTTPException(status_code=400, detail=f"Unknown scenario '{slug}'")
     title = (body.title or "").strip() or None
     if not title:
-        if slug in ("excel", "__excel__", "powerpay"):
-            title = "Excel workbook interview"
-        else:
-            package = scenario_registry.get(slug)
-            title = f"{package.title} interview" if package else f"{slug} interview"
+        title = f"{package.title} interview"
     convo = conversation_store.create_conversation(
         user_id=user.id,
         scenario_slug=slug,

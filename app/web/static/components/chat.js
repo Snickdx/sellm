@@ -195,22 +195,25 @@
   function populateScenarioSelect(selectEl, preferredSlug) {
     if (!selectEl) return;
     selectEl.innerHTML = "";
-    const excelOpt = document.createElement("option");
-    excelOpt.value = "excel";
-    excelOpt.textContent = "Excel (PowerPay workbook)";
-    selectEl.appendChild(excelOpt);
+    if (!yamlScenarios.length) {
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "No scenarios available";
+      selectEl.appendChild(empty);
+      selectEl.disabled = true;
+      return;
+    }
+    selectEl.disabled = false;
     yamlScenarios.forEach((s) => {
       const opt = document.createElement("option");
       opt.value = s.slug;
-      opt.textContent = `${s.title} (${s.slug})`;
+      opt.textContent = s.title || s.slug;
       selectEl.appendChild(opt);
     });
     if (preferredSlug && [...selectEl.options].some((o) => o.value === preferredSlug)) {
       selectEl.value = preferredSlug;
-    } else if (yamlScenarios.length) {
-      selectEl.value = yamlScenarios[0].slug;
     } else {
-      selectEl.value = "excel";
+      selectEl.value = yamlScenarios[0].slug;
     }
   }
 
@@ -344,7 +347,7 @@
   }
 
   function openNewChatModal() {
-    populateScenarioSelect(newChatScenarioSelect, yamlScenarios[0]?.slug || "excel");
+    populateScenarioSelect(newChatScenarioSelect, yamlScenarios[0]?.slug);
     if (!newChatBackdrop) return;
     newChatBackdrop.classList.add("visible");
     newChatBackdrop.setAttribute("aria-hidden", "false");
@@ -358,7 +361,11 @@
   }
 
   async function startNewChatWithScenario() {
-    const slug = newChatScenarioSelect?.value || "excel";
+    const slug = (newChatScenarioSelect?.value || "").trim();
+    if (!slug) {
+      window.alert("Pick a scenario to start the chat.");
+      return;
+    }
     if (newChatStart) newChatStart.disabled = true;
     try {
       const r = await fetch("/api/conversations", {
