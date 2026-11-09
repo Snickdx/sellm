@@ -176,6 +176,22 @@ WEB_DIR = APP_DIR / "web"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+
+def _render_template(request: Request, name: str, context: Optional[Dict[str, Any]] = None):
+    """Starlette-compatible TemplateResponse (old: name+context; new: request+name+context)."""
+    import inspect
+
+    ctx = dict(context or {})
+    ctx["request"] = request
+    params = list(inspect.signature(templates.TemplateResponse).parameters)
+    # New Starlette: (self, request, name, context=None, ...)
+    if len(params) >= 2 and params[1] == "request":
+        return templates.TemplateResponse(request, name, ctx)
+    # Old Starlette: (self, name, context, ...)
+    return templates.TemplateResponse(name, ctx)
+
+
 conversation_store = ConversationStore(
     os.getenv("CONVERSATION_DB_URL")
     or os.getenv("DATABASE_URL")
@@ -835,7 +851,7 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     user = _get_current_user(request)
-    return templates.TemplateResponse(
+    return _render_template(
         request,
         "index.html",
         {
@@ -850,12 +866,12 @@ async def read_root(request: Request):
 async def admin_page(request: Request):
     user = _get_current_user(request)
     if not user:
-        return templates.TemplateResponse(
+        return _render_template(
             request,
             "admin.html",
             {"authenticated": False, "username": None, "is_admin": False},
         )
-    return templates.TemplateResponse(
+    return _render_template(
         request,
         "admin.html",
         {
