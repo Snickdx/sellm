@@ -1,3 +1,12 @@
+# ── Frontend build ─────────────────────────────────────────
+FROM node:22-bookworm-slim AS frontend
+
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 # ── Build stage: install deps ──────────────────────────────
 FROM python:3.12-slim-bookworm AS builder
 
@@ -30,7 +39,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
     EXCEL_FILE=/app/data.xlsx \
     CHROMA_PERSIST_DIRECTORY=/app/storage/chroma_db_v2 \
-    SCENARIOS_ROOT=/app/scenarios
+    SCENARIOS_ROOT=/app/scenarios \
+    STORAGE_RECORDINGS_DIR=/app/storage/recordings
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 \
@@ -40,8 +50,9 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
+COPY --from=frontend /frontend/dist /app/frontend/dist
 
-RUN mkdir -p storage \
+RUN mkdir -p storage storage/recordings \
     && python -m setup.chroma.init_chroma \
     && chmod +x docker/entrypoint.sh
 

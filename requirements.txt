@@ -19,3 +19,4 @@ neo4j==5.14.0
 cryptography==41.0.7
 httpx==0.28.1
 PyYAML>=6.0.2
+python-jose[cryptography]==3.3.0

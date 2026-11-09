@@ -27,3 +27,14 @@ data/
 
 # Optional Neo4j local dump artifacts
 *.dump
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+tests/_recordings/
+tests/_test_conversations.db
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/

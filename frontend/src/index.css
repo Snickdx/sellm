@@ -1,0 +1,400 @@
+:root {
+  --bg: #f3efe6;
+  --bg-accent: #e4ddd0;
+  --ink: #1c241c;
+  --muted: #5a6458;
+  --panel: rgba(255, 252, 246, 0.92);
+  --line: #c9c0b0;
+  --accent: #2f5d50;
+  --accent-ink: #f7f3ea;
+  --danger: #8a2f2f;
+  --shadow: 0 18px 40px rgba(40, 48, 36, 0.08);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  line-height: 1.5;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, #dfe8df 0%, transparent 40%),
+    linear-gradient(160deg, #f7f3ea 0%, #e7e0d2 55%, #d9e2d8 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--accent);
+}
+
+code {
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+  background: var(--bg-accent);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+.page,
+.auth-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+}
+
+.auth-shell {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.auth-panel,
+.panel {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  border-radius: 18px;
+  padding: 1.5rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0 0 0.35rem;
+}
+
+h1,
+h2 {
+  font-family: "Fraunces", "Times New Roman", serif;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.lede {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.user-meta {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  color: var(--muted);
+}
+
+.mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin: 1.25rem 0;
+}
+
+.mode-toggle button,
+button,
+.ghost {
+  font: inherit;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--ink);
+  padding: 0.65rem 0.9rem;
+  cursor: pointer;
+}
+
+.mode-toggle button.active,
+button[type='submit'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.ghost {
+  background: transparent;
+}
+
+.auth-form,
+.inline-form {
+  display: grid;
+  gap: 0.85rem;
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+input {
+  font: inherit;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.inline-form {
+  grid-template-columns: 1fr auto;
+}
+
+.error {
+  color: var(--danger);
+  margin: 0;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.team-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.team-list li {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.panel + .panel {
+  margin-top: 1rem;
+}
+
+.persona-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.persona-card {
+  display: grid;
+  gap: 0.35rem;
+  text-align: left;
+  min-height: 5.5rem;
+}
+
+.persona-card span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.interview-layout {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.session-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.session-list button {
+  width: 100%;
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+}
+
+.session-list button span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.session-list button.active {
+  border-color: var(--accent);
+  background: #e7f0ec;
+}
+
+.export-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.chat-log {
+  display: grid;
+  gap: 0.75rem;
+  max-height: 50vh;
+  overflow: auto;
+  padding-right: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.bubble {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 0.75rem 0.9rem;
+  background: #fff;
+}
+
+.bubble.student {
+  border-color: #b7c7bf;
+  background: #f3f7f5;
+}
+
+.bubble.persona {
+  background: #fffaf2;
+}
+
+.bubble.streaming {
+  opacity: 0.85;
+}
+
+.bubble header {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.bubble footer {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.chat-compose {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.chat-compose textarea {
+  font: inherit;
+  padding: 0.75rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  resize: vertical;
+  min-height: 5rem;
+}
+
+.draft-review {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.draft-review h3 {
+  margin: 0 0 0.35rem;
+}
+
+.file-label {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.45rem 0.75rem;
+}
+
+.review-metrics {
+  margin-top: 0.75rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.review-metrics ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--ink);
+}
+
+.recording-banner {
+  margin: 0.5rem 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  background: #f8e8e8;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.team-actions {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.code-excerpt {
+  margin: 0.35rem 0 0;
+  padding: 0.65rem 0.75rem;
+  background: #1d241f;
+  color: #e8efe9;
+  border-radius: 10px;
+  overflow: auto;
+  font-size: 0.82rem;
+  font-family: "IBM Plex Mono", "Consolas", monospace;
+}
+
+.check-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.35rem 0;
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+}
+
+select {
+  font: inherit;
+  padding: 0.7rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .topbar,
+  .inline-form {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .user-meta {
+    flex-wrap: wrap;
+  }
+
+  .interview-layout {
+    grid-template-columns: 1fr;
+  }
+}

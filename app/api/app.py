@@ -38,7 +38,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -78,9 +78,16 @@ from app.seproject.seed import seed_scenarios
 from app.seproject.scenarios.registry import scenario_registry
 from app.seproject.chat.persona_service import generate_validated_reply, get_persona
 from app.seproject.api.scenarios import router as scenarios_router
+from app.seproject.api.teams import router as teams_router
+from app.seproject.api.repositories import router as repositories_router
+from app.seproject.api.exit_interviews import router as exit_interviews_router
+from app.seproject.api.voice import router as voice_router
+from app.seproject.api.policy import router as policy_router
 from app.seproject.indexing import index_all_scenarios
 from app.seproject.scenario_pack_adapter import pack_from_persona
 from app.seproject.db_models import Scenario, ScenarioPersona, ScenarioFact, RequirementsSession, Message  # noqa: F401
+from app.seproject import exit_models as _exit_models  # noqa: F401 — register SQLModel tables
+from app.seproject.db import configure_engine as configure_seproject_engine
 from sqlmodel import SQLModel as _SESQLModel
 from app.llm_registry import (
     choice_label,
@@ -150,8 +157,10 @@ async def _app_lifespan(_app: FastAPI):
         print(f"✓ Seeded users: {', '.join(created)}")
     roles = {u.username: getattr(u, "role", None) for u in conversation_store.list_users() if u.username in ("nick", "wayne", "claudine", "snick")}
     print(f"✓ Roles ready: {roles}")
-    # Ensure YAML scenario tables exist on the shared conversation DB engine
+    # Ensure YAML scenario + exit-interview tables exist on the shared conversation DB engine
+    configure_seproject_engine(conversation_store.engine)
     _SESQLModel.metadata.create_all(conversation_store.engine)
+    Path(os.getenv("STORAGE_RECORDINGS_DIR", "./storage/recordings")).mkdir(parents=True, exist_ok=True)
     seed_info = seed_scenarios(engine=conversation_store.engine)
     print(
         f"✓ YAML scenarios loaded: {seed_info['loaded']} "
@@ -216,6 +225,11 @@ app.add_middleware(
 )
 app.include_router(scenarios_router)
 app.include_router(admin_router)
+app.include_router(teams_router, prefix="/api")
+app.include_router(repositories_router, prefix="/api")
+app.include_router(exit_interviews_router, prefix="/api")
+app.include_router(voice_router, prefix="/api")
+app.include_router(policy_router, prefix="/api")
 
 excel_file = os.getenv("EXCEL_FILE", "data.xlsx")
 print(f"Using Excel file: {excel_file}")
@@ -1629,4 +1643,37 @@ async def feedback(request: FeedbackRequest, req: Request):
 
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Exit-interview React SPA (built with vite base=/course/)
+COURSE_DIST = _PROJECT_ROOT / "frontend" / "dist"
+COURSE_ASSETS = COURSE_DIST / "assets"
+if COURSE_ASSETS.is_dir():
+    app.mount("/course/assets", StaticFiles(directory=str(COURSE_ASSETS)), name="course-assets")
+
+
+@app.get("/course")
+async def course_root_redirect():
+    return RedirectResponse(url="/course/")
+
+
+@app.get("/course/")
+@app.get("/course/{full_path:path}")
+async def course_spa(full_path: str = ""):
+    if not COURSE_DIST.is_dir():
+        raise HTTPException(
+            status_code=404,
+            detail="Course SPA not built. Run: cd frontend && npm ci && npm run build",
+        )
+    if full_path:
+        candidate = (COURSE_DIST / full_path).resolve()
+        try:
+            candidate.relative_to(COURSE_DIST.resolve())
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail="Not found") from exc
+        if candidate.is_file():
+            return FileResponse(candidate)
+    index = COURSE_DIST / "index.html"
+    if not index.is_file():
+        raise HTTPException(status_code=404, detail="Course SPA index missing")
+    return FileResponse(index)
 
