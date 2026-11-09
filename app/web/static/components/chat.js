@@ -69,6 +69,9 @@
   // ── Auth state ──────────────────────────────────────────────
   let authToken = localStorage.getItem("auth_token");
   let currentUser = null;
+  let isAdmin = false;
+  let userRole = "student";
+  let canSelectModeModel = false;
   let userApiKeys = {};
   let quotaState = {
     token_limit: null,
@@ -94,14 +97,50 @@
     if (!authToken) return false;
     try {
       const r = await fetch("/api/auth/me", { headers: authHeaders() });
-      if (!r.ok) { setAuth(null, null); return false; }
+      if (!r.ok) { setAuth(null, null); isAdmin = false; return false; }
       const data = await r.json();
       currentUser = data.username;
+      applyRoleState(data);
+      applyUserDefaults(data);
+      updateAdminLink();
+      updateModeModelVisibility();
       return true;
     } catch {
       setAuth(null, null);
+      isAdmin = false;
+      userRole = "student";
+      canSelectModeModel = false;
+      updateAdminLink();
+      updateModeModelVisibility();
       return false;
     }
+  }
+
+  function applyRoleState(data) {
+    if (!data || typeof data !== "object") return;
+    isAdmin = Boolean(data.is_admin);
+    userRole = data.role || (isAdmin ? "admin" : "student");
+    canSelectModeModel = data.can_select_mode_model != null
+      ? Boolean(data.can_select_mode_model)
+      : (userRole === "admin" || userRole === "tester");
+  }
+
+  function updateAdminLink() {
+    const link = document.getElementById("adminLink");
+    if (!link) return;
+    if (isAdmin) {
+      link.hidden = false;
+      link.style.display = "inline-flex";
+    } else {
+      link.hidden = true;
+      link.style.display = "none";
+    }
+  }
+
+  function updateModeModelVisibility() {
+    const modeField = document.getElementById("responseModeField");
+    if (modeField) modeField.classList.toggle("hidden", !canSelectModeModel);
+    if (!canSelectModeModel && llmModelRow) llmModelRow.classList.add("hidden");
   }
 
   // ── DOM refs ────────────────────────────────────────────────
@@ -117,6 +156,7 @@
   const chatInput = document.getElementById("chatInput");
   const sendButton = document.getElementById("sendButton");
   const responseMode = document.getElementById("responseMode");
+  const responseModeField = document.getElementById("responseModeField");
   const personaSelect = document.getElementById("personaSelect");
   const personaField = document.getElementById("personaField");
   const scenarioLockedLabel = document.getElementById("scenarioLockedLabel");
@@ -129,6 +169,25 @@
   const llmModelHint = document.getElementById("llmModelHint");
   const LLM_CHOICE_STORAGE_KEY = "sellm_llm_choice";
   let selectedLlmChoice = null;
+
+  function applyUserDefaults(data) {
+    if (!data || typeof data !== "object") return;
+    const mode = data.default_response_mode;
+    if (mode && responseMode && [...responseMode.options].some((o) => o.value === mode)) {
+      responseMode.value = mode;
+    }
+    if (data.default_llm_choice) {
+      selectedLlmChoice = data.default_llm_choice;
+      if (canSelectModeModel) {
+        try {
+          localStorage.setItem(LLM_CHOICE_STORAGE_KEY, data.default_llm_choice);
+        } catch (_) {
+          /* ignore */
+        }
+      }
+    }
+    updateModeModelVisibility();
+  }
   let yamlScenarios = [];
   let lockedScenarioSlug = null;
   const conversationList = document.getElementById("conversationList");
@@ -291,6 +350,7 @@
 
   function showApp() {
     if (loginOverlay) loginOverlay.classList.add("hidden");
+    updateAdminLink();
   }
 
   function isMobileNav() {
@@ -409,7 +469,9 @@
         return;
       }
       setAuth(data.token, data.username);
+      applyRoleState(data);
       applyQuotaState(data);
+      applyUserDefaults(data);
       showApp();
       await loadUserConfig();
       await refreshQuotaFromMe();
@@ -690,11 +752,24 @@
       if (reflectionRow) {
         reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
       }
+      if (config.role != null || config.can_select_mode_model != null || config.is_admin != null) {
+        applyRoleState(config);
+        updateAdminLink();
+      }
+      if (config.default_response_mode && responseMode) {
+        const mode = config.default_response_mode;
+        if ([...responseMode.options].some((o) => o.value === mode)) {
+          responseMode.value = mode;
+        }
+      }
+      if (config.default_llm_choice) selectedLlmChoice = config.default_llm_choice;
+      updateModeModelVisibility();
       populateLlmModelSelect(config);
     } catch {
       tweakModeEnabled = false;
       if (reflectionRow) reflectionRow.style.display = "none";
       if (llmModelRow) llmModelRow.classList.add("hidden");
+      if (responseModeField) responseModeField.classList.add("hidden");
     }
   }
 
@@ -728,10 +803,10 @@
   function populateLlmModelSelect(config) {
     if (!llmModelSelect || !llmModelRow) return;
     const choices = Array.isArray(config.llm_choices) ? config.llm_choices : [];
-    const enabled = Boolean(config.llm_model_switcher_enabled);
+    const enabled = canSelectModeModel && Boolean(config.llm_model_switcher_enabled);
     llmModelRow.classList.toggle("hidden", !enabled);
     if (!enabled) {
-      selectedLlmChoice = config.llm_default_choice || null;
+      selectedLlmChoice = config.llm_default_choice || config.default_llm_choice || selectedLlmChoice || null;
       return;
     }
     const saved = localStorage.getItem(LLM_CHOICE_STORAGE_KEY);
@@ -954,17 +1029,103 @@
   }
 
   // ── Conversations ───────────────────────────────────────────
+  function parseMessageDate(raw) {
+    if (!raw) return null;
+    try {
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? null : d;
+    } catch {
+      return null;
+    }
+  }
+
+  function dayKey(date) {
+    if (!date) return "";
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  function startOfLocalDay(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  function formatDayLabel(date) {
+    if (!date) return "";
+    const today = startOfLocalDay(new Date());
+    const target = startOfLocalDay(date);
+    const diffDays = Math.round((today.getTime() - target.getTime()) / 86400000);
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays > 1 && diffDays < 7) {
+      return date.toLocaleDateString(undefined, { weekday: "long" });
+    }
+    return date.toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
+    });
+  }
+
+  function formatMessageTime(raw) {
+    const d = parseMessageDate(raw);
+    if (!d) return "";
+    // Day comes from separators; bubbles only need clock time.
+    return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function formatConversationWhen(raw) {
+    const d = parseMessageDate(raw);
+    if (!d) return "";
+    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function formatElapsedMs(ms) {
+    if (ms == null || !Number.isFinite(ms) || ms < 0) return "";
+    if (ms < 1000) return `${Math.max(0, Math.round(ms))}ms`;
+    const seconds = ms / 1000;
+    if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const rem = Math.round(seconds % 60);
+    return `${minutes}m ${rem}s`;
+  }
+
+  function elapsedBetween(startIso, endIso) {
+    if (!startIso || !endIso) return null;
+    const a = new Date(startIso).getTime();
+    const b = new Date(endIso).getTime();
+    if (Number.isNaN(a) || Number.isNaN(b) || b < a) return null;
+    return b - a;
+  }
+
+  function lastChatDayKey() {
+    if (!chatMessages) return "";
+    const separators = chatMessages.querySelectorAll(".day-separator[data-day]");
+    if (!separators.length) return "";
+    return separators[separators.length - 1].dataset.day || "";
+  }
+
+  function ensureDaySeparator(raw) {
+    const d = parseMessageDate(raw) || new Date();
+    const key = dayKey(d);
+    if (!key || lastChatDayKey() === key) return;
+    const sep = document.createElement("div");
+    sep.className = "day-separator";
+    sep.dataset.day = key;
+    sep.setAttribute("role", "separator");
+    sep.setAttribute("aria-label", formatDayLabel(d));
+    const label = document.createElement("span");
+    label.textContent = formatDayLabel(d);
+    sep.appendChild(label);
+    chatMessages.appendChild(sep);
+  }
+
   function formatConversationMeta(c) {
     let when = "";
     const raw = c.updated_at || c.created_at;
-    if (raw) {
-      try {
-        const d = new Date(raw);
-        if (!Number.isNaN(d.getTime())) {
-          when = d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-        }
-      } catch { /* ignore */ }
-    }
+    if (raw) when = formatConversationWhen(raw);
     const scen = c.scenario_slug ? scenarioDisplayName(c.scenario_slug) : "";
     if (scen && when) return `${scen} · ${when}`;
     return scen || when;
@@ -1056,7 +1217,18 @@
       if (!data.messages?.length) {
         chatMessages.innerHTML = `<div class="message assistant"><div class="message-content">${WELCOME_HTML}</div></div>`;
       } else {
-        data.messages.forEach((m) => { addMessage(m.role, m.content, null, null, null); conversationHistory.push({ role: m.role, content: m.content }); });
+        data.messages.forEach((m, i) => {
+          let responseMs = null;
+          if (m.role === "assistant" && i > 0) {
+            const prev = data.messages[i - 1];
+            if (prev?.role === "user") responseMs = elapsedBetween(prev.created_at, m.created_at);
+          }
+          addMessage(m.role, m.content, null, m.mode_used || null, {
+            createdAt: m.created_at || null,
+            responseMs,
+          });
+          conversationHistory.push({ role: m.role, content: m.content });
+        });
       }
       syncListSelection();
       await loadReflectionThreadsForConversation(currentConversationId);
@@ -1098,7 +1270,37 @@
     return `${modeUsed}${llmPart}`;
   }
 
+  let typingElapsedTimer = null;
+
+  function appendMessageMeta(cd, role, meta) {
+    const when = formatMessageTime(meta?.createdAt);
+    const elapsedLabel = role === "assistant" ? formatElapsedMs(meta?.responseMs) : "";
+    if (!when && !elapsedLabel) return;
+    const row = document.createElement("div");
+    row.className = "message-meta";
+    if (when) {
+      const timeEl = document.createElement("span");
+      timeEl.className = "timestamp";
+      timeEl.textContent = when;
+      if (meta?.createdAt) {
+        try {
+          timeEl.title = new Date(meta.createdAt).toLocaleString();
+        } catch { /* ignore */ }
+      }
+      row.appendChild(timeEl);
+    }
+    if (elapsedLabel) {
+      const elapsedEl = document.createElement("span");
+      elapsedEl.className = "elapsed";
+      elapsedEl.textContent = elapsedLabel;
+      elapsedEl.title = "Time to generate this response";
+      row.appendChild(elapsedEl);
+    }
+    cd.appendChild(row);
+  }
+
   function addMessage(role, content, sources = null, modeUsed = null, meta = null) {
+    ensureDaySeparator(meta?.createdAt || new Date().toISOString());
     const div = document.createElement("div");
     div.className = `message ${role}`;
     const cd = document.createElement("div");
@@ -1127,35 +1329,60 @@
       row.appendChild(up); row.appendChild(down); row.appendChild(note);
       cd.appendChild(row);
     }
+    appendMessageMeta(cd, role, meta);
     div.appendChild(cd);
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  function addTypingIndicator() {
+  function addTypingIndicator(startedAt = performance.now()) {
+    removeTypingIndicator();
     const div = document.createElement("div");
     div.className = "message assistant";
     div.id = "typingIndicator";
     const cd = document.createElement("div");
     cd.className = "message-content";
     cd.innerHTML = '<div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+    const meta = document.createElement("div");
+    meta.className = "message-meta";
+    const elapsedEl = document.createElement("span");
+    elapsedEl.className = "elapsed";
+    elapsedEl.id = "typingElapsed";
+    elapsedEl.textContent = "0.0s";
+    elapsedEl.title = "Elapsed while waiting for a response";
+    meta.appendChild(elapsedEl);
+    cd.appendChild(meta);
     div.appendChild(cd);
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    typingElapsedTimer = setInterval(() => {
+      const el = document.getElementById("typingElapsed");
+      if (!el) return;
+      el.textContent = formatElapsedMs(performance.now() - startedAt) || "0.0s";
+    }, 100);
   }
 
-  function removeTypingIndicator() { const el = document.getElementById("typingIndicator"); if (el) el.remove(); }
+  function removeTypingIndicator() {
+    if (typingElapsedTimer) {
+      clearInterval(typingElapsedTimer);
+      typingElapsedTimer = null;
+    }
+    const el = document.getElementById("typingIndicator");
+    if (el) el.remove();
+  }
 
   async function sendMessage(message) {
     if (!currentConversationId || !lockedScenarioSlug) {
       openNewChatModal();
       return;
     }
-    addMessage("user", message);
+    const sentAt = new Date().toISOString();
+    addMessage("user", message, null, null, { createdAt: sentAt });
     conversationHistory.push({ role: "user", content: message });
     chatInput.value = "";
     sendButton.disabled = true;
-    addTypingIndicator();
+    const startedAt = performance.now();
+    addTypingIndicator(startedAt);
     try {
       const r = await fetch("/api/chat", {
         method: "POST",
@@ -1188,6 +1415,8 @@
         throw new Error(detail);
       }
       const data = await r.json();
+      // Use client wait so the final label matches the live typing timer.
+      const responseMs = performance.now() - startedAt;
       removeTypingIndicator();
       applyQuotaState(data);
       addMessage("assistant", data.response, null, data.mode_used || null, {
@@ -1197,12 +1426,17 @@
         routing: data.routing || null,
         billing: data.billing || null,
         llm_used: data.llm_used || null,
+        createdAt: new Date().toISOString(),
+        responseMs,
       });
       conversationHistory.push({ role: "assistant", content: data.response });
       if (data.conversation_id) { currentConversationId = data.conversation_id; await loadConversations(); await loadReflectionThreadsForConversation(currentConversationId); }
     } catch (e) {
       removeTypingIndicator();
-      addMessage("assistant", e?.message || "Sorry, I encountered an error. Please try again.");
+      addMessage("assistant", e?.message || "Sorry, I encountered an error. Please try again.", null, null, {
+        createdAt: new Date().toISOString(),
+        responseMs: performance.now() - startedAt,
+      });
       console.error(e);
     }
     finally { sendButton.disabled = false; chatInput.focus(); }

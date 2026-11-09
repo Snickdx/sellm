@@ -241,11 +241,21 @@ class RequirementsRAGNeo4j:
                     brief=package.meta.brief or "",
                 )
                 for persona in package.personas:
+                    system_role = (
+                        persona.system_role.value
+                        if getattr(persona, "system_role", None) is not None
+                        and hasattr(persona.system_role, "value")
+                        else (str(persona.system_role) if getattr(persona, "system_role", None) else "")
+                    )
+                    admin_capabilities = list(getattr(persona, "admin_capabilities", None) or [])
                     session.run(
                         """
                         MATCH (s:YamlScenario {slug: $slug, version: $version})
                         MERGE (p:YamlPersona {key: $key, scenario_slug: $slug, scenario_version: $version})
-                        SET p.display_name = $display_name, p.role = $role
+                        SET p.display_name = $display_name,
+                            p.role = $role,
+                            p.system_role = $system_role,
+                            p.admin_capabilities = $admin_capabilities
                         MERGE (s)-[:HAS_PERSONA]->(p)
                         """,
                         slug=package.meta.slug,
@@ -253,6 +263,8 @@ class RequirementsRAGNeo4j:
                         key=persona.id,
                         display_name=persona.display_name,
                         role=persona.role,
+                        system_role=system_role,
+                        admin_capabilities=admin_capabilities,
                     )
                     for fact in facts_for_persona(package, persona.id, include_never_student=False):
                         node_id = f"yaml:{package.meta.slug}:{fact.id}"

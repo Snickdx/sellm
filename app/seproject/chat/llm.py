@@ -168,6 +168,12 @@ class OpenAILLMProvider:
                 "id": persona.get("id"),
                 "display_name": persona.get("display_name"),
                 "role": persona.get("role"),
+                "system_role": (
+                    persona.get("system_role").value
+                    if hasattr(persona.get("system_role"), "value")
+                    else persona.get("system_role")
+                ),
+                "admin_capabilities": persona.get("admin_capabilities") or [],
                 "priorities": persona.get("priorities"),
                 "communication_style": persona.get("communication_style"),
                 "uncertainty_policy": persona.get("uncertainty_policy"),

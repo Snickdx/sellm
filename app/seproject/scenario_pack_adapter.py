@@ -44,12 +44,24 @@ def pack_from_persona(package: ScenarioPackage, persona_key: str) -> YamlScenari
     for fact in facts:
         by_category.setdefault(fact.category or "knowledge", []).append(f"- {fact.statement}")
     sections = {cat: "\n".join(lines) for cat, lines in sorted(by_category.items())}
-    sections["Persona"] = (
-        f"Name: {persona.display_name}\n"
-        f"Role: {persona.role}\n"
-        f"Style: {persona.communication_style}\n"
-        f"Uncertainty: {persona.uncertainty_policy}"
+    system_role = (
+        persona.system_role.value
+        if getattr(persona, "system_role", None) is not None and hasattr(persona.system_role, "value")
+        else (str(persona.system_role) if getattr(persona, "system_role", None) else "")
     )
+    caps = getattr(persona, "admin_capabilities", None) or []
+    caps_line = ", ".join(caps) if caps else ""
+    persona_lines = [
+        f"Name: {persona.display_name}",
+        f"Role: {persona.role}",
+        f"Style: {persona.communication_style}",
+        f"Uncertainty: {persona.uncertainty_policy}",
+    ]
+    if system_role:
+        persona_lines.insert(2, f"System role: {system_role}")
+    if caps_line:
+        persona_lines.insert(3 if system_role else 2, f"Admin capabilities: {caps_line}")
+    sections["Persona"] = "\n".join(persona_lines)
     return YamlScenarioPack(
         title=package.meta.title,
         slug=package.meta.slug,

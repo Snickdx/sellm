@@ -10,6 +10,7 @@ except ImportError:
 
 import json
 import os
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -39,7 +40,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-import jinja2
 from fastapi.templating import Jinja2Templates
 
 from app.api.schemas import (
@@ -63,7 +63,15 @@ from app.api.schemas import (
     UserConfigProviderSet,
     UserConfigSetRequest,
 )
-from app.storage.conversation_store import ConversationStore, User
+from app.api.admin import router as admin_router
+from app.storage.conversation_store import (
+    ROLE_ADMIN,
+    ROLE_STUDENT,
+    ROLE_TESTER,
+    ConversationStore,
+    User,
+    normalize_role,
+)
 from app.tweaks.behavior_tweaks import BehaviorTweaksStore
 from app.llm_wrapper import LLMWrapper
 from app.seproject.seed import seed_scenarios
@@ -137,7 +145,11 @@ async def _app_lifespan(_app: FastAPI):
         hybrid_top_k=hybrid_top_k,
         hybrid_route_margin=hybrid_route_margin,
     )
-    conversation_store.seed_users()
+    created = conversation_store.seed_users()
+    if created:
+        print(f"✓ Seeded users: {', '.join(created)}")
+    roles = {u.username: getattr(u, "role", None) for u in conversation_store.list_users() if u.username in ("nick", "wayne", "claudine", "snick")}
+    print(f"✓ Roles ready: {roles}")
     # Ensure YAML scenario tables exist on the shared conversation DB engine
     _SESQLModel.metadata.create_all(conversation_store.engine)
     seed_info = seed_scenarios(engine=conversation_store.engine)
@@ -163,16 +175,16 @@ app = FastAPI(title="Requirements Chatbot API", lifespan=_app_lifespan)
 WEB_DIR = APP_DIR / "web"
 TEMPLATES_DIR = WEB_DIR / "templates"
 STATIC_DIR = WEB_DIR / "static"
-templates = Jinja2Templates(
-    directory=str(TEMPLATES_DIR),
-    autoescape=jinja2.select_autoescape(["html", "xml"]),
-)
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 conversation_store = ConversationStore(
     os.getenv("CONVERSATION_DB_URL")
     or os.getenv("DATABASE_URL")
     or "sqlite:///./storage/conversations.db"
 )
 conversation_store.init()
+app.state.conversation_store = conversation_store
+app.state.get_current_user = _get_current_user
+app.state.rag_systems = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -182,6 +194,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(scenarios_router)
+app.include_router(admin_router)
 
 excel_file = os.getenv("EXCEL_FILE", "data.xlsx")
 print(f"Using Excel file: {excel_file}")
@@ -193,6 +206,7 @@ neo4j_password = os.getenv("NEO4J_PASSWORD", "password")
 rag_systems: Dict[str, Optional[object]] = {"vector": None, "neo4j": None}
 engine_status: Dict[str, str] = {"vector": "not_initialized", "neo4j": "not_initialized"}
 _rag_backend = os.getenv("RAG_BACKEND", "chromadb").lower()
+app.state.rag_systems = rag_systems
 
 if _rag_backend in ("chromadb", "vector", "hybrid", "compare"):
     try:
@@ -281,15 +295,39 @@ def _user_api_overrides(user: Optional[User]) -> dict:
             providers[cfg.provider.lower()] = {
                 "api_key": decrypt_secret(cfg.api_key),
                 "base_url": cfg.base_url,
+                "scope": "user",
             }
     return {"user_providers": providers}
 
 
+def _app_api_overrides() -> dict:
+    """Return shared platform provider keys available to all users."""
+    providers = {}
+    for cfg in conversation_store.get_all_app_api_configs():
+        if cfg.api_key and cfg.provider:
+            plain = decrypt_secret(cfg.api_key)
+            if plain:
+                providers[cfg.provider.lower()] = {
+                    "api_key": plain,
+                    "base_url": cfg.base_url,
+                    "scope": "app",
+                }
+    return {"app_providers": providers}
+
+
+def _merged_providers_for_user(user: Optional[User]) -> dict:
+    """User BYOK wins over app-wide keys for the same provider."""
+    merged = {}
+    merged.update(_app_api_overrides().get("app_providers", {}))
+    if user:
+        merged.update(_user_api_overrides(user).get("user_providers", {}))
+    return merged
+
+
 def _get_user_provider_override(user: Optional[User], backend: str) -> dict:
-    """Get the override for a specific backend from user's stored configs."""
-    overrides = _user_api_overrides(user)
-    providers = overrides.get("user_providers", {})
-    info = providers.get(backend.lower())
+    """Get the override for a specific backend from user BYOK or app-wide keys."""
+    providers = _merged_providers_for_user(user)
+    info = providers.get((backend or "").lower())
     if info and info.get("api_key"):
         return {
             "provider_override": backend,
@@ -298,6 +336,58 @@ def _get_user_provider_override(user: Optional[User], backend: str) -> dict:
         }
     return {}
 
+def _user_role(user: Optional[User]) -> str:
+    if not user:
+        return ROLE_STUDENT
+    return normalize_role(getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False)))
+
+
+def _can_select_mode_model(user: Optional[User]) -> bool:
+    """Students cannot pick mode/model; testers and admins can."""
+    return _user_role(user) in (ROLE_ADMIN, ROLE_TESTER)
+
+
+def _effective_defaults(user: Optional[User]) -> dict:
+    """Resolve response mode / LLM choice defaults.
+
+    Students always use admin-configured student_* defaults (role-wide).
+    Testers/admins: per-user override → app default → env.
+    """
+    settings = conversation_store.get_app_settings()
+    app_mode = (settings.default_response_mode or "vector").strip() or "vector"
+    app_llm = (settings.default_llm_choice or "").strip() or None
+    student_mode = (
+        getattr(settings, "student_default_response_mode", None) or app_mode or "vector"
+    ).strip() or "vector"
+    student_llm = (getattr(settings, "student_default_llm_choice", None) or "").strip() or None
+    role = _user_role(user)
+    user_mode = (getattr(user, "default_response_mode", None) or "").strip() or None if user else None
+    user_llm = (getattr(user, "default_llm_choice", None) or "").strip() or None if user else None
+    if role == ROLE_STUDENT:
+        return {
+            "default_response_mode": student_mode,
+            "default_llm_choice": student_llm or app_llm or default_choice_id(),
+            "app_default_response_mode": app_mode,
+            "app_default_llm_choice": app_llm,
+            "student_default_response_mode": student_mode,
+            "student_default_llm_choice": student_llm,
+            "user_default_response_mode": None,
+            "user_default_llm_choice": None,
+            "role": role,
+            "can_select_mode_model": False,
+        }
+    return {
+        "default_response_mode": user_mode or app_mode,
+        "default_llm_choice": user_llm or app_llm or default_choice_id(),
+        "app_default_response_mode": app_mode,
+        "app_default_llm_choice": app_llm,
+        "student_default_response_mode": student_mode,
+        "student_default_llm_choice": student_llm,
+        "user_default_response_mode": user_mode,
+        "user_default_llm_choice": user_llm,
+        "role": role,
+        "can_select_mode_model": True,
+    }
 
 def _rag_for_mode(mode: str):
     if mode == "neo4j":
@@ -316,16 +406,14 @@ def _llm_used_payload(choice_id: str, user_provider: str = "") -> Dict[str, str]
 
 
 def _require_stakeholder_llm(user: Optional[User]) -> None:
-    providers = _user_api_overrides(user).get("user_providers", {})
+    providers = _merged_providers_for_user(user)
     if not stakeholder_llm_available(providers):
         raise ValueError(STAKEHOLDER_LLM_REQUIRED_MSG)
 
 
 def _user_llm_provider(user: Optional[User], llm_choice: Optional[str] = None) -> str:
-    """Provider name from user's stored API keys, matching llm_choice if given."""
-    if not user:
-        return ""
-    providers = _user_api_overrides(user).get("user_providers", {})
+    """Provider name from user BYOK or app-wide keys, matching llm_choice if given."""
+    providers = _merged_providers_for_user(user)
     if llm_choice:
         hint, _ = parse_choice_id(llm_choice)
         if hint and hint in providers:
@@ -336,6 +424,27 @@ def _user_llm_provider(user: Optional[User], llm_choice: Optional[str] = None) -
     return ""
 
 
+def _available_llm_choice_ids(user: Optional[User]) -> set:
+    """All selectable choice ids from Ollama + user/app providers."""
+    ids: set = {c["id"] for c in list_llm_choices()}
+    for provider in _merged_providers_for_user(user):
+        for c in list_llm_choices(user_provider=provider):
+            ids.add(c["id"])
+    return ids
+
+
+def _resolve_choice_for_user(user: Optional[User], llm_choice: Optional[str]) -> str:
+    effective = _effective_defaults(user)
+    choice = (llm_choice or "").strip() or (effective.get("default_llm_choice") or "")
+    available = _available_llm_choice_ids(user)
+    if choice and choice in available:
+        return choice
+    fallback = effective.get("default_llm_choice") or default_choice_id()
+    if fallback in available:
+        return fallback
+    return default_choice_id()
+
+
 def _resolve_llm_for_user(
     user: Optional[User],
     llm_choice: Optional[str],
@@ -343,17 +452,16 @@ def _resolve_llm_for_user(
     mode: str = "vector",
 ) -> tuple:
     """Returns (llm, resolved_choice_id, user_override dict)."""
-    user_provider = _user_llm_provider(user, llm_choice)
-    resolved_choice = validate_choice_id(llm_choice, user_provider=user_provider)
+    resolved_choice = _resolve_choice_for_user(user, llm_choice)
     backend, _ = parse_choice_id(resolved_choice)
     user_override = _get_user_provider_override(user, backend or "")
+    providers = _merged_providers_for_user(user)
+    user_provider = backend if backend in providers else _user_llm_provider(user, resolved_choice)
     rag = _rag_for_mode(mode) or rag_systems.get("vector") or rag_systems.get("neo4j")
     if not rag:
         raise ValueError("No RAG engine available for LLM wrapper")
     llm = resolve_llm_wrapper(rag, resolved_choice, user_provider=user_provider)
     return llm, resolved_choice, user_override
-
-
 def _debug_chunks(results: Optional[List[Dict]]) -> List[Dict[str, Any]]:
     chunks: List[Dict[str, Any]] = []
     for item in (results or [])[:6]:
@@ -611,6 +719,16 @@ def _chat_quota_fields(user: User, billing: str) -> dict:
     }
 
 
+def _to_chat_message(m: Any) -> ChatMessage:
+    created = getattr(m, "created_at", None)
+    return ChatMessage(
+        role=m.role,
+        content=m.content,
+        created_at=created.isoformat() if created is not None else None,
+        mode_used=getattr(m, "mode_used", None),
+    )
+
+
 @app.post("/api/auth/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     user = conversation_store.get_user_by_credentials(request.username, request.password)
@@ -618,10 +736,18 @@ async def login(request: LoginRequest):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     token = conversation_store.create_session(user.id)
     quota = _token_quota_payload(user)
+    defaults = _effective_defaults(user)
+    role = defaults["role"]
     return LoginResponse(
         token=token,
         user_id=user.id,
         username=user.username,
+        is_admin=role == ROLE_ADMIN,
+        role=role,
+        can_select_mode_model=bool(defaults["can_select_mode_model"]),
+        group_name=getattr(user, "group_name", None),
+        default_response_mode=defaults["default_response_mode"],
+        default_llm_choice=defaults["default_llm_choice"],
         token_limit=quota["token_limit"],
         tokens_used=quota["tokens_used"],
         tokens_remaining=quota["tokens_remaining"],
@@ -642,13 +768,24 @@ async def me(request: Request):
     user = _get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    defaults = _effective_defaults(user)
+    role = defaults["role"]
     return {
         "user_id": user.id,
         "username": user.username,
+        "is_admin": role == ROLE_ADMIN,
+        "role": role,
+        "can_select_mode_model": bool(defaults["can_select_mode_model"]),
+        "group_name": getattr(user, "group_name", None),
+        "default_response_mode": defaults["default_response_mode"],
+        "default_llm_choice": defaults["default_llm_choice"],
+        "app_default_response_mode": defaults["app_default_response_mode"],
+        "app_default_llm_choice": defaults["app_default_llm_choice"],
+        "student_default_response_mode": defaults.get("student_default_response_mode"),
+        "student_default_llm_choice": defaults.get("student_default_llm_choice"),
         **_token_quota_payload(user),
         "byok_hint": BYOK_REQUIRED_MSG if _quota_exhausted(user) and not _user_has_byok(user) else None,
     }
-
 # ── User API config ───────────────────────────────────────────
 
 @app.get("/api/user/config", response_model=UserConfigGetResponse)
@@ -699,11 +836,32 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
 async def read_root(request: Request):
     user = _get_current_user(request)
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "authenticated": user is not None,
             "username": user.username if user else None,
+            "is_admin": bool(getattr(user, "is_admin", False)) if user else False,
+        },
+    )
+
+
+@app.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request):
+    user = _get_current_user(request)
+    if not user:
+        return templates.TemplateResponse(
+            request,
+            "admin.html",
+            {"authenticated": False, "username": None, "is_admin": False},
+        )
+    return templates.TemplateResponse(
+        request,
+        "admin.html",
+        {
+            "authenticated": True,
+            "username": user.username,
+            "is_admin": bool(getattr(user, "is_admin", False)),
         },
     )
 
@@ -714,10 +872,28 @@ async def chat(request: ChatRequest, req: Request):
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
+        started = time.perf_counter()
+
+        def _chat_out(**kwargs: Any) -> ChatResponse:
+            return ChatResponse(
+                response_ms=int((time.perf_counter() - started) * 1000),
+                **kwargs,
+            )
+
         billing = _resolve_quota_gate(user)
         # After platform quota is exhausted, require BYOK / local Ollama for LLM modes
         if billing == "byok" and not _user_has_byok(user) and not ollama_reachable():
             raise HTTPException(status_code=429, detail=BYOK_REQUIRED_MSG)
+
+        # Students cannot choose mode/model — always use admin student defaults
+        defaults = _effective_defaults(user)
+        forced_mode = None
+        forced_llm = None
+        if not defaults.get("can_select_mode_model"):
+            forced_mode = defaults.get("default_response_mode") or "vector"
+            forced_llm = defaults.get("default_llm_choice")
+            request.response_mode = forced_mode
+            request.llm_choice = forced_llm
 
         conversation_id = request.conversation_id
         if conversation_id:
@@ -737,11 +913,11 @@ async def chat(request: ChatRequest, req: Request):
         conversation_store.add_message(conversation_id=conversation_id, role="user", content=request.message, mode_used=None)
         stored_messages = conversation_store.get_messages(conversation_id)
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
-        mode = (request.response_mode or "vector").lower()
+        mode = (request.response_mode or forced_mode or "vector").lower()
         user_provider = _user_llm_provider(user, request.llm_choice)
         if billing == "byok" and not user_provider and ollama_reachable():
             user_provider = "ollama"
-        llm_choice = validate_choice_id(request.llm_choice, user_provider=user_provider)
+        llm_choice = _resolve_choice_for_user(user, request.llm_choice)
         # After quota exhaustion, prefer the user's configured cloud provider when no model picked
         if billing == "byok" and user_provider and user_provider != "ollama" and not (request.llm_choice or "").strip():
             for choice in list_llm_choices(user_provider=user_provider):
@@ -749,12 +925,11 @@ async def chat(request: ChatRequest, req: Request):
                 if cid.startswith(f"{user_provider}:") and choice.get("available", True):
                     llm_choice = cid
                     break
-        # Using a stored cloud key (even under quota) bills to BYOK and skips the shared pool
+        # Using a personal BYOK cloud key (even under quota) bills to BYOK; app-wide keys stay platform
         if billing == "platform" and user_provider and user_provider != "ollama":
-            override = _get_user_provider_override(user, user_provider)
-            if override.get("api_key_override"):
+            user_only = _user_api_overrides(user).get("user_providers", {})
+            if user_provider in user_only:
                 billing = "byok"
-
         debug_out: Optional[Dict[str, Any]] = None
         llm_payload = _llm_used_payload(llm_choice)
         # Scenario is locked on the conversation; persona may still change per turn
@@ -813,7 +988,7 @@ async def chat(request: ChatRequest, req: Request):
             if request.debug:
                 debug_out = {"compare": compare_debug}
             llm_payload = _llm_used_payload(resolved_choice or llm_choice)
-            return ChatResponse(
+            return _chat_out(
                 response=combined,
                 sources=None,
                 mode_used="compare",
@@ -834,7 +1009,7 @@ async def chat(request: ChatRequest, req: Request):
                 mode_used=mode_label,
             )
             _record_tokens_if_platform(user, billing=billing, prompt=request.message, response=response)
-            return ChatResponse(
+            return _chat_out(
                 response=response,
                 sources=None,
                 mode_used=mode_label,
@@ -856,7 +1031,7 @@ async def chat(request: ChatRequest, req: Request):
                 mode_used=mode_label,
             )
             _record_tokens_if_platform(user, billing=billing, prompt=request.message, response=response)
-            return ChatResponse(
+            return _chat_out(
                 response=response,
                 sources=None,
                 mode_used=mode_label,
@@ -904,7 +1079,7 @@ async def chat(request: ChatRequest, req: Request):
                 "handoff_suggestion": reply.handoff_suggestion,
                 "model_version": reply.model_version,
             }
-            return ChatResponse(
+            return _chat_out(
                 response=reply.answer,
                 sources=[{"fact_id": fid} for fid in reply.used_fact_ids] or None,
                 mode_used=mode_label,
@@ -932,7 +1107,7 @@ async def chat(request: ChatRequest, req: Request):
             mode_used=mode_label,
         )
         _record_tokens_if_platform(user, billing=billing, prompt=request.message, response=response)
-        return ChatResponse(
+        return _chat_out(
             response=response,
             sources=None,
             mode_used=mode_label,
@@ -1075,7 +1250,7 @@ async def get_conversation(conversation_id: str, request: Request):
         scenario_slug=getattr(convo, "scenario_slug", None),
         created_at=convo.created_at.isoformat(),
         updated_at=convo.updated_at.isoformat(),
-        messages=[ChatMessage(role=m.role, content=m.content) for m in messages],
+        messages=[_to_chat_message(m) for m in messages],
     )
 
 
@@ -1093,42 +1268,70 @@ async def config(request: Request = None):
         for mode, wrapper in active_wrappers.items()
     }
     user = _get_current_user(request) if request else None
-    user_overrides = _user_api_overrides(user) if user else {}
-    user_providers = user_overrides.get("user_providers", {})
-    user_provider_names = set(user_providers.keys())
+    user_providers = _user_api_overrides(user).get("user_providers", {}) if user else {}
+    app_providers = _app_api_overrides().get("app_providers", {})
+    merged_providers = _merged_providers_for_user(user)
+    provider_names = set(merged_providers.keys())
 
-    has_openai = "openai" in user_provider_names
-    has_anthropic = "anthropic" in user_provider_names
-    has_gemini = "gemini" in user_provider_names
-    has_groq = "groq" in user_provider_names
-    has_openrouter = "openrouter" in user_provider_names
+    has_openai = "openai" in provider_names
+    has_anthropic = "anthropic" in provider_names
+    has_gemini = "gemini" in provider_names
+    has_groq = "groq" in provider_names
+    has_openrouter = "openrouter" in provider_names
 
-    # Gather choices from all configured user providers
+    # Gather choices from Ollama + all configured user/app providers
     choices = list_llm_choices()  # base (Ollama)
     seen_ids = {c["id"] for c in choices}
     for p in ("openai", "anthropic", "gemini", "groq", "openrouter"):
-        if p in user_provider_names:
-            for c in list_llm_choices(user_provider=p):
-                if c["id"] not in seen_ids:
-                    seen_ids.add(c["id"])
-                    choices.append(c)
+        if p not in provider_names:
+            continue
+        scope = "user" if p in user_providers else "app"
+        for c in list_llm_choices(user_provider=p):
+            if c["id"] not in seen_ids:
+                seen_ids.add(c["id"])
+                labeled = dict(c)
+                if scope == "app":
+                    labeled["label"] = f"App · {c['label']}"
+                    labeled["key_scope"] = "app"
+                else:
+                    labeled["label"] = f"Your key · {c['label']}"
+                    labeled["key_scope"] = "user"
+                choices.append(labeled)
 
     switcher_on = (
         has_openai
         or has_anthropic
         or has_gemini
+        or has_groq
+        or has_openrouter
         or ollama_reachable()
         or len([c for c in choices if c["provider"] != "template"]) > 0
     )
+    defaults = _effective_defaults(user) if user else {
+        "default_response_mode": conversation_store.get_app_settings().default_response_mode or "vector",
+        "default_llm_choice": conversation_store.get_app_settings().default_llm_choice or default_choice_id(),
+        "app_default_response_mode": conversation_store.get_app_settings().default_response_mode or "vector",
+        "app_default_llm_choice": conversation_store.get_app_settings().default_llm_choice,
+        "role": ROLE_STUDENT,
+        "can_select_mode_model": False,
+    }
+    can_select = bool(defaults.get("can_select_mode_model")) if user else False
     return {
         "excel_file": excel_file,
         "neo4j_uri": neo4j_uri,
         "engines": engine_status,
         "llm_backend_env": llm_backend,
         "llm_model_env": llm_model,
-        "llm_default_choice": default_choice_id(),
-        "llm_choices": choices,
-        "llm_model_switcher_enabled": switcher_on and len(choices) > 1,
+        "llm_default_choice": defaults.get("default_llm_choice") or default_choice_id(),
+        "default_response_mode": defaults.get("default_response_mode") or "vector",
+        "app_default_response_mode": defaults.get("app_default_response_mode"),
+        "app_default_llm_choice": defaults.get("app_default_llm_choice"),
+        "student_default_response_mode": defaults.get("student_default_response_mode"),
+        "student_default_llm_choice": defaults.get("student_default_llm_choice"),
+        "llm_choices": choices if can_select else [],
+        "llm_model_switcher_enabled": can_select and switcher_on and len(choices) > 1,
+        "can_select_mode_model": can_select,
+        "role": defaults.get("role") or _user_role(user),
         "llm_providers": {
             "openai": has_openai,
             "anthropic": has_anthropic,
@@ -1137,6 +1340,7 @@ async def config(request: Request = None):
             "openrouter": has_openrouter,
             "ollama": ollama_reachable(),
         },
+        "app_key_providers": sorted(app_providers.keys()),
         "hybrid_top_k": hybrid_top_k,
         "hybrid_route_margin": hybrid_route_margin,
         "tweak_mode_enabled": tweak_mode_enabled,
@@ -1158,8 +1362,8 @@ async def config(request: Request = None):
         ),
         "chroma_persist_directory": chroma_persist_directory,
         "llm_runtime_by_mode": llm_runtime,
+        "is_admin": (_user_role(user) == ROLE_ADMIN) if user else False,
     }
-
 
 def _reflection_messages(req: ReflectionAnalyzeRequest) -> List[Dict]:
     if req.messages is not None and len(req.messages) > 0:
@@ -1185,7 +1389,7 @@ def _thread_to_detail(thread_id: str) -> ReflectionThreadDetail:
         latest_draft_json=thread.latest_draft_json,
         created_at=thread.created_at.isoformat(),
         updated_at=thread.updated_at.isoformat(),
-        messages=[ChatMessage(role=m.role, content=m.content) for m in messages],
+        messages=[_to_chat_message(m) for m in messages],
     )
 
 

@@ -59,8 +59,11 @@ def cmd_list(_: argparse.Namespace) -> int:
     for user in users:
         limit = getattr(user, "token_limit", None)
         used = getattr(user, "tokens_used", None)
+        role = getattr(user, "role", None) or ("admin" if getattr(user, "is_admin", False) else "student")
+        group = getattr(user, "group_name", None) or "-"
         print(
-            f"{user.id}\t{user.username}\tlimit={limit}\tused={used}\t{user.created_at.isoformat()}"
+            f"{user.id}\t{user.username}\t{role}\tgroup={group}\t"
+            f"limit={limit}\tused={used}\t{user.created_at.isoformat()}"
         )
     return 0
 
@@ -68,9 +71,29 @@ def cmd_list(_: argparse.Namespace) -> int:
 def cmd_add(args: argparse.Namespace) -> int:
     store = _store()
     before = {u.username for u in store.list_users()}
-    user = store.create_user(args.username, args.password)
+    user = store.create_user(
+        args.username,
+        args.password,
+        is_admin=bool(args.admin) if getattr(args, "admin", False) else None,
+        group_name=getattr(args, "group", None),
+    )
     action = "Updated" if user.username in before else "Created"
-    print(f"{action} user '{user.username}' (id={user.id})")
+    role = "admin" if getattr(user, "is_admin", False) else "user"
+    print(f"{action} user '{user.username}' (id={user.id}, {role})")
+    return 0
+
+
+def cmd_promote(args: argparse.Namespace) -> int:
+    store = _store()
+    users = {u.username: u for u in store.list_users()}
+    username = args.username.strip().lower()
+    user = users.get(username)
+    if not user:
+        print(f"User '{username}' not found", file=sys.stderr)
+        return 1
+    updated = store.update_user(user.id, is_admin=not bool(args.revoke))
+    state = "admin" if updated and updated.is_admin else "user"
+    print(f"Set '{username}' → {state}")
     return 0
 
 
@@ -87,7 +110,14 @@ def main(argv: list[str] | None = None) -> int:
     p_add = sub.add_parser("add", help="Add a user or reset password if username exists")
     p_add.add_argument("username")
     p_add.add_argument("password")
+    p_add.add_argument("--admin", action="store_true", help="Grant admin role")
+    p_add.add_argument("--group", default=None, help="Assign group/cohort label")
     p_add.set_defaults(func=cmd_add)
+
+    p_promote = sub.add_parser("promote", help="Grant or revoke admin for a user")
+    p_promote.add_argument("username")
+    p_promote.add_argument("--revoke", action="store_true", help="Remove admin role")
+    p_promote.set_defaults(func=cmd_promote)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

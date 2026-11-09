@@ -21,7 +21,7 @@ This system is designed for **requirements gathering training**. It simulates a 
 - **Stakeholder simulation**: Role-plays as a non-technical stakeholder with plain, informal language
 - **Comparison modes**: Vector RAG, Neo4j RAG, Hybrid RAG, **Direct Model** (Excel pack in prompt), **YAML Scenario** (COMP 3613 persona packages), and **Compare All**
 - **Dual RAG**: ChromaDB (vector) and Neo4j (vector + graph), usable separately or via **hybrid** auto-routing
-- **YAML scenarios**: Seven seproject packages under `scenarios/` — pick scenario + persona like choosing Vector vs Neo4j
+- **YAML scenarios**: Seven packages under `scenarios/` (canonical authoring home) — pick scenario + persona like choosing Vector vs Neo4j; YAML edits must be reindexed into vector + Neo4j and refresh yaml/direct preprompt packs
 - **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Gemini, Groq, OpenRouter); RAG/direct chat requires a real LLM; YAML mode defaults to heuristic persona replies
 - **Scenario pack**: `data.xlsx` compiled into structured context for direct mode and optional RAG prompt enrichment
 - **Auth + persistence**: Login, per-user conversations (SQLite/Postgres), reflection threads for meta-review
@@ -102,16 +102,26 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 http://localhost:8000
 ```
 
-1. **Sign in** — default training users are seeded on startup (`nick`, `wayne`, `claudine`, `snick`; password `badPassword1`). Seed a 20-user cohort with token quotas:
+1. **Sign in** — default training users are seeded on startup (`nick`, `wayne`, `claudine`, `snick`; password `badPassword1`). Roles:
+
+| User | Role | Mode / model controls |
+|------|------|------------------------|
+| `nick` | **admin** | Full admin + can pick mode/model |
+| `wayne`, `claudine`, `snick` | **tester** | Can pick mode/model (previous privileges) |
+| Cohort CSV (`trainee01`…) | **student** | Mode/model hidden; locked to admin student defaults |
 
 ```bash
 python -m setup.users.seed_cohort
+# optional: python -m setup.users.seed_cohort --group morning
 # writes setup/users/cohort_credentials.csv (gitignored)
 python -m setup.users.manage_users list
 python -m setup.users.manage_users add myuser mypassword
+python -m setup.users.manage_users promote nick
 ```
 
-Each cohort user gets `USER_TOKEN_LIMIT` tokens (default **15000**, ~one focused elicitation). While under budget, chat bills the shared pool. When the budget is exhausted, chat **switches to the user’s own API key** (Settings ⚙️); if none is configured, it returns **429** and prompts them to add one. The chat header shows a live budget meter.
+Each cohort user gets `USER_TOKEN_LIMIT` tokens (default **15000**, ~one focused elicitation). While under budget, chat bills the shared pool (including **app-wide API keys** configured by an admin). When the budget is exhausted, chat **switches to the user’s own API key** (Settings ⚙️); if none is configured, it returns **429** and prompts them to add one. The chat header shows a live budget meter.
+
+**Admin** (`/admin`, or 🛠 in the chat sidebar when signed in as admin): user management / roles, group assignment, account notes, token monitoring, view/download transcripts, app-wide provider keys, tester defaults, and **student-wide** default response mode / LLM model.
 
 1. Start practicing requirements gathering!
   - Ask questions as you would in a real stakeholder interview
@@ -588,7 +598,8 @@ Popular alternatives:
 ├── data.xlsx                # Excel knowledge base (RAG / direct modes)
 ├── scenarios/               # COMP 3613 YAML scenario packages (yaml mode)
 ├── scripts/
-│   └── sync-scenarios.ps1   # Refresh scenarios/ from sibling seproject repo
+│   ├── sync-scenarios.ps1   # Inventory sellm scenarios; optional -PushToSeproject mirror
+│   └── reindex_scenarios.py # Reload YAML → registry + vector + graph after authoring
 ├── storage/
 │   ├── chroma_db_v2/        # ChromaDB database (gitignored)
 │   └── conversations.db     # SQLite chat history (gitignored)

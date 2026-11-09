@@ -92,6 +92,14 @@ class KnowledgeFact(BaseModel):
         return self
 
 
+class SystemRole(str, Enum):
+    platform_admin = "platform_admin"
+    operator = "operator"
+    approver = "approver"
+    end_user = "end_user"
+    hybrid = "hybrid"
+
+
 class Persona(BaseModel):
     id: str
     display_name: str
@@ -101,6 +109,9 @@ class Persona(BaseModel):
     known_fact_ids: list[str] = Field(default_factory=list)
     uncertainty_policy: str = "Admit when unsure; do not invent policy."
     referral_rules: list[str] = Field(default_factory=list)
+    # Optional depth fields: organizational title may understate in-system authority.
+    system_role: SystemRole | None = None
+    admin_capabilities: list[str] = Field(default_factory=list)
 
 
 class GapQuestion(BaseModel):
@@ -111,6 +122,9 @@ class GapQuestion(BaseModel):
     why_it_matters: str = ""
     alternatives: list[str] = Field(default_factory=list)
     recommended_default: str | None = None
+    suggested_assumption: str | None = None
+    theme: str | None = None
+    actions: list[str] = Field(default_factory=list)
     status: str = "open"  # open | decided
 
 

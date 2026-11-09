@@ -8,6 +8,8 @@ from pydantic import BaseModel
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
     content: str
+    created_at: Optional[str] = None
+    mode_used: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
@@ -35,6 +37,7 @@ class ChatResponse(BaseModel):
     token_limit: Optional[int] = None
     tokens_used: Optional[int] = None
     tokens_remaining: Optional[int] = None
+    response_ms: Optional[int] = None
 
 
 class FeedbackRequest(BaseModel):
@@ -119,6 +122,12 @@ class LoginResponse(BaseModel):
     token: str
     user_id: int
     username: str
+    is_admin: Optional[bool] = False
+    role: Optional[str] = None  # admin | tester | student
+    can_select_mode_model: Optional[bool] = True
+    group_name: Optional[str] = None
+    default_response_mode: Optional[str] = None
+    default_llm_choice: Optional[str] = None
     token_limit: Optional[int] = None
     tokens_used: Optional[int] = None
     tokens_remaining: Optional[int] = None
@@ -132,6 +141,7 @@ class ProviderKeyEntry(BaseModel):
     api_key_masked: Optional[str] = None
     has_key: bool = False
     base_url: Optional[str] = None
+    scope: Optional[str] = None  # user | app
 
 class UserConfigGetResponse(BaseModel):
     keys: List[ProviderKeyEntry] = []
@@ -143,4 +153,105 @@ class UserConfigProviderSet(BaseModel):
 
 class UserConfigSetRequest(BaseModel):
     keys: List[UserConfigProviderSet] = []
+
+
+# ── Admin ─────────────────────────────────────────────────────
+
+class AdminUserSummary(BaseModel):
+    id: int
+    username: str
+    is_admin: bool = False
+    role: str = "student"
+    can_select_mode_model: bool = False
+    group_name: Optional[str] = None
+    admin_notes: Optional[str] = None
+    token_limit: int = 0
+    tokens_used: int = 0
+    tokens_remaining: Optional[int] = None
+    default_response_mode: Optional[str] = None
+    default_llm_choice: Optional[str] = None
+    conversation_count: int = 0
+    created_at: str
+
+
+class AdminUserCreateRequest(BaseModel):
+    username: str
+    password: str
+    token_limit: Optional[int] = None
+    is_admin: bool = False
+    role: Optional[str] = None  # admin | tester | student
+    group_name: Optional[str] = None
+    admin_notes: Optional[str] = None
+    default_response_mode: Optional[str] = None
+    default_llm_choice: Optional[str] = None
+
+
+class AdminUserUpdateRequest(BaseModel):
+    token_limit: Optional[int] = None
+    tokens_used: Optional[int] = None
+    reset_tokens: Optional[bool] = None
+    is_admin: Optional[bool] = None
+    role: Optional[str] = None
+    group_name: Optional[str] = None
+    clear_group: Optional[bool] = None
+    admin_notes: Optional[str] = None
+    default_response_mode: Optional[str] = None
+    clear_default_response_mode: Optional[bool] = None
+    default_llm_choice: Optional[str] = None
+    clear_default_llm_choice: Optional[bool] = None
+    password: Optional[str] = None
+
+
+class AdminConversationSummary(BaseModel):
+    id: str
+    title: str
+    scenario_slug: Optional[str] = None
+    message_count: int = 0
+    created_at: str
+    updated_at: str
+
+
+class AdminConversationDetail(BaseModel):
+    id: str
+    title: str
+    scenario_slug: Optional[str] = None
+    user_id: int
+    username: str
+    created_at: str
+    updated_at: str
+    messages: List[ChatMessage]
+
+
+class AdminAppSettings(BaseModel):
+    default_response_mode: str = "vector"
+    default_llm_choice: Optional[str] = None
+    student_default_response_mode: str = "vector"
+    student_default_llm_choice: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class AdminAppSettingsUpdate(BaseModel):
+    default_response_mode: Optional[str] = None
+    default_llm_choice: Optional[str] = None
+    clear_default_llm_choice: Optional[bool] = None
+    student_default_response_mode: Optional[str] = None
+    student_default_llm_choice: Optional[str] = None
+    clear_student_default_llm_choice: Optional[bool] = None
+
+
+class AdminAppKeysGetResponse(BaseModel):
+    keys: List[ProviderKeyEntry] = []
+
+
+class AdminAppKeysSetRequest(BaseModel):
+    keys: List[UserConfigProviderSet] = []
+
+
+class AdminTokenSummary(BaseModel):
+    user_count: int
+    total_token_limit: int
+    total_tokens_used: int
+    exhausted_users: int
+    by_group: Dict[str, Dict[str, int]]
+    users: List[AdminUserSummary]
 

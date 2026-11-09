@@ -22,7 +22,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(_REPO_ROOT / "app" / ".env")
 load_dotenv(_REPO_ROOT / ".env")
 
-from app.storage.conversation_store import ConversationStore  # noqa: E402
+from app.storage.conversation_store import ROLE_STUDENT, ConversationStore  # noqa: E402
 
 DEFAULT_CSV = _REPO_ROOT / "setup" / "users" / "cohort_credentials.csv"
 
@@ -52,6 +52,7 @@ def seed_cohort(
     csv_path: Path = DEFAULT_CSV,
     prefix: str = "trainee",
     reset_usage: bool = True,
+    group_name: str | None = None,
 ) -> list[dict]:
     store = _store()
     rows: list[dict] = []
@@ -63,12 +64,16 @@ def seed_cohort(
             password,
             token_limit=token_limit,
             reset_usage=reset_usage,
+            group_name=group_name,
+            role=ROLE_STUDENT,
         )
         rows.append(
             {
                 "username": user.username,
                 "password": password,
                 "user_id": user.id,
+                "role": getattr(user, "role", None) or ROLE_STUDENT,
+                "group_name": getattr(user, "group_name", None) or "",
                 "token_limit": int(user.token_limit or token_limit),
                 "tokens_used": int(user.tokens_used or 0),
             }
@@ -78,7 +83,7 @@ def seed_cohort(
     with csv_path.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(
             fh,
-            fieldnames=["username", "password", "user_id", "token_limit", "tokens_used"],
+            fieldnames=["username", "password", "user_id", "role", "group_name", "token_limit", "tokens_used"],
         )
         writer.writeheader()
         writer.writerows(rows)
@@ -103,6 +108,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--prefix", default="trainee", help="Username prefix (default trainee)")
     parser.add_argument(
+        "--group",
+        default=None,
+        help="Assign all cohort users to this group label (e.g. morning)",
+    )
+    parser.add_argument(
         "--keep-usage",
         action="store_true",
         help="Do not reset tokens_used when updating existing users",
@@ -115,8 +125,11 @@ def main(argv: list[str] | None = None) -> int:
         csv_path=args.csv,
         prefix=args.prefix,
         reset_usage=not args.keep_usage,
+        group_name=args.group,
     )
     print(f"Seeded {len(rows)} users with token_limit={args.limit}")
+    if args.group:
+        print(f"Group assigned: {args.group}")
     print(f"Credentials written to {args.csv.resolve()}")
     for row in rows:
         print(f"  {row['username']}\tlimit={row['token_limit']}\tused={row['tokens_used']}")

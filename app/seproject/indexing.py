@@ -9,15 +9,36 @@ from app.seproject.scenarios.models import ScenarioPackage
 from app.seproject.scenarios.registry import scenario_registry
 
 
-def _fact_document(package: ScenarioPackage, persona_id: str, fact) -> tuple[str, dict[str, Any], str]:
+def _persona_system_role(persona) -> str:
+    system_role = getattr(persona, "system_role", None)
+    if system_role is None:
+        return ""
+    return system_role.value if hasattr(system_role, "value") else str(system_role)
+
+
+def _fact_document(package: ScenarioPackage, persona, fact) -> tuple[str, dict[str, Any], str]:
     statement = fact.statement.strip()
     category = fact.category or "knowledge"
-    text = (
-        f"Scenario: {package.meta.title}\n"
-        f"Persona: {persona_id}\n"
-        f"Category: {category}\n"
-        f"Statement: {statement}"
+    persona_id = persona.id
+    system_role = _persona_system_role(persona)
+    caps = list(getattr(persona, "admin_capabilities", None) or [])
+    text_parts = [
+        f"Scenario: {package.meta.title}",
+        f"Persona: {persona_id}",
+        f"Display name: {persona.display_name}",
+        f"Role: {persona.role}",
+    ]
+    if system_role:
+        text_parts.append(f"System role: {system_role}")
+    if caps:
+        text_parts.append(f"Admin capabilities: {', '.join(caps)}")
+    text_parts.extend(
+        [
+            f"Category: {category}",
+            f"Statement: {statement}",
+        ]
     )
+    text = "\n".join(text_parts)
     meta = {
         "source": "yaml",
         "sheet": "Knowledge",
@@ -28,6 +49,7 @@ def _fact_document(package: ScenarioPackage, persona_id: str, fact) -> tuple[str
         "fact_id": fact.id,
         "disclosure": fact.disclosure.value if hasattr(fact.disclosure, "value") else str(fact.disclosure),
         "category": category,
+        "system_role": system_role,
         "keywords": category.replace("_", ","),
         "row": 0,
     }
@@ -42,7 +64,7 @@ def build_persona_documents(package: ScenarioPackage) -> tuple[list[str], list[d
     ids: list[str] = []
     for persona in package.personas:
         for fact in facts_for_persona(package, persona.id, include_never_student=False):
-            text, meta, doc_id = _fact_document(package, persona.id, fact)
+            text, meta, doc_id = _fact_document(package, persona, fact)
             documents.append(text)
             metadatas.append(meta)
             ids.append(doc_id)
@@ -82,4 +104,21 @@ def index_all_scenarios(*, vector_rag=None, neo4j_rag=None) -> dict[str, int]:
         "packages": len(packages),
         "vector_docs": index_packages_to_vector(vector_rag, packages),
         "neo4j_edges": index_packages_to_neo4j(neo4j_rag, packages),
+    }
+
+
+def reload_and_index_scenarios(*, engine=None, vector_rag=None, neo4j_rag=None) -> dict[str, Any]:
+    """Reload YAML packages from disk, optionally re-seed DB, then refresh vector + graph indexes.
+
+    Direct/yaml preprompt modes read the in-memory registry + persona pack adapter, so a
+    reload is required before those modes see YAML edits without an app restart.
+    """
+    from app.seproject.seed import seed_scenarios
+
+    seed_info = seed_scenarios(engine=engine)
+    index_info = index_all_scenarios(vector_rag=vector_rag, neo4j_rag=neo4j_rag)
+    return {
+        "seed": seed_info,
+        "index": index_info,
+        "modes_refreshed": ["yaml", "direct", "vector", "neo4j", "hybrid"],
     }

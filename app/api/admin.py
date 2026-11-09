@@ -1,0 +1,454 @@
+"""Admin API: user management, token monitoring, transcripts, app-wide keys/defaults."""
+
+from __future__ import annotations
+
+from typing import List, Optional
+
+from fastapi import APIRouter, HTTPException, Request, Response
+
+from app.api.schemas import (
+    AdminAppKeysGetResponse,
+    AdminAppKeysSetRequest,
+    AdminAppSettings,
+    AdminAppSettingsUpdate,
+    AdminConversationDetail,
+    AdminConversationSummary,
+    AdminTokenSummary,
+    AdminUserCreateRequest,
+    AdminUserSummary,
+    AdminUserUpdateRequest,
+    ChatMessage,
+    ProviderKeyEntry,
+)
+from app.security.secret_store import (
+    decrypt_secret,
+    encrypt_secret,
+    is_unchanged_api_key,
+    mask_secret,
+)
+from app.storage.conversation_store import (
+    ROLE_ADMIN,
+    ROLE_STUDENT,
+    ROLE_TESTER,
+    VALID_ROLES,
+    normalize_role,
+)
+
+router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+VALID_RESPONSE_MODES = {
+    "vector",
+    "neo4j",
+    "hybrid",
+    "direct",
+    "yaml",
+    "scenario",
+    "compare",
+}
+
+
+def _store(request: Request):
+    return request.app.state.conversation_store
+
+
+def _require_admin(request: Request):
+    getter = getattr(request.app.state, "get_current_user", None)
+    if not callable(getter):
+        raise HTTPException(status_code=500, detail="Auth not configured")
+    user = getter(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    role = normalize_role(getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False)))
+    if role != ROLE_ADMIN and not bool(getattr(user, "is_admin", False)):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+
+def _remaining(user) -> Optional[int]:
+    limit = int(getattr(user, "token_limit", 0) or 0)
+    used = int(getattr(user, "tokens_used", 0) or 0)
+    return max(0, limit - used) if limit > 0 else None
+
+
+def _user_role(user) -> str:
+    return normalize_role(getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False)))
+
+
+def _user_summary(store, user) -> AdminUserSummary:
+    role = _user_role(user)
+    return AdminUserSummary(
+        id=user.id,
+        username=user.username,
+        is_admin=role == ROLE_ADMIN,
+        role=role,
+        can_select_mode_model=role in (ROLE_ADMIN, ROLE_TESTER),
+        group_name=getattr(user, "group_name", None),
+        admin_notes=getattr(user, "admin_notes", None),
+        token_limit=int(getattr(user, "token_limit", 0) or 0),
+        tokens_used=int(getattr(user, "tokens_used", 0) or 0),
+        tokens_remaining=_remaining(user),
+        default_response_mode=getattr(user, "default_response_mode", None),
+        default_llm_choice=getattr(user, "default_llm_choice", None),
+        conversation_count=store.count_conversations_for_user(user.id),
+        created_at=user.created_at.isoformat() if user.created_at else "",
+    )
+
+
+def _validate_role(role: Optional[str]) -> Optional[str]:
+    if role is None:
+        return None
+    cleaned = (role or "").strip().lower()
+    if cleaned not in VALID_ROLES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid role '{role}'. Expected one of: {', '.join(sorted(VALID_ROLES))}",
+        )
+    return cleaned
+
+
+def _settings_payload(settings) -> AdminAppSettings:
+    return AdminAppSettings(
+        default_response_mode=settings.default_response_mode or "vector",
+        default_llm_choice=settings.default_llm_choice,
+        student_default_response_mode=getattr(settings, "student_default_response_mode", None) or "vector",
+        student_default_llm_choice=getattr(settings, "student_default_llm_choice", None),
+        updated_at=settings.updated_at.isoformat() if settings.updated_at else None,
+    )
+
+
+def _validate_mode(mode: Optional[str]) -> Optional[str]:
+    if mode is None:
+        return None
+    cleaned = (mode or "").strip().lower()
+    if not cleaned:
+        return None
+    if cleaned not in VALID_RESPONSE_MODES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid response mode '{mode}'. Expected one of: {', '.join(sorted(VALID_RESPONSE_MODES))}",
+        )
+    return cleaned
+
+
+@router.get("/users", response_model=List[AdminUserSummary])
+async def list_users(request: Request, group: Optional[str] = None):
+    _require_admin(request)
+    store = _store(request)
+    users = store.list_users()
+    if group is not None:
+        needle = group.strip()
+        if needle == "" or needle == "(ungrouped)":
+            users = [u for u in users if not (getattr(u, "group_name", None) or "").strip()]
+        else:
+            users = [u for u in users if (getattr(u, "group_name", None) or "") == needle]
+    return [_user_summary(store, u) for u in users]
+
+
+@router.get("/groups", response_model=List[str])
+async def list_groups(request: Request):
+    _require_admin(request)
+    return _store(request).list_group_names()
+
+
+@router.post("/users", response_model=AdminUserSummary)
+async def create_user(body: AdminUserCreateRequest, request: Request):
+    _require_admin(request)
+    store = _store(request)
+    mode = _validate_mode(body.default_response_mode)
+    role = _validate_role(body.role)
+    if role is None and body.is_admin:
+        role = ROLE_ADMIN
+    if role is None:
+        role = ROLE_STUDENT
+    try:
+        user = store.create_user(
+            body.username,
+            body.password,
+            token_limit=body.token_limit,
+            role=role,
+            is_admin=role == ROLE_ADMIN,
+            group_name=body.group_name,
+            admin_notes=body.admin_notes,
+            default_response_mode=mode,
+            default_llm_choice=body.default_llm_choice,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _user_summary(store, user)
+
+
+@router.get("/users/{user_id}", response_model=AdminUserSummary)
+async def get_user(user_id: int, request: Request):
+    _require_admin(request)
+    store = _store(request)
+    user = store.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _user_summary(store, user)
+
+
+@router.patch("/users/{user_id}", response_model=AdminUserSummary)
+async def update_user(user_id: int, body: AdminUserUpdateRequest, request: Request):
+    admin = _require_admin(request)
+    store = _store(request)
+    existing = store.get_user_by_id(user_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    tokens_used = body.tokens_used
+    if body.reset_tokens:
+        tokens_used = 0
+
+    mode = None
+    clear_mode = bool(body.clear_default_response_mode)
+    if body.default_response_mode is not None and not clear_mode:
+        mode = _validate_mode(body.default_response_mode)
+
+    role = _validate_role(body.role)
+    # Prevent demoting yourself accidentally with no other admin path
+    if existing.id == admin.id:
+        if (role is not None and role != ROLE_ADMIN) or body.is_admin is False:
+            raise HTTPException(status_code=400, detail="Cannot remove your own admin role")
+
+    updated = store.update_user(
+        user_id,
+        token_limit=body.token_limit,
+        tokens_used=tokens_used,
+        role=role,
+        is_admin=body.is_admin if role is None else (role == ROLE_ADMIN),
+        group_name=body.group_name,
+        clear_group=bool(body.clear_group),
+        admin_notes=body.admin_notes,
+        default_response_mode=mode,
+        clear_default_response_mode=clear_mode,
+        default_llm_choice=body.default_llm_choice,
+        clear_default_llm_choice=bool(body.clear_default_llm_choice),
+        password=body.password,
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return _user_summary(store, updated)
+
+
+@router.get("/tokens", response_model=AdminTokenSummary)
+async def token_monitor(request: Request):
+    _require_admin(request)
+    store = _store(request)
+    summary = store.token_usage_summary()
+    users = [_user_summary(store, u) for u in store.list_users()]
+    return AdminTokenSummary(
+        user_count=summary["user_count"],
+        total_token_limit=summary["total_token_limit"],
+        total_tokens_used=summary["total_tokens_used"],
+        exhausted_users=summary["exhausted_users"],
+        by_group=summary["by_group"],
+        users=users,
+    )
+
+
+@router.get("/users/{user_id}/conversations", response_model=List[AdminConversationSummary])
+async def list_user_conversations(user_id: int, request: Request):
+    _require_admin(request)
+    store = _store(request)
+    user = store.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    out: List[AdminConversationSummary] = []
+    for convo in store.list_conversations_for_user(user_id):
+        messages = store.get_messages(convo.id)
+        out.append(
+            AdminConversationSummary(
+                id=convo.id,
+                title=convo.title,
+                scenario_slug=getattr(convo, "scenario_slug", None),
+                message_count=len(messages),
+                created_at=convo.created_at.isoformat(),
+                updated_at=convo.updated_at.isoformat(),
+            )
+        )
+    return out
+
+
+@router.get("/users/{user_id}/conversations/{conversation_id}", response_model=AdminConversationDetail)
+async def get_user_conversation(user_id: int, conversation_id: str, request: Request):
+    _require_admin(request)
+    store = _store(request)
+    user = store.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    convo = store.get_conversation(conversation_id)
+    if not convo or convo.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    messages = store.get_messages(conversation_id)
+    return AdminConversationDetail(
+        id=convo.id,
+        title=convo.title,
+        scenario_slug=getattr(convo, "scenario_slug", None),
+        user_id=user.id,
+        username=user.username,
+        created_at=convo.created_at.isoformat(),
+        updated_at=convo.updated_at.isoformat(),
+        messages=[
+            ChatMessage(
+                role=m.role,
+                content=m.content,
+                created_at=m.created_at.isoformat() if getattr(m, "created_at", None) else None,
+                mode_used=getattr(m, "mode_used", None),
+            )
+            for m in messages
+        ],
+    )
+
+
+@router.get("/users/{user_id}/conversations/{conversation_id}/download")
+async def download_user_conversation(
+    user_id: int,
+    conversation_id: str,
+    request: Request,
+    format: str = "txt",
+):
+    _require_admin(request)
+    store = _store(request)
+    user = store.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    convo = store.get_conversation(conversation_id)
+    if not convo or convo.user_id != user_id:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    messages = store.get_messages(conversation_id)
+    fmt = (format or "txt").strip().lower()
+    safe_title = "".join(c if c.isalnum() or c in "-_" else "_" for c in (convo.title or "transcript"))[:48]
+    filename = f"{user.username}_{safe_title}_{conversation_id[:8]}"
+
+    if fmt == "json":
+        import json
+
+        payload = {
+            "conversation_id": convo.id,
+            "title": convo.title,
+            "scenario_slug": getattr(convo, "scenario_slug", None),
+            "user_id": user.id,
+            "username": user.username,
+            "created_at": convo.created_at.isoformat(),
+            "updated_at": convo.updated_at.isoformat(),
+            "messages": [{"role": m.role, "content": m.content, "mode_used": m.mode_used} for m in messages],
+        }
+        body = json.dumps(payload, indent=2, ensure_ascii=False)
+        return Response(
+            content=body,
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.json"'},
+        )
+
+    lines = [
+        f"Transcript: {convo.title}",
+        f"User: {user.username} (id={user.id})",
+        f"Scenario: {getattr(convo, 'scenario_slug', None) or '(none)'}",
+        f"Created: {convo.created_at.isoformat()}",
+        f"Updated: {convo.updated_at.isoformat()}",
+        "",
+    ]
+    for m in messages:
+        role = (m.role or "unknown").upper()
+        if fmt == "md":
+            lines.append(f"### {role}")
+            lines.append("")
+            lines.append(m.content or "")
+            lines.append("")
+        else:
+            lines.append(f"[{role}]")
+            lines.append(m.content or "")
+            lines.append("")
+    text = "\n".join(lines)
+    ext = "md" if fmt == "md" else "txt"
+    media = "text/markdown" if fmt == "md" else "text/plain"
+    return Response(
+        content=text,
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{filename}.{ext}"'},
+    )
+
+
+@router.get("/settings", response_model=AdminAppSettings)
+async def get_settings(request: Request):
+    _require_admin(request)
+    return _settings_payload(_store(request).get_app_settings())
+
+
+@router.patch("/settings", response_model=AdminAppSettings)
+async def update_settings(body: AdminAppSettingsUpdate, request: Request):
+    _require_admin(request)
+    mode = _validate_mode(body.default_response_mode) if body.default_response_mode is not None else None
+    student_mode = (
+        _validate_mode(body.student_default_response_mode)
+        if body.student_default_response_mode is not None
+        else None
+    )
+    settings = _store(request).update_app_settings(
+        default_response_mode=mode,
+        default_llm_choice=body.default_llm_choice,
+        clear_default_llm_choice=bool(body.clear_default_llm_choice),
+        student_default_response_mode=student_mode,
+        student_default_llm_choice=body.student_default_llm_choice,
+        clear_student_default_llm_choice=bool(body.clear_student_default_llm_choice),
+    )
+    return _settings_payload(settings)
+
+
+@router.get("/app-keys", response_model=AdminAppKeysGetResponse)
+async def get_app_keys(request: Request):
+    _require_admin(request)
+    entries: List[ProviderKeyEntry] = []
+    for cfg in _store(request).get_all_app_api_configs():
+        plain = decrypt_secret(cfg.api_key) if cfg.api_key else ""
+        masked = mask_secret(plain) if plain else None
+        entries.append(
+            ProviderKeyEntry(
+                provider=cfg.provider,
+                api_key_hint=masked,
+                api_key_masked=masked,
+                has_key=bool(plain),
+                base_url=cfg.base_url,
+                scope="app",
+            )
+        )
+    return AdminAppKeysGetResponse(keys=entries)
+
+
+@router.post("/app-keys")
+async def set_app_keys(body: AdminAppKeysSetRequest, request: Request):
+    _require_admin(request)
+    store = _store(request)
+    for entry in body.keys:
+        provider = (entry.provider or "").strip().lower()
+        if not provider:
+            continue
+        existing = store.get_app_api_config(provider)
+        if is_unchanged_api_key(entry.api_key):
+            stored_key = existing.api_key if existing else ""
+        elif not (entry.api_key or "").strip():
+            stored_key = ""
+        else:
+            stored_key = encrypt_secret(entry.api_key.strip())
+        store.set_app_api_config(
+            provider=provider,
+            api_key=stored_key,
+            base_url=entry.base_url,
+        )
+    return {"status": "ok"}
+
+
+@router.post("/scenarios/reindex")
+async def reindex_scenarios(request: Request):
+    """Reload YAML scenario packages and refresh vector + graph indexes (and in-memory yaml/direct packs)."""
+    _require_admin(request)
+    from app.seproject.indexing import reload_and_index_scenarios
+
+    store = _store(request)
+    rag_systems = getattr(request.app.state, "rag_systems", None) or {}
+    result = reload_and_index_scenarios(
+        engine=store.engine,
+        vector_rag=rag_systems.get("vector"),
+        neo4j_rag=rag_systems.get("neo4j"),
+    )
+    return {"status": "ok", **result}
