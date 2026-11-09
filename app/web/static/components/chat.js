@@ -748,13 +748,17 @@
       const response = await fetch("/api/config", { headers: authHeaders() });
       if (!response.ok) return;
       const config = await response.json();
-      tweakModeEnabled = Boolean(config.tweak_mode_enabled);
-      if (reflectionRow) {
-        reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
-      }
       if (config.role != null || config.can_select_mode_model != null || config.is_admin != null) {
         applyRoleState(config);
         updateAdminLink();
+      }
+      // Students never get reflection/tweak UI even if the env flag is on.
+      const reflectionOn = config.reflection_enabled != null
+        ? Boolean(config.reflection_enabled)
+        : Boolean(config.tweak_mode_enabled) && userRole !== "student";
+      tweakModeEnabled = reflectionOn;
+      if (reflectionRow) {
+        reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
       }
       if (config.default_response_mode && responseMode) {
         const mode = config.default_response_mode;

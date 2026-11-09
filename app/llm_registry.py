@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Dict, List, Optional, Tuple  # noqa: F401 used by stakeholder_llm_available
 
 from app.llm_wrapper import LLMWrapper
@@ -19,6 +20,9 @@ OPENAI_DEFAULT_MODELS = [
 OLLAMA_FALLBACK_MODELS = ["llama3.2", "mistral", "phi3", "gemma2", "llama3.1"]
 
 _wrapper_cache: Dict[Tuple[int, str, str], LLMWrapper] = {}
+# Local Ollama /api/tags is often 1–3s; config used to call it several times per request.
+_OLLAMA_TAGS_TTL_SEC = float(os.getenv("OLLAMA_TAGS_CACHE_TTL", "30"))
+_ollama_tags_cache: Optional[Tuple[float, List[str]]] = None
 
 
 def _parse_csv_env(name: str) -> List[str]:
@@ -32,22 +36,30 @@ def ollama_host() -> str:
     return (os.getenv("OLLAMA_HOST") or "http://localhost:11434").rstrip("/")
 
 
-def fetch_ollama_tags() -> List[str]:
-    """Full model tags from Ollama (e.g. llama3.2:latest)."""
+def fetch_ollama_tags(*, force: bool = False) -> List[str]:
+    """Full model tags from Ollama (e.g. llama3.2:latest). Cached briefly to keep /api/config snappy."""
+    global _ollama_tags_cache
+    now = time.monotonic()
+    if not force and _ollama_tags_cache is not None:
+        cached_at, cached_tags = _ollama_tags_cache
+        if (now - cached_at) < _OLLAMA_TAGS_TTL_SEC:
+            return list(cached_tags)
+
+    names: List[str] = []
     try:
         import requests
 
-        response = requests.get(f"{ollama_host()}/api/tags", timeout=2)
-        if response.status_code != 200:
-            return []
-        names: List[str] = []
-        for item in response.json().get("models", []):
-            raw = (item.get("name") or "").strip()
-            if raw:
-                names.append(raw)
-        return names
+        response = requests.get(f"{ollama_host()}/api/tags", timeout=1.5)
+        if response.status_code == 200:
+            for item in response.json().get("models", []):
+                raw = (item.get("name") or "").strip()
+                if raw:
+                    names.append(raw)
     except Exception:
-        return []
+        names = []
+
+    _ollama_tags_cache = (now, names)
+    return list(names)
 
 
 def fetch_ollama_model_names() -> List[str]:

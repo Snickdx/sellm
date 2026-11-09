@@ -80,9 +80,10 @@ class User(SQLModel, table=True):
     group_name: Optional[str] = Field(default=None, index=True)
     # Instructor notes visible only to admins
     admin_notes: Optional[str] = Field(default=None)
-    # Per-user defaults (testers/admins); students use AppSettings student_* defaults
+    # Per-user overrides; null / budget_is_override=False → inherit role defaults
     default_response_mode: Optional[str] = Field(default=None)
     default_llm_choice: Optional[str] = Field(default=None)
+    budget_is_override: bool = Field(default=False, index=True)
     created_at: datetime = Field(default_factory=_utc_now, index=True)
 
 class AuthSession(SQLModel, table=True):
@@ -114,12 +115,18 @@ class AppSettings(SQLModel, table=True):
     """Singleton row (id=1) for app-wide / role defaults."""
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    # Defaults for testers/admins when they have no per-user override
+    # Tester (+ legacy app) defaults when no per-user override
     default_response_mode: str = Field(default="vector")
     default_llm_choice: Optional[str] = Field(default=None)
-    # Locked defaults for all student-role accounts
+    tester_token_limit: int = Field(default=15_000)
+    # Student role defaults
     student_default_response_mode: str = Field(default="vector")
     student_default_llm_choice: Optional[str] = Field(default=None)
+    student_token_limit: int = Field(default=15_000)
+    # Admin role defaults (mode/llm fall back to tester/app defaults if unset)
+    admin_default_response_mode: Optional[str] = Field(default=None)
+    admin_default_llm_choice: Optional[str] = Field(default=None)
+    admin_token_limit: int = Field(default=50_000)
     updated_at: datetime = Field(default_factory=_utc_now, index=True)
 
 
@@ -205,6 +212,8 @@ class ConversationStore:
                 alters.append("ALTER TABLE user ADD COLUMN default_response_mode VARCHAR")
             if "default_llm_choice" not in cols:
                 alters.append("ALTER TABLE user ADD COLUMN default_llm_choice VARCHAR")
+            if "budget_is_override" not in cols:
+                alters.append("ALTER TABLE user ADD COLUMN budget_is_override BOOLEAN DEFAULT 0")
             if alters:
                 with self.engine.begin() as conn:
                     for stmt in alters:
@@ -252,36 +261,69 @@ class ConversationStore:
             insp = inspect(self.engine)
             if "appsettings" in insp.get_table_names():
                 cols = {c["name"] for c in insp.get_columns("appsettings")}
-                with self.engine.begin() as conn:
-                    if "student_default_response_mode" not in cols:
-                        conn.execute(
-                            text(
-                                "ALTER TABLE appsettings ADD COLUMN student_default_response_mode VARCHAR DEFAULT 'vector'"
-                            )
-                        )
-                    if "student_default_llm_choice" not in cols:
-                        conn.execute(
-                            text("ALTER TABLE appsettings ADD COLUMN student_default_llm_choice VARCHAR")
-                        )
+                default_limit = int(os.getenv("USER_TOKEN_LIMIT", "15000"))
+                alters = []
+                if "student_default_response_mode" not in cols:
+                    alters.append(
+                        "ALTER TABLE appsettings ADD COLUMN student_default_response_mode VARCHAR DEFAULT 'vector'"
+                    )
+                if "student_default_llm_choice" not in cols:
+                    alters.append("ALTER TABLE appsettings ADD COLUMN student_default_llm_choice VARCHAR")
+                if "student_token_limit" not in cols:
+                    alters.append(
+                        f"ALTER TABLE appsettings ADD COLUMN student_token_limit INTEGER DEFAULT {default_limit}"
+                    )
+                if "tester_token_limit" not in cols:
+                    alters.append(
+                        f"ALTER TABLE appsettings ADD COLUMN tester_token_limit INTEGER DEFAULT {default_limit}"
+                    )
+                if "admin_default_response_mode" not in cols:
+                    alters.append("ALTER TABLE appsettings ADD COLUMN admin_default_response_mode VARCHAR")
+                if "admin_default_llm_choice" not in cols:
+                    alters.append("ALTER TABLE appsettings ADD COLUMN admin_default_llm_choice VARCHAR")
+                if "admin_token_limit" not in cols:
+                    alters.append(
+                        f"ALTER TABLE appsettings ADD COLUMN admin_token_limit INTEGER DEFAULT {max(default_limit, 50000)}"
+                    )
+                if alters:
+                    with self.engine.begin() as conn:
+                        for stmt in alters:
+                            conn.execute(text(stmt))
         except Exception as exc:  # noqa: BLE001
-            print(f"[warn] Could not ensure appsettings student columns: {exc}")
+            print(f"[warn] Could not ensure appsettings role columns: {exc}")
 
         with Session(self.engine) as session:
             row = session.get(AppSettings, 1)
             if row is None:
+                default_limit = int(os.getenv("USER_TOKEN_LIMIT", "15000"))
                 session.add(
                     AppSettings(
                         id=1,
                         default_response_mode="vector",
                         default_llm_choice=None,
+                        tester_token_limit=default_limit,
                         student_default_response_mode="vector",
                         student_default_llm_choice=None,
+                        student_token_limit=default_limit,
+                        admin_token_limit=max(default_limit, 50_000),
                     )
                 )
                 session.commit()
             else:
+                dirty = False
                 if not getattr(row, "student_default_response_mode", None):
                     row.student_default_response_mode = row.default_response_mode or "vector"
+                    dirty = True
+                if getattr(row, "student_token_limit", None) in (None, 0):
+                    row.student_token_limit = int(os.getenv("USER_TOKEN_LIMIT", "15000"))
+                    dirty = True
+                if getattr(row, "tester_token_limit", None) in (None, 0):
+                    row.tester_token_limit = int(os.getenv("USER_TOKEN_LIMIT", "15000"))
+                    dirty = True
+                if getattr(row, "admin_token_limit", None) in (None, 0):
+                    row.admin_token_limit = max(int(os.getenv("USER_TOKEN_LIMIT", "15000")), 50_000)
+                    dirty = True
+                if dirty:
                     session.add(row)
                     session.commit()
 
@@ -503,6 +545,64 @@ class ConversationStore:
             return existing_role.strip().lower()
         return ROLE_STUDENT
 
+    def role_token_limit(self, role: str, settings: Optional[AppSettings] = None) -> int:
+        settings = settings or self.get_app_settings()
+        role = normalize_role(role)
+        default_env = int(os.getenv("USER_TOKEN_LIMIT", "15000"))
+        if role == ROLE_ADMIN:
+            return int(getattr(settings, "admin_token_limit", None) or max(default_env, 50_000))
+        if role == ROLE_TESTER:
+            return int(getattr(settings, "tester_token_limit", None) or default_env)
+        return int(getattr(settings, "student_token_limit", None) or default_env)
+
+    def role_defaults(self, role: str, settings: Optional[AppSettings] = None) -> Dict[str, Any]:
+        """Mode / LLM / budget defaults for a role."""
+        settings = settings or self.get_app_settings()
+        role = normalize_role(role)
+        tester_mode = (settings.default_response_mode or "vector").strip() or "vector"
+        tester_llm = (settings.default_llm_choice or "").strip() or None
+        student_mode = (
+            getattr(settings, "student_default_response_mode", None) or tester_mode
+        ).strip() or "vector"
+        student_llm = (getattr(settings, "student_default_llm_choice", None) or "").strip() or None
+        admin_mode = (getattr(settings, "admin_default_response_mode", None) or "").strip() or None
+        admin_llm = (getattr(settings, "admin_default_llm_choice", None) or "").strip() or None
+        if role == ROLE_STUDENT:
+            mode, llm = student_mode, student_llm or tester_llm
+        elif role == ROLE_ADMIN:
+            mode, llm = (admin_mode or tester_mode), (admin_llm or tester_llm)
+        else:
+            mode, llm = tester_mode, tester_llm
+        return {
+            "role": role,
+            "default_response_mode": mode,
+            "default_llm_choice": llm,
+            "token_limit": self.role_token_limit(role, settings),
+        }
+
+    def apply_role_budget(self, role: str, token_limit: Optional[int] = None) -> int:
+        """Set token_limit for all users of role that are not budget overrides. Returns update count."""
+        role = normalize_role(role)
+        settings = self.get_app_settings()
+        limit = int(token_limit if token_limit is not None else self.role_token_limit(role, settings))
+        updated = 0
+        with Session(self.engine) as session:
+            users = list(session.exec(select(User)).all())
+            for user in users:
+                user_role = normalize_role(
+                    getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False))
+                )
+                if user_role != role:
+                    continue
+                if bool(getattr(user, "budget_is_override", False)):
+                    continue
+                user.token_limit = max(0, limit)
+                user.budget_is_override = False
+                session.add(user)
+                updated += 1
+            session.commit()
+        return updated
+
     def create_user(
         self,
         username: str,
@@ -516,6 +616,7 @@ class ConversationStore:
         admin_notes: Optional[str] = None,
         default_response_mode: Optional[str] = None,
         default_llm_choice: Optional[str] = None,
+        budget_is_override: Optional[bool] = None,
     ) -> User:
         """Create a user or update password if username already exists."""
         username = username.strip().lower()
@@ -523,16 +624,12 @@ class ConversationStore:
             raise ValueError("Username is required")
         if not password:
             raise ValueError("Password is required")
-        limit = int(token_limit if token_limit is not None else os.getenv("USER_TOKEN_LIMIT", "15000"))
         with Session(self.engine) as session:
             existing = session.exec(
                 select(User).where(User.username == username)
             ).first()
             if existing:
                 existing.password_hash = hash_password(password)
-                existing.token_limit = limit
-                if reset_usage:
-                    existing.tokens_used = 0
                 if role is not None:
                     resolved = normalize_role(role, is_admin=bool(is_admin))
                     existing.role = resolved
@@ -546,6 +643,19 @@ class ConversationStore:
                         existing.role = ROLE_ADMIN
                     elif existing.role == ROLE_ADMIN:
                         existing.role = ROLE_STUDENT
+                resolved_role = normalize_role(
+                    getattr(existing, "role", None), is_admin=bool(getattr(existing, "is_admin", False))
+                )
+                if token_limit is not None:
+                    existing.token_limit = int(token_limit)
+                    existing.budget_is_override = (
+                        True if budget_is_override is None else bool(budget_is_override)
+                    )
+                elif not bool(getattr(existing, "budget_is_override", False)):
+                    existing.token_limit = self.role_token_limit(resolved_role)
+                    existing.budget_is_override = False
+                if reset_usage:
+                    existing.tokens_used = 0
                 if group_name is not None:
                     existing.group_name = (group_name or "").strip() or None
                 if admin_notes is not None:
@@ -564,6 +674,12 @@ class ConversationStore:
                 resolved = ROLE_ADMIN
             else:
                 resolved = self.default_role_for_username(username, is_admin=bool(is_admin))
+            if token_limit is not None:
+                limit = int(token_limit)
+                override = True if budget_is_override is None else bool(budget_is_override)
+            else:
+                limit = self.role_token_limit(resolved)
+                override = False
             user = User(
                 username=username,
                 password_hash=hash_password(password),
@@ -575,6 +691,7 @@ class ConversationStore:
                 admin_notes=admin_notes,
                 default_response_mode=(default_response_mode or "").strip() or None,
                 default_llm_choice=(default_llm_choice or "").strip() or None,
+                budget_is_override=override,
             )
             session.add(user)
             session.commit()
@@ -634,18 +751,22 @@ class ConversationStore:
         clear_default_response_mode: bool = False,
         default_llm_choice: Optional[str] = None,
         clear_default_llm_choice: bool = False,
+        budget_is_override: Optional[bool] = None,
+        reset_budget_to_role: bool = False,
+        reset_mode_to_role: bool = False,
+        reset_llm_to_role: bool = False,
+        reset_defaults_to_role: bool = False,
         password: Optional[str] = None,
     ) -> Optional[User]:
         with Session(self.engine) as session:
             user = session.get(User, user_id)
             if user is None:
                 return None
-            if token_limit is not None:
-                user.token_limit = max(0, int(token_limit))
-            if tokens_used is not None:
-                user.tokens_used = max(0, int(tokens_used))
+            role_changed = False
             if role is not None:
                 resolved = normalize_role(role, is_admin=bool(is_admin))
+                if normalize_role(getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False))) != resolved:
+                    role_changed = True
                 user.role = resolved
                 user.is_admin = resolved == ROLE_ADMIN
             elif is_admin is not None:
@@ -657,20 +778,47 @@ class ConversationStore:
                     user.role = ROLE_ADMIN
                 elif getattr(user, "role", None) == ROLE_ADMIN:
                     user.role = ROLE_STUDENT
+                role_changed = True
+
+            if reset_defaults_to_role:
+                reset_mode_to_role = True
+                reset_llm_to_role = True
+                reset_budget_to_role = True
+
+            if reset_mode_to_role or clear_default_response_mode:
+                user.default_response_mode = None
+            elif default_response_mode is not None:
+                user.default_response_mode = (default_response_mode or "").strip() or None
+
+            if reset_llm_to_role or clear_default_llm_choice:
+                user.default_llm_choice = None
+            elif default_llm_choice is not None:
+                user.default_llm_choice = (default_llm_choice or "").strip() or None
+
+            current_role = normalize_role(
+                getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False))
+            )
+            if reset_budget_to_role:
+                user.budget_is_override = False
+                user.token_limit = self.role_token_limit(current_role)
+            elif token_limit is not None:
+                user.token_limit = max(0, int(token_limit))
+                user.budget_is_override = True if budget_is_override is None else bool(budget_is_override)
+            elif budget_is_override is not None:
+                user.budget_is_override = bool(budget_is_override)
+                if not user.budget_is_override:
+                    user.token_limit = self.role_token_limit(current_role)
+            elif role_changed and not bool(getattr(user, "budget_is_override", False)):
+                user.token_limit = self.role_token_limit(current_role)
+
+            if tokens_used is not None:
+                user.tokens_used = max(0, int(tokens_used))
             if clear_group:
                 user.group_name = None
             elif group_name is not None:
                 user.group_name = (group_name or "").strip() or None
             if admin_notes is not None:
                 user.admin_notes = admin_notes
-            if clear_default_response_mode:
-                user.default_response_mode = None
-            elif default_response_mode is not None:
-                user.default_response_mode = (default_response_mode or "").strip() or None
-            if clear_default_llm_choice:
-                user.default_llm_choice = None
-            elif default_llm_choice is not None:
-                user.default_llm_choice = (default_llm_choice or "").strip() or None
             if password:
                 user.password_hash = hash_password(password)
             session.add(user)
@@ -744,10 +892,19 @@ class ConversationStore:
         default_response_mode: Optional[str] = None,
         default_llm_choice: Optional[str] = None,
         clear_default_llm_choice: bool = False,
+        tester_token_limit: Optional[int] = None,
         student_default_response_mode: Optional[str] = None,
         student_default_llm_choice: Optional[str] = None,
         clear_student_default_llm_choice: bool = False,
+        student_token_limit: Optional[int] = None,
+        admin_default_response_mode: Optional[str] = None,
+        clear_admin_default_response_mode: bool = False,
+        admin_default_llm_choice: Optional[str] = None,
+        clear_admin_default_llm_choice: bool = False,
+        admin_token_limit: Optional[int] = None,
+        apply_budgets: bool = True,
     ) -> AppSettings:
+        budgets_to_apply: List[tuple[str, int]] = []
         with Session(self.engine) as session:
             row = session.get(AppSettings, 1)
             if row is None:
@@ -760,6 +917,9 @@ class ConversationStore:
                 row.default_llm_choice = None
             elif default_llm_choice is not None:
                 row.default_llm_choice = (default_llm_choice or "").strip() or None
+            if tester_token_limit is not None:
+                row.tester_token_limit = max(0, int(tester_token_limit))
+                budgets_to_apply.append((ROLE_TESTER, row.tester_token_limit))
             if student_default_response_mode is not None:
                 row.student_default_response_mode = (
                     (student_default_response_mode or "").strip() or "vector"
@@ -768,11 +928,30 @@ class ConversationStore:
                 row.student_default_llm_choice = None
             elif student_default_llm_choice is not None:
                 row.student_default_llm_choice = (student_default_llm_choice or "").strip() or None
+            if student_token_limit is not None:
+                row.student_token_limit = max(0, int(student_token_limit))
+                budgets_to_apply.append((ROLE_STUDENT, row.student_token_limit))
+            if clear_admin_default_response_mode:
+                row.admin_default_response_mode = None
+            elif admin_default_response_mode is not None:
+                cleaned = (admin_default_response_mode or "").strip() or None
+                row.admin_default_response_mode = cleaned
+            if clear_admin_default_llm_choice:
+                row.admin_default_llm_choice = None
+            elif admin_default_llm_choice is not None:
+                row.admin_default_llm_choice = (admin_default_llm_choice or "").strip() or None
+            if admin_token_limit is not None:
+                row.admin_token_limit = max(0, int(admin_token_limit))
+                budgets_to_apply.append((ROLE_ADMIN, row.admin_token_limit))
             row.updated_at = _utc_now()
             session.add(row)
             session.commit()
             session.refresh(row)
-            return row
+            settings = row
+        if apply_budgets:
+            for role_name, limit in budgets_to_apply:
+                self.apply_role_budget(role_name, limit)
+        return settings
 
     def get_all_app_api_configs(self) -> List[AppApiKey]:
         with Session(self.engine) as session:

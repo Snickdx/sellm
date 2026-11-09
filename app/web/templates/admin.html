@@ -35,9 +35,16 @@
         .topbar a:hover, .topbar button.linkish:hover { background: rgba(255,255,255,0.22); }
         .shell {
             display: grid;
-            grid-template-columns: 220px minmax(280px, 1.1fr) minmax(0, 1.6fr);
+            grid-template-columns: 220px minmax(0, 1fr);
             height: calc(100vh - 52px);
             background: #f8fafc;
+        }
+        /* Master-detail only when a list pane is needed (Users). */
+        .shell.with-list {
+            grid-template-columns: 220px minmax(260px, 0.95fr) minmax(0, 1.55fr);
+        }
+        .shell:not(.with-list) .list-pane {
+            display: none;
         }
         .nav, .list-pane, .detail-pane {
             min-height: 0;
@@ -45,6 +52,15 @@
             border-right: 1px solid #e2e8f0;
         }
         .detail-pane { border-right: none; }
+        .detail-pane .detail-body {
+            max-width: 920px;
+        }
+        .shell.users-wide .detail-pane .detail-body {
+            max-width: none;
+        }
+        .shell.with-list .detail-pane .detail-body {
+            max-width: none;
+        }
         .nav {
             background: #f1f5f9;
             padding: 12px;
@@ -232,10 +248,144 @@
             background: #fff;
         }
         .provider-card h4 { font-size: 13px; margin-bottom: 8px; }
+        .role-defaults {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 14px;
+        }
+        .role-defaults-top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px 14px;
+            margin-bottom: 8px;
+        }
+        .role-defaults-top .hint {
+            font-size: 12px;
+            color: #64748b;
+        }
+        .role-toggle {
+            display: inline-flex;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+        .role-toggle button {
+            border: none;
+            background: transparent;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 650;
+            color: #475569;
+            cursor: pointer;
+        }
+        .role-toggle button + button {
+            border-left: 1px solid #d1d5db;
+        }
+        .role-toggle button.active {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+        .role-defaults-fields {
+            display: grid;
+            grid-template-columns: minmax(140px, 1.1fr) minmax(160px, 1.4fr) minmax(110px, 0.8fr) auto;
+            gap: 8px 10px;
+            align-items: end;
+        }
+        .role-defaults-fields .field { margin-bottom: 0; }
+        .role-defaults-fields .field label { margin-bottom: 2px; }
+        .role-defaults-fields .actions { margin-top: 0; }
+        .users-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .users-toolbar input, .users-toolbar select {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 13px;
+            background: #fff;
+            max-width: 220px;
+        }
+        .users-table-wrap {
+            overflow: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+        }
+        table.users-grid {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 980px;
+        }
+        table.users-grid th, table.users-grid td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+            vertical-align: middle;
+        }
+        table.users-grid th {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+            background: #f8fafc;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        table.users-grid tr:hover td { background: #f8fafc; }
+        table.users-grid tr.selected td { background: #eef2ff; }
+        table.users-grid select, table.users-grid input[type="number"] {
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 4px 6px;
+            font-size: 12px;
+            background: #fff;
+            max-width: 150px;
+        }
+        table.users-grid .cell-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        table.users-grid .btn-xs {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #374151;
+        }
+        table.users-grid .btn-xs.primary {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+            color: #3730a3;
+        }
+        .badge.override { background: #dbeafe; color: #1e40af; }
+        .badge.inherit { background: #f1f5f9; color: #64748b; }
+        .user-editor {
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            padding: 14px;
+        }
         @media (max-width: 980px) {
             .shell { grid-template-columns: 1fr; height: auto; }
             .nav, .list-pane, .detail-pane { border-right: none; border-bottom: 1px solid #e2e8f0; max-height: none; }
             .grid-2 { grid-template-columns: 1fr; }
+            .role-defaults-fields { grid-template-columns: 1fr 1fr; }
+            .role-defaults-fields .actions { grid-column: 1 / -1; }
         }
     </style>
 </head>
@@ -276,7 +426,7 @@
             <button type="button" data-view="users" class="active">Users</button>
             <button type="button" data-view="tokens">Token monitor</button>
             <button type="button" data-view="appkeys">App-wide keys</button>
-            <button type="button" data-view="defaults">Default model / mode</button>
+            <button type="button" data-view="defaults">Role defaults</button>
         </aside>
 
         <section class="list-pane">
@@ -297,6 +447,6 @@
         </section>
     </div>
 
-    <script src="/static/components/admin.js?v=2"></script>
+    <script src="/static/components/admin.js?v=6"></script>
 </body>
 </html>

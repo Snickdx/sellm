@@ -74,8 +74,11 @@ def _user_role(user) -> str:
     return normalize_role(getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False)))
 
 
-def _user_summary(store, user) -> AdminUserSummary:
+def _user_summary(store, user, settings=None) -> AdminUserSummary:
     role = _user_role(user)
+    role_defs = store.role_defaults(role, settings)
+    user_mode = (getattr(user, "default_response_mode", None) or "").strip() or None
+    user_llm = (getattr(user, "default_llm_choice", None) or "").strip() or None
     return AdminUserSummary(
         id=user.id,
         username=user.username,
@@ -87,8 +90,16 @@ def _user_summary(store, user) -> AdminUserSummary:
         token_limit=int(getattr(user, "token_limit", 0) or 0),
         tokens_used=int(getattr(user, "tokens_used", 0) or 0),
         tokens_remaining=_remaining(user),
-        default_response_mode=getattr(user, "default_response_mode", None),
-        default_llm_choice=getattr(user, "default_llm_choice", None),
+        budget_is_override=bool(getattr(user, "budget_is_override", False)),
+        default_response_mode=user_mode,
+        default_llm_choice=user_llm,
+        mode_is_override=bool(user_mode),
+        llm_is_override=bool(user_llm),
+        role_default_response_mode=role_defs.get("default_response_mode"),
+        role_default_llm_choice=role_defs.get("default_llm_choice"),
+        role_token_limit=int(role_defs.get("token_limit") or 0),
+        effective_response_mode=user_mode or role_defs.get("default_response_mode"),
+        effective_llm_choice=user_llm or role_defs.get("default_llm_choice"),
         conversation_count=store.count_conversations_for_user(user.id),
         created_at=user.created_at.isoformat() if user.created_at else "",
     )
@@ -110,8 +121,13 @@ def _settings_payload(settings) -> AdminAppSettings:
     return AdminAppSettings(
         default_response_mode=settings.default_response_mode or "vector",
         default_llm_choice=settings.default_llm_choice,
+        tester_token_limit=int(getattr(settings, "tester_token_limit", None) or 15_000),
         student_default_response_mode=getattr(settings, "student_default_response_mode", None) or "vector",
         student_default_llm_choice=getattr(settings, "student_default_llm_choice", None),
+        student_token_limit=int(getattr(settings, "student_token_limit", None) or 15_000),
+        admin_default_response_mode=getattr(settings, "admin_default_response_mode", None),
+        admin_default_llm_choice=getattr(settings, "admin_default_llm_choice", None),
+        admin_token_limit=int(getattr(settings, "admin_token_limit", None) or 50_000),
         updated_at=settings.updated_at.isoformat() if settings.updated_at else None,
     )
 
@@ -134,6 +150,7 @@ def _validate_mode(mode: Optional[str]) -> Optional[str]:
 async def list_users(request: Request, group: Optional[str] = None):
     _require_admin(request)
     store = _store(request)
+    settings = store.get_app_settings()
     users = store.list_users()
     if group is not None:
         needle = group.strip()
@@ -141,7 +158,7 @@ async def list_users(request: Request, group: Optional[str] = None):
             users = [u for u in users if not (getattr(u, "group_name", None) or "").strip()]
         else:
             users = [u for u in users if (getattr(u, "group_name", None) or "") == needle]
-    return [_user_summary(store, u) for u in users]
+    return [_user_summary(store, u, settings) for u in users]
 
 
 @router.get("/groups", response_model=List[str])
@@ -165,6 +182,7 @@ async def create_user(body: AdminUserCreateRequest, request: Request):
             body.username,
             body.password,
             token_limit=body.token_limit,
+            budget_is_override=body.budget_is_override,
             role=role,
             is_admin=role == ROLE_ADMIN,
             group_name=body.group_name,
@@ -200,7 +218,7 @@ async def update_user(user_id: int, body: AdminUserUpdateRequest, request: Reque
         tokens_used = 0
 
     mode = None
-    clear_mode = bool(body.clear_default_response_mode)
+    clear_mode = bool(body.clear_default_response_mode) or bool(body.reset_mode_to_role)
     if body.default_response_mode is not None and not clear_mode:
         mode = _validate_mode(body.default_response_mode)
 
@@ -222,7 +240,12 @@ async def update_user(user_id: int, body: AdminUserUpdateRequest, request: Reque
         default_response_mode=mode,
         clear_default_response_mode=clear_mode,
         default_llm_choice=body.default_llm_choice,
-        clear_default_llm_choice=bool(body.clear_default_llm_choice),
+        clear_default_llm_choice=bool(body.clear_default_llm_choice) or bool(body.reset_llm_to_role),
+        budget_is_override=body.budget_is_override,
+        reset_budget_to_role=bool(body.reset_budget_to_role),
+        reset_mode_to_role=bool(body.reset_mode_to_role),
+        reset_llm_to_role=bool(body.reset_llm_to_role),
+        reset_defaults_to_role=bool(body.reset_defaults_to_role),
         password=body.password,
     )
     if not updated:
@@ -235,7 +258,8 @@ async def token_monitor(request: Request):
     _require_admin(request)
     store = _store(request)
     summary = store.token_usage_summary()
-    users = [_user_summary(store, u) for u in store.list_users()]
+    settings = store.get_app_settings()
+    users = [_user_summary(store, u, settings) for u in store.list_users()]
     return AdminTokenSummary(
         user_count=summary["user_count"],
         total_token_limit=summary["total_token_limit"],
@@ -384,13 +408,24 @@ async def update_settings(body: AdminAppSettingsUpdate, request: Request):
         if body.student_default_response_mode is not None
         else None
     )
+    admin_mode = None
+    if body.admin_default_response_mode is not None and not body.clear_admin_default_response_mode:
+        admin_mode = _validate_mode(body.admin_default_response_mode)
     settings = _store(request).update_app_settings(
         default_response_mode=mode,
         default_llm_choice=body.default_llm_choice,
         clear_default_llm_choice=bool(body.clear_default_llm_choice),
+        tester_token_limit=body.tester_token_limit,
         student_default_response_mode=student_mode,
         student_default_llm_choice=body.student_default_llm_choice,
         clear_student_default_llm_choice=bool(body.clear_student_default_llm_choice),
+        student_token_limit=body.student_token_limit,
+        admin_default_response_mode=admin_mode,
+        clear_admin_default_response_mode=bool(body.clear_admin_default_response_mode),
+        admin_default_llm_choice=body.admin_default_llm_choice,
+        clear_admin_default_llm_choice=bool(body.clear_admin_default_llm_choice),
+        admin_token_limit=body.admin_token_limit,
+        apply_budgets=body.apply_budgets is not False,
     )
     return _settings_payload(settings)
 

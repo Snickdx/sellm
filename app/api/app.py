@@ -184,11 +184,16 @@ def _render_template(request: Request, name: str, context: Optional[Dict[str, An
 
     ctx = dict(context or {})
     ctx["request"] = request
-    params = list(inspect.signature(templates.TemplateResponse).parameters)
-    # New Starlette: (self, request, name, context=None, ...)
-    if len(params) >= 2 and params[1] == "request":
+    # Bound methods omit `self` from the signature; unbound include it.
+    params = [
+        p
+        for p in inspect.signature(templates.TemplateResponse).parameters
+        if p != "self"
+    ]
+    # New Starlette: (request, name, context=None, ...)
+    if params and params[0] == "request":
         return templates.TemplateResponse(request, name, ctx)
-    # Old Starlette: (self, name, context, ...)
+    # Old Starlette: (name, context, ...)
     return templates.TemplateResponse(name, ctx)
 
 
@@ -363,46 +368,57 @@ def _can_select_mode_model(user: Optional[User]) -> bool:
     return _user_role(user) in (ROLE_ADMIN, ROLE_TESTER)
 
 
+def _can_use_reflection(user: Optional[User]) -> bool:
+    """Reflection / tweak tools are for testers and admins only."""
+    return bool(user) and _user_role(user) in (ROLE_ADMIN, ROLE_TESTER)
+
+
+def _require_reflection_access(request: Request) -> User:
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not tweak_mode_enabled or behavior_tweaks is None:
+        raise HTTPException(
+            status_code=403,
+            detail="Tweak mode is disabled. Set TWEAK_MODE_ENABLED=true to enable reflection.",
+        )
+    if not _can_use_reflection(user):
+        raise HTTPException(status_code=403, detail="Reflection is not available for student accounts.")
+    return user
+
+
 def _effective_defaults(user: Optional[User]) -> dict:
     """Resolve response mode / LLM choice defaults.
 
-    Students always use admin-configured student_* defaults (role-wide).
-    Testers/admins: per-user override → app default → env.
+    Per-user override → role default → env fallback.
+    Students cannot pick mode/model in chat, but admins may set per-user overrides.
     """
     settings = conversation_store.get_app_settings()
+    role = _user_role(user) if user else ROLE_TESTER
+    role_defs = conversation_store.role_defaults(role, settings)
     app_mode = (settings.default_response_mode or "vector").strip() or "vector"
     app_llm = (settings.default_llm_choice or "").strip() or None
     student_mode = (
         getattr(settings, "student_default_response_mode", None) or app_mode or "vector"
     ).strip() or "vector"
     student_llm = (getattr(settings, "student_default_llm_choice", None) or "").strip() or None
-    role = _user_role(user)
     user_mode = (getattr(user, "default_response_mode", None) or "").strip() or None if user else None
     user_llm = (getattr(user, "default_llm_choice", None) or "").strip() or None if user else None
-    if role == ROLE_STUDENT:
-        return {
-            "default_response_mode": student_mode,
-            "default_llm_choice": student_llm or app_llm or default_choice_id(),
-            "app_default_response_mode": app_mode,
-            "app_default_llm_choice": app_llm,
-            "student_default_response_mode": student_mode,
-            "student_default_llm_choice": student_llm,
-            "user_default_response_mode": None,
-            "user_default_llm_choice": None,
-            "role": role,
-            "can_select_mode_model": False,
-        }
+    role_mode = role_defs.get("default_response_mode") or app_mode
+    role_llm = role_defs.get("default_llm_choice") or app_llm
     return {
-        "default_response_mode": user_mode or app_mode,
-        "default_llm_choice": user_llm or app_llm or default_choice_id(),
+        "default_response_mode": user_mode or role_mode,
+        "default_llm_choice": user_llm or role_llm or default_choice_id(),
         "app_default_response_mode": app_mode,
         "app_default_llm_choice": app_llm,
         "student_default_response_mode": student_mode,
         "student_default_llm_choice": student_llm,
+        "role_default_response_mode": role_mode,
+        "role_default_llm_choice": role_llm,
         "user_default_response_mode": user_mode,
         "user_default_llm_choice": user_llm,
         "role": role,
-        "can_select_mode_model": True,
+        "can_select_mode_model": role in (ROLE_ADMIN, ROLE_TESTER),
     }
 
 def _rag_for_mode(mode: str):
@@ -1295,7 +1311,8 @@ async def config(request: Request = None):
     has_groq = "groq" in provider_names
     has_openrouter = "openrouter" in provider_names
 
-    # Gather choices from Ollama + all configured user/app providers
+    # Gather choices from Ollama + all configured user/app providers.
+    # list_llm_choices()/ollama_reachable() share a short in-process Ollama tags cache.
     choices = list_llm_choices()  # base (Ollama)
     seen_ids = {c["id"] for c in choices}
     for p in ("openai", "anthropic", "gemini", "groq", "openrouter"):
@@ -1314,13 +1331,14 @@ async def config(request: Request = None):
                     labeled["key_scope"] = "user"
                 choices.append(labeled)
 
+    ollama_ok = ollama_reachable()
     switcher_on = (
         has_openai
         or has_anthropic
         or has_gemini
         or has_groq
         or has_openrouter
-        or ollama_reachable()
+        or ollama_ok
         or len([c for c in choices if c["provider"] != "template"]) > 0
     )
     defaults = _effective_defaults(user) if user else {
@@ -1354,12 +1372,17 @@ async def config(request: Request = None):
             "gemini": has_gemini,
             "groq": has_groq,
             "openrouter": has_openrouter,
-            "ollama": ollama_reachable(),
+            "ollama": ollama_ok,
         },
         "app_key_providers": sorted(app_providers.keys()),
         "hybrid_top_k": hybrid_top_k,
         "hybrid_route_margin": hybrid_route_margin,
-        "tweak_mode_enabled": tweak_mode_enabled,
+        "tweak_mode_enabled": bool(
+            tweak_mode_enabled and (not user or _can_use_reflection(user))
+        ),
+        "reflection_enabled": bool(
+            tweak_mode_enabled and user and _can_use_reflection(user)
+        ),
         "tweak_mode_env_set": bool(_tweak_raw.strip()),
         "env_app_dir": str(APP_DIR),
         "env_file_app": str(APP_DIR / ".env"),
@@ -1421,13 +1444,7 @@ def _split_reflection_reply(
 
 @app.post("/api/reflection/analyze")
 async def reflection_analyze(request: ReflectionAnalyzeRequest, req: Request):
-    if not _get_current_user(req):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not tweak_mode_enabled or behavior_tweaks is None:
-        raise HTTPException(
-            status_code=403,
-            detail="Tweak mode is disabled. Set TWEAK_MODE_ENABLED=true to enable reflection.",
-        )
+    _require_reflection_access(req)
     msgs = _reflection_messages(request)
     if len(msgs) < 2:
         raise HTTPException(status_code=400, detail="Need at least two messages to run reflection")
@@ -1457,8 +1474,7 @@ async def reflection_analyze(request: ReflectionAnalyzeRequest, req: Request):
 
 @app.get("/api/conversations/{conversation_id}/reflections", response_model=List[ReflectionThreadSummary])
 async def list_reflection_threads(conversation_id: str, request: Request):
-    if not _get_current_user(request):
-        raise HTTPException(status_code=401, detail="Not authenticated")
+    _require_reflection_access(request)
     convo = conversation_store.get_conversation(conversation_id)
     if not convo:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -1477,10 +1493,7 @@ async def list_reflection_threads(conversation_id: str, request: Request):
 
 @app.post("/api/conversations/{conversation_id}/reflections/start", response_model=ReflectionThreadStartResponse)
 async def start_reflection_thread(conversation_id: str, request: Request):
-    if not _get_current_user(request):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not tweak_mode_enabled or behavior_tweaks is None:
-        raise HTTPException(status_code=403, detail="Tweak mode is disabled.")
+    _require_reflection_access(request)
     convo = conversation_store.get_conversation(conversation_id)
     if not convo:
         raise HTTPException(status_code=404, detail="Conversation not found")
@@ -1515,15 +1528,13 @@ async def start_reflection_thread(conversation_id: str, request: Request):
 
 @app.get("/api/reflections/{thread_id}", response_model=ReflectionThreadDetail)
 async def get_reflection_thread(thread_id: str, request: Request):
-    if not _get_current_user(request):
-        raise HTTPException(status_code=401, detail="Not authenticated")
+    _require_reflection_access(request)
     return _thread_to_detail(thread_id)
 
 
 @app.post("/api/reflections/{thread_id}/chat")
 async def chat_reflection_thread(thread_id: str, request: ReflectionThreadChatRequest, req: Request):
-    if not tweak_mode_enabled or behavior_tweaks is None:
-        raise HTTPException(status_code=403, detail="Tweak mode is disabled.")
+    _require_reflection_access(req)
     if not request.message.strip():
         raise HTTPException(status_code=400, detail="Message is required")
     thread = conversation_store.get_reflection_thread(thread_id)
@@ -1560,10 +1571,7 @@ async def chat_reflection_thread(thread_id: str, request: ReflectionThreadChatRe
 
 @app.post("/api/reflections/{thread_id}/apply")
 async def apply_reflection_thread(thread_id: str, request: ReflectionApplyRequest, req: Request):
-    if not _get_current_user(req):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not tweak_mode_enabled or behavior_tweaks is None:
-        raise HTTPException(status_code=403, detail="Tweak mode is disabled.")
+    _require_reflection_access(req)
     thread = conversation_store.get_reflection_thread(thread_id)
     if not thread:
         raise HTTPException(status_code=404, detail="Reflection thread not found")
@@ -1587,13 +1595,7 @@ async def apply_reflection_thread(thread_id: str, request: ReflectionApplyReques
 
 @app.post("/api/reflection/apply")
 async def reflection_apply(request: ReflectionApplyRequest, req: Request):
-    if not _get_current_user(req):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not tweak_mode_enabled or behavior_tweaks is None:
-        raise HTTPException(
-            status_code=403,
-            detail="Tweak mode is disabled. Set TWEAK_MODE_ENABLED=true to apply reflection patches.",
-        )
+    _require_reflection_access(req)
     normalized = normalize_reflection_payload(dict(request.reflection))
     if not isinstance(normalized.get("patch"), dict):
         raise HTTPException(status_code=400, detail="Invalid reflection payload: missing patch")
@@ -1609,10 +1611,7 @@ async def reflection_apply(request: ReflectionApplyRequest, req: Request):
 
 @app.post("/api/feedback")
 async def feedback(request: FeedbackRequest, req: Request):
-    if not _get_current_user(req):
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not tweak_mode_enabled or behavior_tweaks is None:
-        raise HTTPException(status_code=403, detail="Tweak mode is disabled. Set TWEAK_MODE_ENABLED=true to enable feedback loop.")
+    _require_reflection_access(req)
     result = behavior_tweaks.update_from_feedback(
         query=request.prompt,
         response=request.response,
