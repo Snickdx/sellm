@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
   consentExitSession,
   createExitSession,
   fetchExitSession,
+  fetchMyTeams,
   fetchPolicy,
   fetchTeamDetail,
   finishExitSession,
@@ -35,8 +36,10 @@ function formatWhen(iso: string | null | undefined): string {
 
 export function ExitInterviewPage() {
   const { teamId } = useParams()
+  const navigate = useNavigate()
   const { user, loading } = useAuth()
 
+  const [allTeams, setAllTeams] = useState<Team[]>([])
   const [team, setTeam] = useState<Team | null>(null)
   const [repo, setRepo] = useState<RepositorySubmission | null>(null)
   const [groupName, setGroupName] = useState('')
@@ -83,7 +86,16 @@ export function ExitInterviewPage() {
   }, [])
 
   useEffect(() => {
+    if (!user) return
+    void fetchMyTeams()
+      .then(setAllTeams)
+      .catch(() => setAllTeams([]))
+  }, [user])
+
+  useEffect(() => {
     if (!user || !teamId) return
+    setSession(null)
+    setReport(null)
     void refreshHub().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : 'Failed to load'),
     )
@@ -233,6 +245,24 @@ export function ExitInterviewPage() {
 
   const hub = (
     <div className="stack">
+      {allTeams.length > 1 ? (
+        <label className="auth-form" style={{ marginBottom: 0 }}>
+          Group
+          <select
+            value={teamId}
+            onChange={(e) => {
+              navigate(`/teams/${e.target.value}/exit`)
+            }}
+          >
+            {allTeams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
       <section className="surface">
         <h2>Group settings</h2>
         <p className="hint" style={{ marginBottom: 12 }}>
@@ -420,8 +450,12 @@ export function ExitInterviewPage() {
 
   return (
     <CourseShell
-      title="Exit interview"
-      subtitle={team?.name ? `${team.name}${repoReady ? '' : ' · repo not ready'}` : 'Group & interviews'}
+      title="Exit interviews"
+      subtitle={
+        team?.name
+          ? `${team.name}${repoReady ? '' : ' · repo not ready'}`
+          : 'Group settings, start interview, past sessions'
+      }
     >
       <div className="stack">
         {error && <p className="error">{error}</p>}

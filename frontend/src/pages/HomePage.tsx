@@ -1,73 +1,85 @@
-import { useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
-import { fetchMyTeams, isInstructor, type Team } from '../api/client'
+import { useEffect, useState, type FormEvent } from 'react'
+import { Navigate } from 'react-router-dom'
+import { fetchMyTeams, setupMyGroup, type Team } from '../api/client'
 import { useAuth } from '../auth'
 import { CourseShell } from '../components/CourseShell'
 
 export function HomePage() {
   const { user, loading } = useAuth()
-  const [teams, setTeams] = useState<Team[]>([])
+  const [teams, setTeams] = useState<Team[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [groupName, setGroupName] = useState('')
+  const [githubUrl, setGithubUrl] = useState('')
+  const [createdId, setCreatedId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
     void fetchMyTeams()
       .then(setTeams)
-      .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load teams'))
+      .catch((err: unknown) => {
+        setTeams([])
+        setError(err instanceof Error ? err.message : 'Failed to load teams')
+      })
   }, [user])
 
-  if (loading) return <main className="page-fallback">Loading…</main>
+  if (loading || teams === null) return <main className="page-fallback">Loading…</main>
   if (!user) return <Navigate to="/login" replace />
+  if (createdId) return <Navigate to={`/teams/${createdId}/exit`} replace />
+  if (teams.length > 0) return <Navigate to={`/teams/${teams[0].id}/exit`} replace />
 
-  const admin = isInstructor(user)
-  const mine = admin ? teams : teams.slice(0, 1)
-
-  // One assigned team → go straight to the interview.
-  if (!admin && mine.length === 1) {
-    return <Navigate to={`/teams/${mine[0].id}/exit`} replace />
+  async function onCreate(event: FormEvent) {
+    event.preventDefault()
+    if (!groupName.trim() || !githubUrl.trim()) return
+    setBusy(true)
+    setError(null)
+    try {
+      const result = await setupMyGroup({
+        name: groupName.trim(),
+        github_url: githubUrl.trim(),
+        scenario_slug: 'library',
+      })
+      setCreatedId(result.team.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not create group')
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
-    <CourseShell subtitle="Your assigned exit interview">
+    <CourseShell subtitle="Set up your group to begin">
       <div className="stack">
-        <p className="lede">
-          {admin
-            ? 'Teams, repos, scenarios, and member names are managed in Admin. Students open their assigned interview from here.'
-            : 'Your instructor assigns a team in Admin. Open the interview when it appears below.'}
-        </p>
-
-        {admin ? (
-          <p>
-            <a className="btn-primary" href="/admin?view=teams">
-              Open Admin → Teams
-            </a>
-          </p>
-        ) : null}
-
         {error && <p className="error">{error}</p>}
-
-        {mine.length === 0 ? (
-          <section className="surface">
-            <h2>No team assigned</h2>
-            <p className="hint">
-              {admin
-                ? 'Create a team under Admin → Teams (group name, scenario, repo, member names, cohort login).'
-                : 'Ask your instructor to assign this login to a team.'}
-            </p>
-          </section>
-        ) : (
-          <ul className="team-list">
-            {mine.map((team) => (
-              <li key={team.id}>
-                <strong>{team.name}</strong>
-                <span>{team.scenario_slug ?? 'no scenario'}</span>
-                <span className="team-actions">
-                  <Link to={`/teams/${team.id}/exit`}>Open interview</Link>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <section className="surface">
+          <h2>Group settings</h2>
+          <p className="hint" style={{ marginBottom: 12 }}>
+            Enter a group name and repository URL (no commit hash). Then you can start interviews.
+          </p>
+          <form className="auth-form" onSubmit={onCreate}>
+            <label>
+              Group name
+              <input
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                placeholder="Team Alpha"
+                required
+              />
+            </label>
+            <label>
+              Repository URL
+              <input
+                value={githubUrl}
+                onChange={(e) => setGithubUrl(e.target.value)}
+                placeholder="https://github.com/org/repo or fixture://demo"
+                required
+              />
+            </label>
+            <button type="submit" disabled={busy || !groupName.trim() || !githubUrl.trim()}>
+              {busy ? 'Saving…' : 'Save & continue'}
+            </button>
+          </form>
+        </section>
       </div>
     </CourseShell>
   )
