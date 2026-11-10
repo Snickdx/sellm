@@ -196,7 +196,166 @@ open_questions:
     status: decided
     actions: [accept, modify, reject, defer]
 
+  - id: GAP-TT-006
+    priority: critical
+    theme: system_authority
+    prompt: |
+      Depth-update: confirm system roles. pg_coordinator oversees pairings,
+      overdue feedback, and grad-studies summaries; supervisor posts feedback/
+      progress for their students. Is pg_coordinator platform_admin,
+      supervisor operator of their supervisees, and thesis students end_users
+      (product actors, not chat personas)?
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/34-0
+        note: Coordinator oversees programmes / thesis progress visibility
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-2
+        note: Pairings recorded once agreed
+    why_it_matters: Makes admin vs supervisor authority explicit.
+    alternatives:
+      - Yes — pg_coordinator=platform_admin; supervisor=operator (own students); students=end_user
+      - Both coordinator and supervisor are platform_admin with equal pairing powers
+      - pg_coordinator=approver only; School for Graduate Studies is platform_admin (out of chat)
+      - Defer for student elicitation
+    recommended_default: >-
+      Yes — pg_coordinator=platform_admin; supervisor=operator (own students);
+      students=end_user
+    suggested_assumption: |
+      pg_coordinator is platform_admin (oversee pairings, overdue flags,
+      progress summaries for grad studies). supervisor is operator for their
+      own supervisees (feedback notes with due dates, freeform progress notes).
+      Thesis students are end_users in the product (submit work) but not chat
+      personas. Exact admin UI screens remain elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TT-007
+    priority: important
+    theme: approval_power
+    prompt: |
+      Who may create or change the recorded student–supervisor pairing in the
+      graded system?
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-2
+        note: Pairing recorded once student and supervisor agree
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/50-1
+        note: Students typically initiate finding a supervisor
+    why_it_matters: Separates pairing admin from day-to-day supervision.
+    alternatives:
+      - pg_coordinator records/changes pairings after agreement; supervisor confirms; student initiates off-system or in-app request
+      - Supervisor alone creates the pairing when they accept a student
+      - Only School for Graduate Studies staff (out of chat) may record pairings
+      - Defer for student elicitation
+    recommended_default: >-
+      pg_coordinator records/changes pairings after agreement; supervisor
+      confirms; student initiates off-system or in-app request
+    suggested_assumption: |
+      pg_coordinator may create and change recorded pairings. Supervisors confirm
+      acceptance of a supervisee. Students may request/initiate pairing but do
+      not unilaterally finalize the record. Exact request UX remains elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TT-008
+    priority: important
+    theme: exception_path
+    prompt: |
+      When feedback is overdue (past the configurable due date), what should the
+      coordinator be able to do beyond seeing a flag?
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/290-3
+        note: Overdue / stalled feedback concern
+    why_it_matters: Turns overdue flags into an actionable admin path.
+    alternatives:
+      - Flag only — coordinator sees overdue; escalation/reminders are out of band or elicitation
+      - Coordinator may send a reminder/nudge to the supervisor from the system
+      - Coordinator may reassign due date or reassign supervisor after overdue
+      - Defer for student elicitation
+    recommended_default: >-
+      Coordinator may send a reminder/nudge to the supervisor from the system
+    suggested_assumption: |
+      Overdue feedback is flagged to pg_coordinator. In graded MVP the
+      coordinator may send an in-system reminder/nudge to the supervisor.
+      Reassigning supervisors or forced due-date changes remain elicitation
+      unless decided later.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TT-009
+    priority: important
+    theme: visibility
+    prompt: |
+      What progress/feedback visibility does pg_coordinator have across
+      supervisees vs what a supervisor sees?
+    citations:
+      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/234-0
+        note: Progress visibility / summary needs
+    why_it_matters: Privacy/oversight boundary between coordinator and supervisor.
+    alternatives:
+      - Coordinator sees all pairings, overdue flags, and progress/feedback notes; supervisor sees only their supervisees
+      - Coordinator sees aggregate/overdue only — not full feedback note text
+      - Coordinator and supervisor have the same full visibility to all theses
+      - Defer for student elicitation
+    recommended_default: >-
+      Coordinator sees all pairings, overdue flags, and progress/feedback notes;
+      supervisor sees only their supervisees
+    suggested_assumption: |
+      pg_coordinator has read access across all pairings, overdue flags, and
+      feedback/progress notes for oversight and grad-studies summaries.
+      Supervisors see only their own supervisees' submissions, feedback, and
+      notes. Exact export format remains elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
 decisions:
+  - decision_id: DEC-TT-006
+    gap_id: GAP-TT-006
+    action: accept
+    chosen: >-
+      Yes — pg_coordinator=platform_admin; supervisor=operator (own students);
+      students=end_user
+    modified_text: null
+    rationale: Instructor accepted recommended system-role split.
+    approved_by: instructor
+    approved_at: "2026-11-10T02:55:00Z"
+    resulting_fact_ids: [TT-ASM-006]
+  - decision_id: DEC-TT-007
+    gap_id: GAP-TT-007
+    action: accept
+    chosen: >-
+      pg_coordinator records/changes pairings after agreement; supervisor
+      confirms; student initiates off-system or in-app request
+    modified_text: null
+    rationale: Instructor accepted coordinator-owned pairing records (option 1).
+    approved_by: instructor
+    approved_at: "2026-11-10T02:58:00Z"
+    resulting_fact_ids: [TT-ASM-007, TT-WF-004]
+  - decision_id: DEC-TT-008
+    gap_id: GAP-TT-008
+    action: accept
+    chosen: >-
+      Coordinator may send a reminder/nudge to the supervisor from the system
+    modified_text: null
+    rationale: Instructor chose in-system reminder/nudge (option 2).
+    approved_by: instructor
+    approved_at: "2026-11-10T03:06:00Z"
+    resulting_fact_ids: [TT-ASM-008, TT-WF-005]
+  - decision_id: DEC-TT-009
+    gap_id: GAP-TT-009
+    action: accept
+    chosen: >-
+      Coordinator sees all pairings, overdue flags, and progress/feedback notes;
+      supervisor sees only their supervisees
+    modified_text: null
+    rationale: Instructor accepted full coordinator read access (option 1).
+    approved_by: instructor
+    approved_at: "2026-11-10T03:08:00Z"
+    resulting_fact_ids: [TT-ASM-009, TT-BR-004]
   - decision_id: DEC-TT-001
     gap_id: GAP-TT-001
     action: accept

@@ -14,3 +14,18 @@ facts:
     disclosure: when_relevant
     acceptance_criteria:
       - A request that would exceed capacity is rejected or waitlisted, never silently overbooked.
+
+  - id: LIB-BR-002
+    statement: >-
+      A booking request that would exceed configured room capacity is hard-
+      rejected; the lecturer must reduce headcount or choose another slot.
+      Waitlisting and silent overbooking are out of graded MVP.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-LIB-005
+    approved_by: instructor
+    approved_at: "2026-11-10T00:02:00Z"
+    rationale: Instructor chose hard reject for over-capacity (option 1).
+    known_by: [administrator, library_coordinator, lecturer]
+    disclosure: when_relevant

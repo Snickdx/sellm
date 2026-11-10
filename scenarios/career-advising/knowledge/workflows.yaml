@@ -89,3 +89,33 @@ facts:
         speaker: null
     known_by: [career_advisor]
     disclosure: when_relevant
+
+  - id: CA-WF-005
+    statement: >-
+      Admin catalogue flow: admin defines skills and competency levels mainly via
+      bulk edit or upload; advisors then update mappings attaching those
+      skills/levels to jobs and to courses.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-007
+    approved_by: instructor
+    approved_at: "2026-11-09T23:41:00Z"
+    rationale: Instructor described admin bulk skill definition and advisor mapping updates.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-WF-006
+    statement: >-
+      Student course-entry flow: student searches the pre-populated course
+      catalogue and selects courses for their profile (no free-typed unrecognized
+      course codes on the happy path).
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-008
+    approved_by: instructor
+    approved_at: "2026-11-09T23:42:00Z"
+    rationale: Instructor required catalogue search/select.
+    known_by: [career_advisor]
+    disclosure: when_relevant

@@ -195,6 +195,130 @@ open_questions:
     status: decided
     actions: [accept, modify, reject, defer]
 
+  - id: GAP-UC-006
+    priority: critical
+    theme: system_authority
+    prompt: |
+      Stakeholder is fundraising/alumni staff who manages registration, boards,
+      and campaigns, and self-describes as admin. How should we model their
+      in-system authority?
+    citations:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-2
+        start: "00:01:22.803"
+        end: "00:01:27.286"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/151-3
+        start: "00:28:09.731"
+        end: "00:28:14.314"
+        speaker: null
+    why_it_matters: Drives system_role + admin_capabilities for persona realism.
+    alternatives:
+      - platform_admin — publish/reject/unpublish, campaigns, revoke accounts
+      - operator — publish/reject + campaigns; revoke deferred
+      - approver — publish/reject only
+      - Defer for student elicitation
+    recommended_default: platform_admin — publish/reject/unpublish, campaigns, revoke accounts
+    suggested_assumption: |
+      alumni_admin is platform_admin: may publish, reject, and unpublish
+      job/event listings; compose and send email campaigns; and revoke or
+      disable alumni accounts. Exact UI labels and notification copy stay
+      student elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-UC-007
+    priority: critical
+    theme: exception_path
+    prompt: |
+      When alumni_admin rejects a pending submission or unpublishes a live
+      listing, what happens for the submitter and the board?
+    citations: []
+    why_it_matters: Completes boards state machine and admin override realism.
+    alternatives:
+      - Reject/unpublish → hidden; submitter gets in-system notification
+      - Reject/unpublish → hidden; no required notification
+      - Reject only (no unpublish); notify on reject
+      - Defer for student elicitation
+    recommended_default: Reject/unpublish → hidden; submitter gets in-system notification
+    suggested_assumption: |
+      alumni_admin may reject pending submissions and unpublish live listings
+      at any time; the listing leaves the public board immediately; the
+      submitter receives an in-system notification.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-UC-008
+    priority: critical
+    theme: approval_power
+    prompt: |
+      After UWI-email verification, can alumni_admin revoke/disable an alumni
+      account?
+    citations:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-4
+        start: "00:01:31.271"
+        end: "00:01:35.114"
+        speaker: null
+    why_it_matters: Distinguishes email gate from ongoing admin hygiene.
+    alternatives:
+      - Yes — revoke anytime; lose boards + campaign audience
+      - Yes — revoke with recorded reason required
+      - No — only campus IT can disable
+      - Defer for student elicitation
+    recommended_default: Yes — revoke anytime; lose boards + campaign audience
+    suggested_assumption: |
+      alumni_admin may revoke or disable a verified alumni account at any time;
+      revoked accounts cannot browse boards and are excluded from campaign
+      audiences until re-enabled.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-UC-009
+    priority: important
+    theme: config_default
+    prompt: |
+      How does alumni_admin choose the email campaign audience?
+    citations:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-3
+        start: "00:01:53.639"
+        end: "00:01:58.769"
+        speaker: null
+    why_it_matters: Bounds campaign scope for graded MVP.
+    alternatives:
+      - All currently verified (non-revoked) alumni only
+      - Verified+active plus simple attribute filters
+      - Free-form custom lists / CSV upload required
+      - Defer for student elicitation
+    recommended_default: Verified+active plus simple attribute filters
+    suggested_assumption: |
+      Campaign audiences are all currently verified, non-revoked alumni by
+      default; optional simple attribute filters may apply.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-UC-010
+    priority: important
+    theme: visibility
+    prompt: |
+      Who can see pending job/event submissions before publish?
+    citations: []
+    why_it_matters: Privacy/moderation boundary for pending queue.
+    alternatives:
+      - Admin full queue; submitter own status; others nothing until published
+      - Admin only; submitter gets no status view
+      - All verified alumni see pending marked as pending
+      - Defer for student elicitation
+    recommended_default: Admin full queue; submitter own status; others nothing until published
+    suggested_assumption: |
+      Only alumni_admin can browse the full pending queue. Each submitter can
+      see the status of their own submissions. Other alumni cannot see a
+      listing until it is published.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
 decisions:
   - decision_id: DEC-UC-001
     gap_id: GAP-UC-001
@@ -256,3 +380,52 @@ decisions:
     approved_by: instructor
     approved_at: "2026-11-03T14:22:00Z"
     resulting_fact_ids: [UC-ASM-005, UC-REQ-005, UC-WF-003]
+  - decision_id: DEC-UC-006
+    gap_id: GAP-UC-006
+    action: accept
+    chosen: >-
+      platform_admin — publish/reject/unpublish, campaigns, revoke accounts
+    modified_text: null
+    rationale: Instructor chose option 1 — platform_admin.
+    approved_by: instructor
+    approved_at: "2026-11-10T03:13:00Z"
+    resulting_fact_ids: [UC-ASM-006, UC-REQ-008]
+  - decision_id: DEC-UC-007
+    gap_id: GAP-UC-007
+    action: accept
+    chosen: Reject/unpublish → hidden; submitter gets in-system notification
+    modified_text: null
+    rationale: Instructor chose option 1 — reject/unpublish with notify.
+    approved_by: instructor
+    approved_at: "2026-11-10T03:13:30Z"
+    resulting_fact_ids: [UC-ASM-007, UC-BR-004, UC-WF-004]
+  - decision_id: DEC-UC-008
+    gap_id: GAP-UC-008
+    action: accept
+    chosen: Yes — revoke anytime; lose boards + campaign audience
+    modified_text: null
+    rationale: Instructor chose option 1 — admin revoke anytime.
+    approved_by: instructor
+    approved_at: "2026-11-10T03:14:00Z"
+    resulting_fact_ids: [UC-ASM-008, UC-BR-005, UC-WF-005]
+  - decision_id: DEC-UC-009
+    gap_id: GAP-UC-009
+    action: accept
+    chosen: All currently verified (non-revoked) alumni only
+    modified_text: null
+    rationale: >-
+      Instructor chose option 1 (all verified non-revoked), not optional
+      attribute filters.
+    approved_by: instructor
+    approved_at: "2026-11-10T03:14:30Z"
+    resulting_fact_ids: [UC-ASM-009]
+  - decision_id: DEC-UC-010
+    gap_id: GAP-UC-010
+    action: accept
+    chosen: >-
+      Admin full queue; submitter own status; others nothing until published
+    modified_text: null
+    rationale: Instructor chose option 1 — pending visibility rules.
+    approved_by: instructor
+    approved_at: "2026-11-10T03:16:00Z"
+    resulting_fact_ids: [UC-ASM-010, UC-BR-005]

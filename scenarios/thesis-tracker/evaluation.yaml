@@ -29,3 +29,10 @@ hidden_checks:
     competency: grad_studies_summary
     description: Coordinator can produce a progress summary for grad studies.
     related_fact_ids: [TT-REQ-005, TT-WF-003]
+
+  - id: EVAL-TT-006
+    competency: coordinator_admin_depth
+    description: >-
+      Coordinator is platform_admin for pairings, cross-pairing visibility,
+      overdue nudges; supervisor is scoped operator.
+    related_fact_ids: [TT-ASM-006, TT-ASM-007, TT-ASM-008, TT-ASM-009, TT-BR-004, TT-WF-004, TT-WF-005]

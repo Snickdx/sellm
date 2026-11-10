@@ -78,3 +78,35 @@ facts:
         speaker: null
     known_by: [administrator]
     disclosure: when_asked
+
+  - id: JB-WF-004
+    statement: >-
+      Reject/revise flow: administrator rejects a pending listing → employer
+      revises and resubmits → listing returns to admin review before any publish.
+      Graduates never see rejected/pending listings.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-008
+    approved_by: instructor
+    approved_at: "2026-11-10T02:38:00Z"
+    rationale: Instructor chose revise-and-resubmit after reject.
+    known_by: [administrator, employer]
+    disclosure: when_relevant
+
+  - id: JB-WF-005
+    statement: >-
+      Publish-notify flow: administrator publishes an approved listing → eligible
+      programme subscribers are notified automatically (no separate mandatory
+      notify step). Administrator may later unpublish to hide the listing from
+      graduates.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-009
+    approved_by: instructor
+    approved_at: "2026-11-10T02:39:00Z"
+    rationale: >-
+      Auto-notify (DEC-JB-009) plus admin unpublish (DEC-JB-010) for graded MVP.
+    known_by: [administrator, graduate_applicant]
+    disclosure: when_relevant

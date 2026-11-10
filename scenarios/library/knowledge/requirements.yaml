@@ -94,3 +94,32 @@ facts:
         speaker: lecturer
     known_by: [lecturer]
     disclosure: when_relevant
+
+  - id: LIB-REQ-007
+    statement: >-
+      Lecturers may cancel their own confirmed workshop booking any time before
+      the session start; the library coordinator may also cancel for operational
+      reasons.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-LIB-003
+    approved_by: instructor
+    approved_at: "2026-11-09T23:51:00Z"
+    rationale: Instructor chose cancel any time before start (option 3).
+    known_by: [lecturer, library_coordinator]
+    disclosure: when_relevant
+
+  - id: LIB-REQ-008
+    statement: >-
+      Administrator and library_coordinator may create and update workshop rooms
+      and per-room capacities used by booking checks.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-LIB-006
+    approved_by: instructor
+    approved_at: "2026-11-10T00:14:00Z"
+    rationale: Instructor allowed coordinator to edit capacities as well as administrator.
+    known_by: [administrator, library_coordinator]
+    disclosure: when_relevant

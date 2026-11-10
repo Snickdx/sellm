@@ -240,6 +240,40 @@ facts:
     acceptance_criteria:
       - Missing required courses for a selected path are listed to the user.
 
+  - id: CA-REQ-011
+    statement: >-
+      Jobs/careers and courses are associated through skills and competency
+      levels that belong to a job and to a course; recommendations use those
+      associations rather than only direct course↔career links.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-006
+    approved_by: instructor
+    approved_at: "2026-11-09T23:39:00Z"
+    rationale: Instructor specified skills/competency mapping method.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - A job can have associated skills with competency levels.
+      - A course can have associated skills with competency levels.
+      - Suitability derives from those shared associations.
+
+  - id: CA-REQ-012
+    statement: >-
+      Suited careers are ordered by transparent skill/competency overlap with the
+      student’s selected courses and are always presented as non-absolute
+      suggestions.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-010
+    approved_by: instructor
+    approved_at: "2026-11-09T23:43:00Z"
+    rationale: Instructor accepted option 1 ranking model.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
   - id: CA-REQ-010
     statement: >-
       An enrolled student mid-programme can enter current degree and courses; the

@@ -48,3 +48,42 @@ facts:
     rationale: Instructor accepted MVP core boundary.
     known_by: [alumni_admin]
     disclosure: when_asked
+
+  - id: UC-BR-004
+    statement: >-
+      Rejected or unpublished listings are not visible on public boards;
+      submitters are notified in-system when alumni_admin rejects or
+      unpublishes their listing.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-007
+    approved_by: instructor
+    approved_at: "2026-11-10T03:13:30Z"
+    rationale: Instructor chose reject/unpublish with notify.
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Public boards never show rejected or unpublished listings.
+      - Submitter receives an in-system notification on reject or unpublish.
+
+  - id: UC-BR-005
+    statement: >-
+      Revoked or disabled alumni accounts cannot browse boards and are
+      excluded from campaign audiences. Pending-queue visibility: only
+      alumni_admin sees the full queue; submitters see only their own
+      submission status; other alumni see published listings only.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-008
+    approved_by: instructor
+    approved_at: "2026-11-10T03:14:00Z"
+    rationale: >-
+      Instructor chose revoke anytime (DEC-UC-008); pending visibility from
+      DEC-UC-010 also encoded here for gatekeeping.
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - Revoked accounts are denied board browse and campaign inclusion.
+      - Non-admin alumni cannot see other users' pending submissions.

@@ -69,3 +69,65 @@ facts:
     rationale: Instructor chose assignment-only tracking.
     known_by: [hod]
     disclosure: when_relevant
+
+  - id: TA-ASM-006
+    statement: >-
+      hod is platform_admin for the TA allocation product: create/change/remove
+      course assignments, enforce hard budget and hard 20h/week cap, and view
+      workload records. HR contracts and lecturer task portals remain out of
+      graded MVP.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-006
+    approved_by: instructor
+    approved_at: "2026-11-10T02:47:00Z"
+    rationale: Instructor confirmed hod platform_admin authority.
+    known_by: [hod]
+    disclosure: when_relevant
+
+  - id: TA-ASM-007
+    statement: >-
+      Assignments that would exceed 20 planned hours/week are blocked (not
+      overridable). The system shows remaining capacity so the HOD can reduce
+      hours or change assignments.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-007
+    approved_by: instructor
+    approved_at: "2026-11-10T02:51:00Z"
+    rationale: Instructor chose hard block with remaining capacity UX.
+    known_by: [hod]
+    disclosure: when_relevant
+
+  - id: TA-ASM-008
+    statement: >-
+      hod may create, edit hours, reassign, or remove TA↔course assignments.
+      Every change revalidates the hard 20h/week cap and hard departmental
+      budget. Exact history/audit UI remains elicitation.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-008
+    approved_by: instructor
+    approved_at: "2026-11-10T02:52:00Z"
+    rationale: Instructor allowed reallocations.
+    known_by: [hod]
+    disclosure: when_relevant
+
+  - id: TA-ASM-009
+    statement: >-
+      Departmental TA budget is a hard system block: assignments that would
+      exceed remaining budget cannot be saved. Exact budget units/currency
+      remain elicitation.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-009
+    approved_by: instructor
+    approved_at: "2026-11-10T02:53:00Z"
+    rationale: Instructor chose hard budget block.
+    known_by: [hod]
+    disclosure: when_relevant
+

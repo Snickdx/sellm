@@ -21,7 +21,14 @@ if str(ROOT) not in sys.path:
 
 
 def main() -> int:
-    # Lightweight path: reload registry only, then index if backends import cleanly.
+    try:
+        from dotenv import load_dotenv
+
+        load_dotenv(ROOT / "app" / ".env")
+        load_dotenv(ROOT / ".env")
+    except ImportError:
+        pass
+
     from app.seproject.indexing import reload_and_index_scenarios
     from app.seproject.scenarios.loader import default_scenarios_root
 
@@ -29,6 +36,9 @@ def main() -> int:
     neo4j_rag = None
     excel = os.getenv("EXCEL_FILE") or str(ROOT / "data.xlsx")
     chroma = os.getenv("CHROMA_PERSIST_DIRECTORY") or str(ROOT / "storage" / "chroma")
+    neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
+    neo4j_user = os.getenv("NEO4J_USER", "neo4j")
+    neo4j_password = os.getenv("NEO4J_PASSWORD", "password")
 
     try:
         from app.rag_backend import RequirementsRAG
@@ -39,10 +49,14 @@ def main() -> int:
         print(f"⚠ vector backend unavailable: {exc}")
 
     try:
-        if os.getenv("NEO4J_URI") or os.getenv("NEO4J_PASSWORD"):
-            from app.rag_backend_neo4j import RequirementsRAGNeo4j
+        from app.rag_backend_neo4j import RequirementsRAGNeo4j
 
-            neo4j_rag = RequirementsRAGNeo4j()
+        neo4j_rag = RequirementsRAGNeo4j(
+            excel if Path(excel).is_file() else excel,
+            neo4j_uri=neo4j_uri,
+            neo4j_user=neo4j_user,
+            neo4j_password=neo4j_password,
+        )
     except Exception as exc:  # noqa: BLE001
         print(f"⚠ neo4j backend unavailable: {exc}")
 
@@ -51,6 +65,8 @@ def main() -> int:
     print(f"seed: {result['seed']}")
     print(f"index: {result['index']}")
     print(f"modes refreshed: {result['modes_refreshed']}")
+    if neo4j_rag is not None:
+        neo4j_rag.close()
     return 0
 
 

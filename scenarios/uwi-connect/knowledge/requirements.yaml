@@ -180,3 +180,34 @@ facts:
         speaker: null
     known_by: [alumni_admin]
     disclosure: when_relevant
+
+  - id: UC-REQ-008
+    statement: >-
+      Fundraising/alumni staff operate the platform as admins (not end-users
+      only): they manage registration, boards content, and outbound email
+      campaigns.
+    category: functional
+    status: clarified
+    origin: instructor
+    decision_id: DEC-UC-006
+    approved_by: instructor
+    approved_at: "2026-11-10T03:13:00Z"
+    rationale: Depth-update system-admin lens; transcript self-describes as admin.
+    source_refs:
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-2
+        start: "00:01:22.803"
+        end: "00:01:27.286"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/151-3
+        start: "00:28:09.731"
+        end: "00:28:14.314"
+        speaker: null
+      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/152-0
+        start: "00:28:14.874"
+        end: "00:28:18.718"
+        speaker: null
+    known_by: [alumni_admin]
+    disclosure: when_relevant

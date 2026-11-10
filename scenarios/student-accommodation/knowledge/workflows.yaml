@@ -72,3 +72,20 @@ facts:
         speaker: null
     known_by: [campus_admin]
     disclosure: when_relevant
+
+  - id: SA-WF-004
+    statement: >-
+      Verification outcomes: campus_admin may reject (landlord revises/resubmits),
+      grant provisional acceptance after manual review/certification (still
+      hidden from students), or grant full approval after which landlord may set
+      active/inactive and students may see active listings. campus_admin may
+      later force-deactivate.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-007
+    approved_by: instructor
+    approved_at: "2026-11-10T02:43:00Z"
+    rationale: Combines DEC-SA-007..009 lifecycle depth.
+    known_by: [campus_admin, landlord]
+    disclosure: when_relevant

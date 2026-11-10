@@ -43,3 +43,17 @@ facts:
     rationale: Instructor chose freeform notes only.
     known_by: [pg_coordinator, supervisor]
     disclosure: when_relevant
+
+  - id: TT-BR-004
+    statement: >-
+      Supervisors are scoped to their own supervisees; pg_coordinator may read
+      across all pairings for oversight and summaries.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-009
+    approved_by: instructor
+    approved_at: "2026-11-10T03:08:00Z"
+    rationale: Instructor set coordinator vs supervisor visibility boundary.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant

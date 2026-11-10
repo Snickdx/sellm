@@ -41,3 +41,23 @@ hidden_checks:
       Career info includes credible progression/salary-style context and
       entry-level realism rather than glamorized endpoints.
     related_fact_ids: [CA-REQ-003, CA-REQ-008]
+
+  - id: EVAL-CA-007
+    competency: admin_skills_competency_model
+    description: >-
+      Jobs and courses link via skills/competency levels; admin defines skills
+      (bulk/upload); advisors may update mappings; students do not edit catalogue.
+    related_fact_ids: [CA-ASM-005, CA-ASM-006, CA-REQ-011, CA-BR-004, CA-WF-005]
+
+  - id: EVAL-CA-008
+    competency: catalogue_select_and_overlap_ranking
+    description: >-
+      Students search/select courses from a populated catalogue; suited careers
+      use transparent skill/competency overlap ranking with non-absolute labels.
+    related_fact_ids: [CA-ASM-008, CA-ASM-009, CA-REQ-012, CA-WF-006]
+
+  - id: EVAL-CA-009
+    competency: aggregated_staff_visibility
+    description: >-
+      Staff tooling shows aggregated usage only, not individual exploration history.
+    related_fact_ids: [CA-ASM-007, CA-BR-005]

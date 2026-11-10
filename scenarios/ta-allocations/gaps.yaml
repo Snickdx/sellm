@@ -199,7 +199,162 @@ open_questions:
     status: decided
     actions: [accept, modify, reject, defer]
 
+  - id: GAP-TA-006
+    priority: critical
+    theme: system_authority
+    prompt: |
+      Depth-update: the chat persona is hod only. Is the Head of Department the
+      platform_admin / allocating authority who creates and changes TA↔course
+      assignments in the graded system (budget + 20h hard cap), with HR and
+      lecturers outside the system?
+    citations:
+      - file: sources/TA Allocation Project - Cathreena Paul.vtt
+        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
+        note: Department allocates TAs to courses under budget
+      - file: sources/TA Allocation Project - Cathreena Paul.vtt
+        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
+        note: 20h/week maximum
+    why_it_matters: Makes understated admin authority explicit via system_role.
+    alternatives:
+      - Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system scope
+      - hod=operator only; a departmental admin staff role is the real platform_admin (out of chat)
+      - hod=approver; lecturers request and HOD only signs off (lecturer not in chat)
+      - Defer for student elicitation
+    recommended_default: >-
+      Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system
+      scope
+    suggested_assumption: |
+      hod is platform_admin for the TA allocation product: create/change/remove
+      course assignments, enforce budget and the hard 20h/week cap, and view
+      workload records. HR contracts and lecturer task portals remain out of
+      graded MVP. Exact admin UI screens remain elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TA-007
+    priority: important
+    theme: exception_path
+    prompt: |
+      What should happen when the HOD tries to assign hours that would exceed
+      the hard 20h/week cap (already a hard block per DEC-TA-003)?
+    citations:
+      - file: sources/TA Allocation Project - Cathreena Paul.vtt
+        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
+        note: Maximum 20 hours/week
+    why_it_matters: Makes the hard-block UX/exception path explicit for students.
+    alternatives:
+      - Block save and show remaining capacity; HOD must reduce hours or reassign elsewhere
+      - Block save but allow an HOD override with a recorded reason (softens hard cap)
+      - Auto-truncate hours to remaining capacity without blocking
+      - Defer for student elicitation
+    recommended_default: >-
+      Block save and show remaining capacity; HOD must reduce hours or reassign
+      elsewhere
+    suggested_assumption: |
+      Assignments that would exceed 20 planned hours/week are blocked (not
+      overridable in graded MVP). The system shows remaining capacity so the HOD
+      can reduce hours or change assignments. Exact error copy remains
+      elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TA-008
+    priority: important
+    theme: exception_path
+    prompt: |
+      May the HOD remove or reduce an existing TA↔course assignment mid-term
+      (reallocation), or are assignments immutable once saved in graded MVP?
+    citations:
+      - file: sources/TA Allocation Project - Cathreena Paul.vtt
+        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
+        note: HOD allocates under changing need/budget
+    why_it_matters: Completes admin lifecycle beyond first assign.
+    alternatives:
+      - Yes — HOD may edit hours, reassign, or remove assignments; system rechecks 20h/budget
+      - Hours editable; course assignment cannot be removed once saved (only reduced to zero via elicitation)
+      - Immutable after save for graded MVP; changes are out-of-band
+      - Defer for student elicitation
+    recommended_default: >-
+      Yes — HOD may edit hours, reassign, or remove assignments; system rechecks
+      20h/budget
+    suggested_assumption: |
+      hod may create, edit hours, reassign, or remove TA↔course assignments in
+      graded MVP. Every change revalidates the hard 20h/week cap and budget
+      constraints. Exact history/audit UI remains elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-TA-009
+    priority: important
+    theme: config_default
+    prompt: |
+      Is departmental TA budget also a hard system block (like 20h/week), or a
+      soft warning the HOD may exceed?
+    citations:
+      - file: sources/TA Allocation Project - Cathreena Paul.vtt
+        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-0
+        note: Allocations constrained primarily by budget
+    why_it_matters: Clarifies budget enforcement vs the already-hard hour cap.
+    alternatives:
+      - Hard block — cannot save assignments that would exceed departmental TA budget
+      - Soft warning — HOD may proceed after acknowledging over-budget
+      - Budget is informational only in graded MVP (track remaining; no block)
+      - Defer for student elicitation
+    recommended_default: >-
+      Soft warning — HOD may proceed after acknowledging over-budget
+    suggested_assumption: |
+      Departmental TA budget is enforced as a soft warning in graded MVP: the
+      system shows remaining budget and warns on over-budget assignments, but
+      the HOD may still save after acknowledging. The 20h/week cap remains a
+      hard block. Exact budget units/currency remain elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
 decisions:
+  - decision_id: DEC-TA-006
+    gap_id: GAP-TA-006
+    action: accept
+    chosen: >-
+      Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system
+      scope
+    modified_text: null
+    rationale: Instructor accepted hod as platform_admin.
+    approved_by: instructor
+    approved_at: "2026-11-10T02:47:00Z"
+    resulting_fact_ids: [TA-ASM-006]
+  - decision_id: DEC-TA-007
+    gap_id: GAP-TA-007
+    action: accept
+    chosen: >-
+      Block save and show remaining capacity; HOD must reduce hours or reassign
+      elsewhere
+    modified_text: null
+    rationale: Instructor chose hard block with remaining capacity (option 1).
+    approved_by: instructor
+    approved_at: "2026-11-10T02:51:00Z"
+    resulting_fact_ids: [TA-ASM-007, TA-WF-003]
+  - decision_id: DEC-TA-008
+    gap_id: GAP-TA-008
+    action: accept
+    chosen: >-
+      Yes — HOD may edit hours, reassign, or remove assignments; system rechecks
+      20h/budget
+    modified_text: null
+    rationale: Instructor chose editable reallocations (option 1).
+    approved_by: instructor
+    approved_at: "2026-11-10T02:52:00Z"
+    resulting_fact_ids: [TA-ASM-008, TA-REQ-009]
+  - decision_id: DEC-TA-009
+    gap_id: GAP-TA-009
+    action: accept
+    chosen: >-
+      Hard block — cannot save assignments that would exceed departmental TA
+      budget
+    modified_text: null
+    rationale: Instructor chose hard budget block (option 1).
+    approved_by: instructor
+    approved_at: "2026-11-10T02:53:00Z"
+    resulting_fact_ids: [TA-ASM-009, TA-BR-005]
   - decision_id: DEC-TA-001
     gap_id: GAP-TA-001
     action: accept

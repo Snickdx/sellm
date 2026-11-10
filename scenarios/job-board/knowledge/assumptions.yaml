@@ -94,3 +94,66 @@ facts:
     acceptance_criteria:
       - Employer can transition status on applications to their own listings.
       - Admin attempts to change application status are rejected or unavailable.
+
+  - id: JB-ASM-006
+    statement: >-
+      administrator is platform_admin for the job board (review/publish/reject
+      listings, subscriber notify, eligibility gate, export/forward applicant
+      packages, unpublish). employer is operator for their own listings and
+      application status updates. graduate_applicant is end_user (profile,
+      subscribe, apply, view own status). Exact admin UI screens remain
+      elicitation.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-007
+    approved_by: instructor
+    approved_at: "2026-11-10T02:37:00Z"
+    rationale: Instructor accepted system-role split.
+    known_by: [administrator, employer, graduate_applicant]
+    disclosure: when_relevant
+
+  - id: JB-ASM-007
+    statement: >-
+      When an administrator rejects a pending listing, the employer must revise
+      and resubmit before another admin review. Rejected listings are not visible
+      to graduates.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-008
+    approved_by: instructor
+    approved_at: "2026-11-10T02:38:00Z"
+    rationale: Instructor chose reject → revise/resubmit path.
+    known_by: [administrator, employer]
+    disclosure: when_relevant
+
+  - id: JB-ASM-008
+    statement: >-
+      When an administrator publishes a listing, eligible programme subscribers
+      are notified automatically. A separate mandatory notify click is not
+      required in graded MVP. Exact email/template copy remains elicitation.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-009
+    approved_by: instructor
+    approved_at: "2026-11-10T02:39:00Z"
+    rationale: Instructor chose auto-notify on publish (matches transcript desire).
+    known_by: [administrator, graduate_applicant]
+    disclosure: when_relevant
+
+  - id: JB-ASM-009
+    statement: >-
+      Administrator may unpublish a live listing so it is hidden from graduates;
+      the owning employer can see that status. Employer self-withdraw of live
+      listings is out of graded MVP unless elicited.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-010
+    approved_by: instructor
+    approved_at: "2026-11-10T02:39:30Z"
+    rationale: Instructor chose admin unpublish only (option 1).
+    known_by: [administrator, employer]
+    disclosure: when_relevant

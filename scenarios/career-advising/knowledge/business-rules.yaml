@@ -51,3 +51,33 @@ facts:
       about registering when already enrolled.
     known_by: [career_advisor]
     disclosure: when_relevant
+
+  - id: CA-BR-004
+    statement: >-
+      Only admin may define the skill catalogue (skills and competency levels),
+      mainly via bulk edit or upload. Advisors may update mappings of those
+      skills/levels onto jobs and courses. Students cannot edit shared catalogue
+      content.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-007
+    approved_by: instructor
+    approved_at: "2026-11-09T23:41:00Z"
+    rationale: Instructor split admin vs advisor content authority.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-BR-005
+    statement: >-
+      Staff tooling must not expose individual students’ exploration history;
+      only aggregated usage is in graded scope.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-009
+    approved_by: instructor
+    approved_at: "2026-11-09T23:42:30Z"
+    rationale: Instructor chose aggregated visibility only.
+    known_by: [career_advisor]
+    disclosure: when_asked

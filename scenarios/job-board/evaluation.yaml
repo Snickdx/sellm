@@ -46,3 +46,10 @@ hidden_checks:
     description: >-
       Admin vetting of known employers; secure storage of applicant data.
     related_fact_ids: [JB-BR-001, JB-REQ-009]
+
+  - id: EVAL-JB-008
+    competency: admin_lifecycle_depth
+    description: >-
+      Admin is platform_admin; reject requires employer revise/resubmit;
+      publish auto-notifies; admin may unpublish live listings.
+    related_fact_ids: [JB-ASM-006, JB-ASM-007, JB-ASM-008, JB-ASM-009, JB-WF-004, JB-WF-005, JB-REQ-010]

@@ -57,3 +57,19 @@ facts:
     rationale: Product boundary excludes HR/contracts.
     known_by: [hod]
     disclosure: when_asked
+
+  - id: TA-BR-005
+    statement: >-
+      The system must hard-block any assignment change that would exceed the
+      departmental TA budget (same class of enforcement as the 20h/week cap).
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-009
+    approved_by: instructor
+    approved_at: "2026-11-10T02:53:00Z"
+    rationale: Instructor chose hard budget block.
+    known_by: [hod]
+    disclosure: when_relevant
+    acceptance_criteria:
+      - An assignment that would exceed remaining departmental TA budget is rejected.

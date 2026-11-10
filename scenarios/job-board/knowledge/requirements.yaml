@@ -255,3 +255,17 @@ facts:
         speaker: null
     known_by: [administrator]
     disclosure: when_asked
+
+  - id: JB-REQ-010
+    statement: >-
+      An administrator may unpublish a live listing so it is no longer visible to
+      graduates; the submitting employer can see the unpublished status.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-JB-010
+    approved_by: instructor
+    approved_at: "2026-11-10T02:39:30Z"
+    rationale: Instructor chose admin unpublish capability.
+    known_by: [administrator, employer]
+    disclosure: when_relevant

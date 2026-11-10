@@ -68,3 +68,64 @@ facts:
     rationale: Instructor chose freeform notes only.
     known_by: [pg_coordinator, supervisor]
     disclosure: when_relevant
+
+  - id: TT-ASM-006
+    statement: >-
+      pg_coordinator is platform_admin; supervisor is operator for their own
+      supervisees; thesis students are end_users in the product (not chat
+      personas). Exact admin UI screens remain elicitation.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-006
+    approved_by: instructor
+    approved_at: "2026-11-10T02:55:00Z"
+    rationale: Instructor accepted system-role split.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant
+
+  - id: TT-ASM-007
+    statement: >-
+      pg_coordinator may create and change recorded pairings; supervisors confirm
+      acceptance; students may request/initiate but do not unilaterally finalize
+      the pairing record.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-007
+    approved_by: instructor
+    approved_at: "2026-11-10T02:58:00Z"
+    rationale: Instructor accepted coordinator-owned pairing records.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant
+
+  - id: TT-ASM-008
+    statement: >-
+      Overdue feedback is flagged to pg_coordinator, who may send an in-system
+      reminder/nudge to the supervisor. Reassigning supervisors or forcing
+      due-date changes remain elicitation unless decided later.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-008
+    approved_by: instructor
+    approved_at: "2026-11-10T03:06:00Z"
+    rationale: Instructor chose in-system nudge on overdue.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant
+
+  - id: TT-ASM-009
+    statement: >-
+      pg_coordinator has read access across all pairings, overdue flags, and
+      feedback/progress notes. Supervisors see only their own supervisees'
+      submissions, feedback, and notes.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-009
+    approved_by: instructor
+    approved_at: "2026-11-10T03:08:00Z"
+    rationale: Instructor accepted full coordinator oversight visibility.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant
+

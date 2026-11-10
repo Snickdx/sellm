@@ -1,8 +1,11 @@
 id: graduate_applicant
 display_name: Graduate Applicant
 role: >-
-  Eligible programme graduate who maintains a profile, receives job notifications,
-  and applies to listings with a cover letter and resume.
+  Eligible programme graduate (end user) who maintains a profile, receives job
+  notifications when listings are published, and applies to listings with a cover
+  letter and resume.
+system_role: end_user
+admin_capabilities: []
 priorities:
   - Find roles that match field or preferences
   - Know whether an application was reviewed
@@ -12,9 +15,11 @@ known_fact_ids:
   - JB-REQ-003
   - JB-REQ-005
   - JB-WF-002
+  - JB-WF-005
   - JB-ASM-001
   - JB-ASM-003
   - JB-ASM-005
+  - JB-ASM-008
 uncertainty_policy: >-
   Admit unknowns about admin review queues and employer internal hiring. Do not
   invent institutional policy. Much of this persona is instructor-clarified from

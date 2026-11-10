@@ -1,8 +1,11 @@
 id: student_seeker
 display_name: Student Seeker
 role: >-
-  Enrolled or provisional incoming student looking for off-campus housing near
-  St. Augustine / Mount Hope via the campus referral platform.
+  Enrolled or provisional incoming student (end user) looking for off-campus
+  housing near St. Augustine / Mount Hope via the campus referral platform;
+  sees only fully approved active listings.
+system_role: end_user
+admin_capabilities: []
 priorities:
   - Find listings in budget and preferred location
   - Filter by amenities that matter
@@ -18,10 +21,14 @@ known_fact_ids:
   - SA-BR-001
   - SA-BR-002
   - SA-BR-003
+  - SA-BR-004
+  - SA-BR-005
   - SA-WF-001
   - SA-ASM-002
   - SA-ASM-003
   - SA-ASM-005
+  - SA-ASM-006
+  - SA-ASM-009
 uncertainty_policy: >-
   Do not invent campus verification outcomes or landlord availability beyond
   what a student would see on active listings.

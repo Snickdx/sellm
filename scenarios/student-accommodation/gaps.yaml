@@ -244,7 +244,168 @@ open_questions:
     status: decided
     actions: [accept, modify, reject, defer]
 
+  - id: GAP-SA-006
+    priority: critical
+    theme: system_authority
+    prompt: |
+      Depth-update: confirm system roles. campus_admin verifies/approves listings
+      and gates eligibility; landlord submits and manages own units after
+      approval; student_seeker browses/contacts as end user. Is campus_admin
+      platform_admin, landlord operator of own listings, student_seeker end_user?
+    citations:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
+        note: Campus verification before listing
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-3
+        note: Closed platform for eligible students
+    why_it_matters: Makes admin authority explicit for persona system_role fields.
+    alternatives:
+      - Yes — campus_admin=platform_admin; landlord=operator (own listings); student=end_user
+      - campus_admin and landlord both platform_admin with overlapping publish powers
+      - campus_admin=approver only; a separate estates office is platform_admin (out of chat)
+      - Defer for student elicitation
+    recommended_default: >-
+      Yes — campus_admin=platform_admin; landlord=operator (own listings);
+      student=end_user
+    suggested_assumption: |
+      campus_admin is platform_admin (verify/approve/reject listings, eligibility
+      gate, closed-platform rules). landlord is operator for their own units
+      after approval (active/inactive, photos, amenities). student_seeker is
+      end_user (browse/filter/contact/message). Exact admin UI screens remain
+      elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-SA-007
+    priority: important
+    theme: exception_path
+    prompt: |
+      When campus_admin rejects a landlord unit/listing after verification, what
+      should happen?
+    citations:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/145-2
+        note: Admin approve or reject after checklist / site confirmation
+    why_it_matters: Completes verification workflow with a reject path.
+    alternatives:
+      - Reject with optional reason; landlord may revise and resubmit for another review
+      - Permanent reject — landlord cannot resubmit that unit without a new application process
+      - Reject only after site visit failure; otherwise always request more info first
+      - Defer for student elicitation
+    recommended_default: >-
+      Reject with optional reason; landlord may revise and resubmit for another
+      review
+    suggested_assumption: |
+      campus_admin may reject a pending listing with an optional reason.
+      Landlord may revise and resubmit for another verification. Rejected/
+      pending listings stay hidden from students.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-SA-008
+    priority: important
+    theme: approval_power
+    prompt: |
+      After a listing is approved (including provisional acceptance after manual
+      review/certification), who may take it down or force inactive if it becomes
+      unsuitable?
+    citations:
+      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/110-0
+        note: Landlord manages listing after approval
+    why_it_matters: Separates landlord active/inactive from admin safety takedown.
+    alternatives:
+      - Landlord controls active/inactive; campus_admin may also force-unpublish / deactivate
+      - Landlord only — admin cannot take down after approval
+      - Admin only for takedown; landlord cannot set inactive (must request admin)
+      - Defer for student elicitation
+    recommended_default: >-
+      Landlord controls active/inactive; campus_admin may also force-unpublish /
+      deactivate
+    suggested_assumption: |
+      Landlord may set their approved listing active/inactive. campus_admin may
+      also force-deactivate or unpublish a listing that becomes unsuitable.
+      Exact notice/reason UI remains elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-SA-009
+    priority: important
+    theme: visibility
+    prompt: |
+      For provisional acceptance (DEC-SA-007), are provisionally accepted
+      listings visible to eligible students like fully approved ones, or is
+      visibility restricted until full certification?
+    citations: []
+    why_it_matters: Clarifies what students see during provisional state.
+    alternatives:
+      - Visible to eligible students the same as fully approved active listings
+      - Visible but clearly labelled as provisionally accepted / pending final certification
+      - Hidden from students until full (non-provisional) approval
+      - Defer for student elicitation
+    recommended_default: >-
+      Visible but clearly labelled as provisionally accepted / pending final
+      certification
+    suggested_assumption: |
+      Provisionally accepted listings may appear to eligible students when the
+      landlord sets them active, but must be clearly labelled as provisionally
+      accepted / pending final certification. Exact label copy remains
+      elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
 decisions:
+  - decision_id: DEC-SA-006
+    gap_id: GAP-SA-006
+    action: accept
+    chosen: >-
+      Yes — campus_admin=platform_admin; landlord=operator (own listings);
+      student=end_user
+    modified_text: null
+    rationale: Instructor accepted recommended system-role split.
+    approved_by: instructor
+    approved_at: "2026-11-10T02:41:00Z"
+    resulting_fact_ids: [SA-ASM-006]
+  - decision_id: DEC-SA-007
+    gap_id: GAP-SA-007
+    action: modify
+    chosen: >-
+      Reject with optional reason; landlord may revise and resubmit; provisional
+      acceptance possible after manual review and certification
+    modified_text: >-
+      campus_admin may reject a pending listing with an optional reason; landlord
+      may revise and resubmit for another review. A listing may also receive
+      provisional acceptance once it has passed manual review and is certified.
+      Rejected/pending (non-accepted) listings stay hidden from students.
+    rationale: >-
+      Instructor accepted reject→revise/resubmit and added provisional acceptance
+      after manual review/certification.
+    approved_by: instructor
+    approved_at: "2026-11-10T02:43:00Z"
+    resulting_fact_ids: [SA-ASM-007, SA-WF-004]
+  - decision_id: DEC-SA-008
+    gap_id: GAP-SA-008
+    action: accept
+    chosen: >-
+      Landlord controls active/inactive; campus_admin may also force-unpublish /
+      deactivate
+    modified_text: null
+    rationale: Instructor accepted dual takedown control (option 1).
+    approved_by: instructor
+    approved_at: "2026-11-10T02:44:00Z"
+    resulting_fact_ids: [SA-ASM-008, SA-REQ-009]
+  - decision_id: DEC-SA-009
+    gap_id: GAP-SA-009
+    action: accept
+    chosen: Hidden from students until full (non-provisional) approval
+    modified_text: null
+    rationale: >-
+      Instructor chose option 3 — provisional is not student-visible until full
+      approval.
+    approved_by: instructor
+    approved_at: "2026-11-10T02:44:30Z"
+    resulting_fact_ids: [SA-ASM-009, SA-BR-005]
   - decision_id: DEC-SA-001
     gap_id: GAP-SA-001
     action: accept

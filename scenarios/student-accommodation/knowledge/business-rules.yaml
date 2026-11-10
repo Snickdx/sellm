@@ -61,3 +61,19 @@ facts:
     rationale: Follows verify-before-publish lifecycle.
     known_by: [campus_admin, landlord, student_seeker]
     disclosure: when_relevant
+
+  - id: SA-BR-005
+    statement: >-
+      Provisionally accepted listings are not visible to student seekers until
+      full (non-provisional) approval; only fully approved active listings may
+      appear in student browse.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-009
+    approved_by: instructor
+    approved_at: "2026-11-10T02:44:30Z"
+    rationale: Instructor hid provisional from students until full approval.
+    known_by: [campus_admin, landlord, student_seeker]
+    disclosure: when_relevant
+

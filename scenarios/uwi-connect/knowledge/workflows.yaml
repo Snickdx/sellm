@@ -54,15 +54,17 @@ facts:
   - id: UC-WF-003
     statement: >-
       Campaign flow: alumni_admin composes an email campaign in the platform →
-      selects registered/verified alumni audience → sends the campaign; emails
-      stay clear and simple (often one or two events).
+      audience is all currently verified non-revoked alumni → sends the
+      campaign; emails stay clear and simple (often one or two events).
     category: workflow
     status: clarified
     origin: instructor
     decision_id: DEC-UC-005
     approved_by: instructor
     approved_at: "2026-11-03T14:22:00Z"
-    rationale: Instructor required full email campaign builder.
+    rationale: >-
+      Instructor required full email campaign builder; audience narrowed by
+      DEC-UC-009 to all verified non-revoked (no segments).
     source_refs:
       - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
         cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-3
@@ -74,5 +76,35 @@ facts:
         start: "00:10:08.045"
         end: "00:10:13.091"
         speaker: null
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+
+  - id: UC-WF-004
+    statement: >-
+      Exception boards flow: alumni_admin rejects a pending listing or
+      unpublishes a live listing → item leaves/never enters the public board →
+      submitter receives an in-system notification.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-007
+    approved_by: instructor
+    approved_at: "2026-11-10T03:13:30Z"
+    rationale: Instructor chose reject/unpublish with in-system notify.
+    known_by: [alumni_admin]
+    disclosure: when_relevant
+
+  - id: UC-WF-005
+    statement: >-
+      Account hygiene flow: alumni_admin revokes or disables a verified alumni
+      account → account loses board browse access and is dropped from campaign
+      audiences until re-enabled.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-UC-008
+    approved_by: instructor
+    approved_at: "2026-11-10T03:14:00Z"
+    rationale: Instructor chose admin revoke anytime.
     known_by: [alumni_admin]
     disclosure: when_relevant

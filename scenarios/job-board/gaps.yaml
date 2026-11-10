@@ -159,7 +159,162 @@ open_questions:
     status: decided
     actions: [accept, modify, reject, defer]
 
+  - id: GAP-JB-007
+    priority: critical
+    theme: system_authority
+    prompt: |
+      Depth-update: confirm system roles for the three personas. The interviewee
+      is university staff who run the current Airtable/email board. Should
+      administrator be platform_admin (publish, reject, notify, export, eligibility
+      gate), employer be operator of their own listings/applications, and
+      graduate_applicant be end_user only?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/12-1
+        note: Admins publish openings and expose opportunities
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/45-0
+        note: Staff will not publish unknown jobs
+    why_it_matters: Makes understated admin authority explicit via system_role fields.
+    alternatives:
+      - Yes — admin=platform_admin; employer=operator (own listings); graduate=end_user
+      - Admin and employer both platform_admin with overlapping publish powers
+      - Admin=operator only; programme office is the real platform_admin (out of chat)
+      - Defer for student elicitation
+    recommended_default: >-
+      Yes — admin=platform_admin; employer=operator (own listings); graduate=end_user
+    suggested_assumption: |
+      administrator is platform_admin for the job board (review/publish/reject
+      listings, subscriber notify, eligibility gate, export/forward applicant
+      packages). employer is operator for their own listings and application
+      status updates. graduate_applicant is end_user (profile, subscribe, apply,
+      view own status). Exact admin UI screens remain elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-JB-008
+    priority: important
+    theme: exception_path
+    prompt: |
+      When an administrator rejects an employer listing submission, what should
+      happen?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/45-0
+        note: Staff will not publish unknown/arbitrary jobs
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/46-0
+        note: Listings expected from known companies
+    why_it_matters: Completes publish workflow with a reject path students can elicit.
+    alternatives:
+      - Reject with optional reason visible to the submitting employer; listing stays unpublished
+      - Silent reject — listing removed from queue with no employer-visible reason
+      - Reject requires employer revision then resubmit before another review
+      - Defer for student elicitation
+    recommended_default: >-
+      Reject with optional reason visible to the submitting employer; listing
+      stays unpublished
+    suggested_assumption: |
+      Administrator may reject a pending listing; the employer can see that it
+      was rejected and an optional reason. Rejected listings are not visible to
+      graduates. Exact notification channel/copy remains elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-JB-009
+    priority: important
+    theme: config_default
+    prompt: |
+      On publish, should eligible subscribers be notified automatically (desired
+      in transcript), or keep a separate admin notify step?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/67-0
+        note: Desired change — notify subscribers automatically on publish
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/66-0
+        note: Current flow has separate notify after publish
+    why_it_matters: Fixes graded MVP notify behaviour vs legacy manual step.
+    alternatives:
+      - Automatic notify on publish to eligible subscribers
+      - Keep separate admin notify step after publish
+      - Automatic notify plus admin may re-send later
+      - Defer for student elicitation
+    recommended_default: Automatic notify on publish to eligible subscribers
+    suggested_assumption: |
+      When an administrator publishes a listing, eligible programme subscribers
+      are notified automatically. A separate mandatory notify click is not
+      required in graded MVP. Exact email/template copy remains elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-JB-010
+    priority: important
+    theme: visibility
+    prompt: |
+      May an administrator unpublish / take down a live listing after it was
+      published (e.g. expired, withdrawn, or found inappropriate)?
+    citations:
+      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/45-0
+        note: Staff gatekeep legitimacy of postings
+    why_it_matters: Completes admin lifecycle beyond first publish.
+    alternatives:
+      - Yes — admin may unpublish; listing hidden from graduates; employer can see status
+      - No — once published, only deadline expiry removes visibility (no manual unpublish)
+      - Admin may unpublish; employer may also withdraw their own live listing
+      - Defer for student elicitation
+    recommended_default: >-
+      Admin may unpublish; employer may also withdraw their own live listing
+    suggested_assumption: |
+      Administrator may unpublish a live listing (hidden from graduates). The
+      owning employer may also withdraw their own live listing. Exact reasons
+      UI and notifications remain elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
 decisions:
+  - decision_id: DEC-JB-007
+    gap_id: GAP-JB-007
+    action: accept
+    chosen: >-
+      Yes — admin=platform_admin; employer=operator (own listings);
+      graduate=end_user
+    modified_text: null
+    rationale: Instructor accepted recommended system-role split.
+    approved_by: instructor
+    approved_at: "2026-11-10T02:37:00Z"
+    resulting_fact_ids: [JB-ASM-006]
+  - decision_id: DEC-JB-008
+    gap_id: GAP-JB-008
+    action: accept
+    chosen: >-
+      Reject requires employer revision then resubmit before another review
+    modified_text: null
+    rationale: Instructor chose option 3 — revise and resubmit after reject.
+    approved_by: instructor
+    approved_at: "2026-11-10T02:38:00Z"
+    resulting_fact_ids: [JB-ASM-007, JB-WF-004]
+  - decision_id: DEC-JB-009
+    gap_id: GAP-JB-009
+    action: accept
+    chosen: Automatic notify on publish to eligible subscribers
+    modified_text: null
+    rationale: Instructor chose option 1 — auto-notify on publish.
+    approved_by: instructor
+    approved_at: "2026-11-10T02:39:00Z"
+    resulting_fact_ids: [JB-ASM-008, JB-WF-005]
+  - decision_id: DEC-JB-010
+    gap_id: GAP-JB-010
+    action: accept
+    chosen: >-
+      Yes — admin may unpublish; listing hidden from graduates; employer can see
+      status
+    modified_text: null
+    rationale: Instructor chose option 1 — admin unpublish only (not employer withdraw).
+    approved_by: instructor
+    approved_at: "2026-11-10T02:39:30Z"
+    resulting_fact_ids: [JB-ASM-009, JB-REQ-010]
   - decision_id: DEC-JB-001
     gap_id: GAP-JB-001
     action: accept

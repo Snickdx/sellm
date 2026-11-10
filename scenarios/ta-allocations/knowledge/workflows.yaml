@@ -46,3 +46,19 @@ facts:
         speaker: null
     known_by: [hod]
     disclosure: when_relevant
+
+  - id: TA-WF-003
+    statement: >-
+      Cap/budget exception flow: if a create/edit would exceed 20h/week or
+      departmental budget, the system blocks the save and shows remaining
+      capacity/budget; HOD must reduce hours, reassign, or remove other
+      assignments before retrying.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-007
+    approved_by: instructor
+    approved_at: "2026-11-10T02:51:00Z"
+    rationale: Combines DEC-TA-007 and DEC-TA-009 hard-block UX.
+    known_by: [hod]
+    disclosure: when_relevant

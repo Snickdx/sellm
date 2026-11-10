@@ -29,3 +29,32 @@ hidden_checks:
     competency: email_campaign_builder
     description: Full email campaign builder required for alumni_admin.
     related_fact_ids: [UC-ASM-005, UC-REQ-005, UC-WF-003]
+
+  - id: EVAL-UC-006
+    competency: platform_admin_authority
+    description: >-
+      alumni_admin is platform_admin with publish/reject/unpublish, campaigns,
+      and revoke capabilities.
+    related_fact_ids: [UC-ASM-006, UC-REQ-008]
+
+  - id: EVAL-UC-007
+    competency: reject_unpublish_notify
+    description: Reject/unpublish hides listing and notifies submitter in-system.
+    related_fact_ids: [UC-ASM-007, UC-BR-004, UC-WF-004]
+
+  - id: EVAL-UC-008
+    competency: account_revoke
+    description: Admin may revoke accounts; revoked lose boards and campaign audience.
+    related_fact_ids: [UC-ASM-008, UC-BR-005, UC-WF-005]
+
+  - id: EVAL-UC-009
+    competency: campaign_audience
+    description: Campaign audience is all verified non-revoked alumni (no segments required).
+    related_fact_ids: [UC-ASM-009, UC-WF-003]
+
+  - id: EVAL-UC-010
+    competency: pending_visibility
+    description: >-
+      Admin sees full pending queue; submitter sees own status; others see
+      published only.
+    related_fact_ids: [UC-ASM-010, UC-BR-005]

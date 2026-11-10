@@ -1,16 +1,19 @@
 slug: library
 title: Library Workshop Booking
-version: "0.1.0"
+version: "0.2.0"
 status: approved
 brief: >-
-  Lecturers book workshop sessions for classes on library resources.
-  Coordinator manages availability, capacity, and confirmations.
+  Lecturers request workshop sessions on library resources from a booking system
+  operated by the library coordinator (explicit approve/confirm; conflict
+  preference with larger-cohort override; cancellations any time before start).
+  Over-capacity requests are hard-rejected. Administrator and coordinator may
+  configure rooms/capacities (default 30); administrator escalates capacity-policy
+  disputes. Lecturers need shareable confirmations after acceptance.
 source_status: transcript_received_plus_synthetic_pilot
 source_notes: >-
-  Real interview VTT now present: sources/Library Project Interview - Kriston Latoo.vtt.
-  Current approved package 0.1.0 is still grounded on the SYNTHETIC pilot
-  (library-synthetic.vtt) for tooling. Re-author with scenario-author against the
-  real transcript and bump version before classroom use; do not treat 0.1.0 facts
-  as real-interview ground truth.
-approved_by: instructor@example.com
-approved_at: "2026-11-02T16:00:00Z"
+  Real interview VTT present: sources/Library Project Interview - Kriston Latoo.vtt.
+  Package 0.2.0 remains grounded on the SYNTHETIC pilot (library-synthetic.vtt)
+  plus instructor depth decisions DEC-LIB-002..006. Re-author against the real
+  transcript in a later version before treating facts as real-interview ground truth.
+approved_by: instructor
+approved_at: "2026-11-10T00:14:00Z"

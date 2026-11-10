@@ -29,3 +29,10 @@ hidden_checks:
     competency: hr_out_of_scope
     description: HR/contracts are external; not required in-app.
     related_fact_ids: [TA-REQ-008, TA-BR-004]
+
+  - id: EVAL-TA-006
+    competency: hod_admin_enforcement
+    description: >-
+      hod is platform_admin; hard block 20h and budget with remaining shown;
+      may edit/reassign/remove with revalidation.
+    related_fact_ids: [TA-ASM-006, TA-ASM-007, TA-ASM-008, TA-ASM-009, TA-BR-005, TA-REQ-009, TA-WF-003]

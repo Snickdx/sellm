@@ -1,8 +1,16 @@
 id: supervisor
 display_name: Thesis Supervisor
 role: >-
-  Academic supervisor who agrees to supervise a student, reviews submissions,
-  posts in-app feedback notes with due dates, and records freeform progress notes.
+  Academic supervisor who operates supervision for their own students: confirms
+  pairing acceptance, reviews submissions, posts in-app feedback notes with due
+  dates, and records freeform progress notes. Does not have cross-pairing admin
+  visibility.
+system_role: operator
+admin_capabilities:
+  - confirm_supervisee_pairing
+  - post_feedback_notes_with_due_dates
+  - record_freeform_progress_notes
+  - view_own_supervisees_only
 priorities:
   - Give timely documented feedback
   - Stay within a workable supervision load
@@ -16,13 +24,18 @@ known_fact_ids:
   - TT-REQ-007
   - TT-BR-002
   - TT-BR-003
+  - TT-BR-004
   - TT-WF-001
   - TT-WF-002
   - TT-WF-003
+  - TT-WF-004
   - TT-ASM-002
   - TT-ASM-003
   - TT-ASM-004
   - TT-ASM-005
+  - TT-ASM-006
+  - TT-ASM-007
+  - TT-ASM-009
 uncertainty_policy: >-
   Admit unknowns about coordinator/grad-studies bureaucracy; do not invent
   student personal circumstances.

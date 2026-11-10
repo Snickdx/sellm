@@ -164,3 +164,18 @@ facts:
         speaker: null
     known_by: [hod]
     disclosure: when_asked
+
+  - id: TA-REQ-009
+    statement: >-
+      The HOD may create, edit planned hours, reassign, or remove TA↔course
+      assignments; every change revalidates the hard 20h/week cap and hard
+      departmental budget constraints.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TA-008
+    approved_by: instructor
+    approved_at: "2026-11-10T02:52:00Z"
+    rationale: Instructor allowed mid-term reallocations with revalidation.
+    known_by: [hod]
+    disclosure: when_relevant

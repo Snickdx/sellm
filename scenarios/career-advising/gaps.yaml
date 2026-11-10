@@ -205,7 +205,239 @@ open_questions:
     status: decided
     actions: [accept, modify, reject, defer]
 
+  - id: GAP-CA-006
+    priority: critical
+    theme: system_authority
+    prompt: |
+      Depth-update: Dr Terry Mohammed (Deputy Dean of Outreach / advising
+      stakeholder) is currently modeled as a conversational “career advisor
+      voice.” For the graded system, is this persona the platform operator who
+      owns career↔course mappings and product rules, or only an end-user-style
+      advisor chatting with students?
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/15-3
+        start: "00:00:37.800"
+        end: "00:00:41.181"
+        speaker: null
+        note: Named stakeholder Doctor Terry Mohammed
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/18-0
+        start: "00:01:19.501"
+        end: "00:01:23.723"
+        speaker: null
+        note: Deputy Dean of Outreach, FST background
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/2223
+        note: Stakeholder states what “the system should” do (product authority)
+    why_it_matters: >-
+      Sets system_role / admin_capabilities, brief wording, and whether students
+      must elicit admin curation vs advisor-only UX.
+    alternatives:
+      - platform_admin — owns mappings, career content defaults, and product rules; students are end users
+      - operator — day-to-day monitors advice quality but cannot change mappings alone
+      - end_user hybrid — advisor uses the same student tool with no special admin surface
+      - Defer — leave system authority for student elicitation
+    recommended_default: platform_admin — owns mappings, career content defaults, and product rules; students are end users
+    suggested_assumption: |
+      career_advisor is platform_admin for the advising product: maintains
+      career↔course relationship content and product rules used for dual
+      exploration modes; enrolled students are the end users. Exact admin UI
+      screens remain student elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-CA-007
+    priority: critical
+    theme: approval_power
+    prompt: |
+      Who may create, update, or retire career profiles and course↔career links
+      that drive recommendations (salaries/progression blurbs included)?
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/49-0
+        start: "00:06:20.781"
+        end: "00:06:24.699"
+        speaker: null
+        note: Career info should include salaries / achievements
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/49-1
+        start: "00:06:24.699"
+        end: "00:06:31.824"
+        speaker: null
+    why_it_matters: Separates constituent exploration from content-admin workflows.
+    alternatives:
+      - career_advisor admin only (single operator)
+      - career_advisor admin + faculty programme staff can propose links pending advisor publish
+      - External careers office owns content; this persona only advises students (no edit power)
+      - Defer for student elicitation
+    recommended_default: career_advisor admin only (single operator)
+    suggested_assumption: |
+      Only the career_advisor admin role can create/update/retire career profiles
+      and course↔career links used by the graded system. Students cannot edit
+      shared career content. Multi-approver workflows are out of MVP unless
+      elicited.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-CA-008
+    priority: important
+    theme: exception_path
+    prompt: |
+      What should happen when a student’s entered courses are unrecognized,
+      incomplete, or conflict with the declared programme (bad codes / empty
+      profile)?
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/354-0
+        start: "00:43:27.981"
+        end: "00:43:31.166"
+        speaker: null
+        note: System should ask when more information is still needed
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/354-1
+        start: "00:43:31.166"
+        end: "00:43:34.521"
+        speaker: null
+    why_it_matters: Adds exception path beyond happy-path dual exploration.
+    alternatives:
+      - Block recommendations until required fields/codes validate; prompt for fixes
+      - Allow partial results with explicit “incomplete profile” warnings
+      - Silently ignore unknown courses and recommend from the rest
+      - Defer for student elicitation
+    recommended_default: Allow partial results with explicit “incomplete profile” warnings
+    suggested_assumption: |
+      If courses or programme context are missing/unrecognized, the system may
+      still return suited careers from what it understands but must surface an
+      incomplete-profile warning and ask for the missing inputs. Exact validation
+      catalogues remain elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-CA-009
+    priority: important
+    theme: visibility
+    prompt: |
+      Can the career_advisor admin see individual students’ exploration history
+      (entered courses, career targets, saved paths), or only aggregate/
+      anonymized usage?
+    citations: []
+    why_it_matters: Privacy boundary; students will probe who can see their plans.
+    alternatives:
+      - No individual history for admin — advisor sees only curated content + aggregates
+      - Admin can view a student’s current profile when the student opts in / shares
+      - Admin has full read access to all student explorations for advising follow-up
+      - Defer for student elicitation
+    recommended_default: No individual history for admin — advisor sees only curated content + aggregates
+    suggested_assumption: |
+      career_advisor admin tools cover content curation and product rules, not
+      surveillance of individual student explorations. Cross-student private
+      history is out of graded MVP unless elicited; optional share/opt-in remains
+      elicitation.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
+  - id: GAP-CA-010
+    priority: important
+    theme: config_default
+    prompt: |
+      How “ranked” should suited careers be for MVP (CA-ASM-004), and what
+      default ranking signal is in-scope vs left for elicitation?
+    citations:
+      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/166-0
+        start: "00:21:48.381"
+        end: "00:21:52.698"
+        speaker: null
+    why_it_matters: Clarifies recommendation UX without inventing a fake ML story.
+    alternatives:
+      - Simple overlap score (shared courses/subjects) with explicit non-absolute labels
+      - Manually curated priority order set by career_advisor admin
+      - Opaque “best match” with no disclosed signal (students must elicit)
+      - Defer entirely for student elicitation
+    recommended_default: Simple overlap score (shared courses/subjects) with explicit non-absolute labels
+    suggested_assumption: |
+      MVP ranking is a transparent overlap-style suitability ordering over
+      course/subject matches, always labeled as non-absolute suggestions.
+      Advanced ML ranking and labour-market live feeds are out of graded MVP
+      unless elicited.
+    status: decided
+    actions: [accept, modify, reject, defer]
+
 decisions:
+  - decision_id: DEC-CA-006
+    gap_id: GAP-CA-006
+    action: modify
+    chosen: platform_admin
+    modified_text: >-
+      career_advisor is platform_admin for the advising product. Mapping between
+      jobs/careers and courses is via skills and competency levels that belong
+      to a job and to a course (not only direct course↔career links). Students
+      are end users; exact admin UI screens remain elicitation.
+    rationale: >-
+      Instructor confirmed admin authority and specified the intended mapping
+      method (skills + competency levels on jobs and courses).
+    approved_by: instructor
+    approved_at: "2026-11-09T23:39:00Z"
+    resulting_fact_ids: [CA-ASM-005, CA-REQ-011, CA-BR-004]
+  - decision_id: DEC-CA-007
+    gap_id: GAP-CA-007
+    action: modify
+    chosen: >-
+      Admin defines skills (mainly bulk edit/upload); advisor can update
+      mappings; skill definitions are admin-only
+    modified_text: >-
+      Skill catalogue definition (create/update/retire skills and competency
+      levels) is admin-only, performed mainly via bulk edit or upload. Advisors
+      may update mappings that attach skills/competency levels to jobs and to
+      courses. Students cannot edit the shared catalogue. Whether chat exposes
+      one blended career_advisor voice or separate admin vs advisor personas
+      remains a packaging choice unless a later gap decides.
+    rationale: >-
+      Instructor split content authority: admin owns skill definitions (bulk/
+      upload); advisor may maintain job/course mappings.
+    approved_by: instructor
+    approved_at: "2026-11-09T23:41:00Z"
+    resulting_fact_ids: [CA-ASM-006, CA-WF-005]
+  - decision_id: DEC-CA-008
+    gap_id: GAP-CA-008
+    action: modify
+    chosen: >-
+      Courses are pre-populated; students search and select from the list (no
+      free-typed unrecognized codes)
+    modified_text: >-
+      The course catalogue is already populated in the system. Students add
+      courses by searching and selecting from that list rather than typing
+      arbitrary codes. Unrecognized free-text course codes are out of the happy
+      path. Incomplete selections (too few courses / missing programme context)
+      may still warrant prompts; exact empty-state UX remains elicitation.
+    rationale: >-
+      Instructor rejected free-typed unrecognized-course framing; selection is
+      from a maintained catalogue.
+    approved_by: instructor
+    approved_at: "2026-11-09T23:42:00Z"
+    resulting_fact_ids: [CA-ASM-009, CA-WF-006]
+  - decision_id: DEC-CA-009
+    gap_id: GAP-CA-009
+    action: accept
+    chosen: >-
+      No individual history for admin — curated content + aggregates only
+    modified_text: null
+    rationale: Instructor chose aggregated visibility only.
+    approved_by: instructor
+    approved_at: "2026-11-09T23:42:30Z"
+    resulting_fact_ids: [CA-ASM-007, CA-BR-005]
+  - decision_id: DEC-CA-010
+    gap_id: GAP-CA-010
+    action: accept
+    chosen: >-
+      Transparent suitability ordering from skill/competency overlap between the
+      student’s selected courses and each job, always labeled non-absolute
+    modified_text: null
+    rationale: Instructor accepted option 1 (skill/competency overlap ranking).
+    approved_by: instructor
+    approved_at: "2026-11-09T23:43:00Z"
+    resulting_fact_ids: [CA-ASM-008, CA-REQ-012]
   - decision_id: DEC-CA-001
     gap_id: GAP-CA-001
     action: modify

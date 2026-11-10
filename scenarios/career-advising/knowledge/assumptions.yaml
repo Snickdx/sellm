@@ -58,3 +58,80 @@ facts:
     rationale: Instructor accepted hard-rule tone for graded product.
     known_by: [career_advisor]
     disclosure: when_relevant
+
+  - id: CA-ASM-005
+    statement: >-
+      career_advisor is platform_admin for the advising product. Jobs/careers and
+      courses are related via skills and competency levels that belong to a job
+      and to a course. Enrolled students are end users; exact admin UI screens
+      remain student elicitation.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-006
+    approved_by: instructor
+    approved_at: "2026-11-09T23:39:00Z"
+    rationale: >-
+      Instructor confirmed admin authority and skills/competency mapping method.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-ASM-006
+    statement: >-
+      Skill catalogue definition (create/update/retire skills and competency
+      levels) is admin-only and is performed mainly via bulk edit or upload.
+      Advisors may update mappings that attach skills/competency levels to jobs
+      and to courses. Students cannot edit the shared catalogue.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-007
+    approved_by: instructor
+    approved_at: "2026-11-09T23:41:00Z"
+    rationale: Instructor split admin skill definitions vs advisor mapping updates.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-ASM-007
+    statement: >-
+      Admin/advisor tooling may show aggregated usage only; individual students’
+      exploration history is not visible for graded MVP.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-009
+    approved_by: instructor
+    approved_at: "2026-11-09T23:42:30Z"
+    rationale: Instructor chose aggregated visibility only.
+    known_by: [career_advisor]
+    disclosure: when_asked
+
+  - id: CA-ASM-008
+    statement: >-
+      MVP ranking is a transparent suitability ordering from skill/competency
+      overlap between the student’s selected courses and each job, always labeled
+      as non-absolute suggestions. Advanced ML ranking and live labour-market
+      feeds are out of graded MVP unless elicited.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-010
+    approved_by: instructor
+    approved_at: "2026-11-09T23:43:00Z"
+    rationale: Instructor accepted transparent skill/competency overlap ranking.
+    known_by: [career_advisor]
+    disclosure: when_relevant
+
+  - id: CA-ASM-009
+    statement: >-
+      The course catalogue is pre-populated in the system. Students add courses by
+      searching and selecting from that list rather than typing arbitrary codes.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-CA-008
+    approved_by: instructor
+    approved_at: "2026-11-09T23:42:00Z"
+    rationale: Instructor required catalogue search/select instead of free-typed codes.
+    known_by: [career_advisor]
+    disclosure: when_relevant

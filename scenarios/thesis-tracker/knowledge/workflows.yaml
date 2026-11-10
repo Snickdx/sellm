@@ -67,3 +67,32 @@ facts:
         speaker: null
     known_by: [pg_coordinator, supervisor]
     disclosure: when_relevant
+
+  - id: TT-WF-004
+    statement: >-
+      Pairing admin flow: student may request/initiate → supervisor confirms →
+      pg_coordinator records or changes the official pairing; coordinator can
+      later change pairings when needed.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-007
+    approved_by: instructor
+    approved_at: "2026-11-10T02:58:00Z"
+    rationale: Instructor accepted coordinator-owned pairing records.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant
+
+  - id: TT-WF-005
+    statement: >-
+      Overdue feedback flow: due date passes → item flagged to pg_coordinator →
+      coordinator may send an in-system reminder/nudge to the supervisor.
+    category: workflow
+    status: assumed
+    origin: instructor
+    decision_id: DEC-TT-008
+    approved_by: instructor
+    approved_at: "2026-11-10T03:06:00Z"
+    rationale: Instructor chose in-system nudge.
+    known_by: [pg_coordinator, supervisor]
+    disclosure: when_relevant

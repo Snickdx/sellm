@@ -14,4 +14,14 @@ hidden_checks:
   - id: EVAL-LIB-003
     competency: capacity
     description: Overbooking must be forbidden; default capacity assumption if elicited.
-    related_fact_ids: [LIB-BR-001, LIB-ASM-001]
+    related_fact_ids: [LIB-BR-001, LIB-ASM-001, LIB-BR-002, LIB-ASM-005]
+  - id: EVAL-LIB-004
+    competency: coordinator_admin_ops
+    description: >-
+      Coordinator is booking platform_admin with explicit approve/confirm; admin
+      escalates capacity policy; both may configure rooms/capacities.
+    related_fact_ids: [LIB-ASM-002, LIB-ASM-004, LIB-ASM-006, LIB-REQ-008, LIB-WF-001]
+  - id: EVAL-LIB-005
+    competency: cancellation_any_time_before_start
+    description: Lecturers (and coordinator for ops) may cancel any time before start.
+    related_fact_ids: [LIB-ASM-003, LIB-REQ-007, LIB-WF-002]

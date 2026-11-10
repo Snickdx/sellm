@@ -204,3 +204,18 @@ facts:
         speaker: null
     known_by: [campus_admin, student_seeker, landlord]
     disclosure: when_relevant
+
+  - id: SA-REQ-009
+    statement: >-
+      After full approval, landlords may set listings active/inactive, and
+      campus_admin may force-deactivate or unpublish a listing that becomes
+      unsuitable.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-008
+    approved_by: instructor
+    approved_at: "2026-11-10T02:44:00Z"
+    rationale: Instructor accepted dual takedown control.
+    known_by: [campus_admin, landlord]
+    disclosure: when_relevant

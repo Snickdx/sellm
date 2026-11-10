@@ -1,8 +1,16 @@
 id: landlord
 display_name: Landlord
 role: >-
-  Off-campus housing provider who submits units for campus verification and
-  keeps approved listings accurate (photos, amenities, active/inactive).
+  Off-campus housing provider who operates their own units: submit for campus
+  verification, revise/resubmit after rejection, and after full approval keep
+  listings accurate (photos, amenities, active/inactive). Provisional acceptance
+  is staff-side only until full approval.
+system_role: operator
+admin_capabilities:
+  - submit_units_for_verification
+  - revise_and_resubmit_rejected_listings
+  - set_active_inactive_on_approved_listings
+  - update_photos_amenities_details
 priorities:
   - Get units verified and listed
   - Keep listing details and availability accurate
@@ -15,13 +23,20 @@ known_fact_ids:
   - SA-REQ-006
   - SA-REQ-007
   - SA-REQ-008
+  - SA-REQ-009
   - SA-BR-002
   - SA-BR-003
   - SA-BR-004
+  - SA-BR-005
   - SA-WF-002
+  - SA-WF-004
   - SA-ASM-003
   - SA-ASM-004
   - SA-ASM-005
+  - SA-ASM-006
+  - SA-ASM-007
+  - SA-ASM-008
+  - SA-ASM-009
 uncertainty_policy: >-
   Do not invent campus checklist outcomes; admit when waiting on admin
   verification.

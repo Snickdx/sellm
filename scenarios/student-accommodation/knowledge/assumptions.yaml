@@ -71,3 +71,63 @@ facts:
     rationale: Instructor accepted baseline + amenities.
     known_by: [campus_admin, student_seeker, landlord]
     disclosure: when_relevant
+
+  - id: SA-ASM-006
+    statement: >-
+      campus_admin is platform_admin (verify/approve/reject, eligibility gate,
+      force-deactivate). landlord is operator for their own units after approval.
+      student_seeker is end_user. Exact admin UI screens remain elicitation.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-006
+    approved_by: instructor
+    approved_at: "2026-11-10T02:41:00Z"
+    rationale: Instructor accepted system-role split.
+    known_by: [campus_admin, landlord, student_seeker]
+    disclosure: when_relevant
+
+  - id: SA-ASM-007
+    statement: >-
+      campus_admin may reject a pending listing with an optional reason; landlord
+      may revise and resubmit. A listing may receive provisional acceptance after
+      manual review and certification. Rejected/pending/provisional listings are
+      not student-visible until full approval (see SA-ASM-009).
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-007
+    approved_by: instructor
+    approved_at: "2026-11-10T02:43:00Z"
+    rationale: Instructor chose reject→revise/resubmit plus provisional acceptance.
+    known_by: [campus_admin, landlord]
+    disclosure: when_relevant
+
+  - id: SA-ASM-008
+    statement: >-
+      Landlord may set approved listings active/inactive. campus_admin may also
+      force-deactivate or unpublish a listing that becomes unsuitable.
+    category: functional
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-008
+    approved_by: instructor
+    approved_at: "2026-11-10T02:44:00Z"
+    rationale: Instructor accepted dual takedown control.
+    known_by: [campus_admin, landlord]
+    disclosure: when_relevant
+
+  - id: SA-ASM-009
+    statement: >-
+      Provisionally accepted listings remain hidden from student seekers until
+      full (non-provisional) approval. Only fully approved active listings are
+      student-visible.
+    category: constraint
+    status: assumed
+    origin: instructor
+    decision_id: DEC-SA-009
+    approved_by: instructor
+    approved_at: "2026-11-10T02:44:30Z"
+    rationale: Instructor chose provisional hidden until full approval.
+    known_by: [campus_admin, landlord, student_seeker]
+    disclosure: when_relevant

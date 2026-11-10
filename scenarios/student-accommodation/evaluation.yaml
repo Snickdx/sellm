@@ -34,3 +34,10 @@ hidden_checks:
     competency: landlord_listing_management
     description: Landlords update photos/details and toggle availability.
     related_fact_ids: [SA-REQ-003, SA-REQ-005]
+
+  - id: EVAL-SA-006
+    competency: admin_verification_depth
+    description: >-
+      campus_admin is platform_admin; reject→revise/resubmit; provisional after
+      review/certification hidden until full approval; admin may force-deactivate.
+    related_fact_ids: [SA-ASM-006, SA-ASM-007, SA-ASM-008, SA-ASM-009, SA-BR-005, SA-WF-004, SA-REQ-009]

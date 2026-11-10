@@ -1,13 +1,16 @@
 slug: career-advising
 title: Career Based Advising
-version: "0.1.0"
+version: "0.2.0"
 status: approved
 brief: >-
-  Advisor-guided career tool for enrolled university students: align declared
-  courses (and programme context) with career options in both directions
-  (career→courses and courses→careers); support changing goals via editable
-  inputs; show realistic entry-level career info; identify missing courses
-  without enrolment/booking workflows. High-school scope is out (DEC-CA-001).
+  Advisor/admin-guided career tool for enrolled university students: courses are
+  selected from a pre-populated catalogue; jobs and courses are linked via skills
+  and competency levels; students explore in both directions (career→courses and
+  courses→careers) with transparent non-absolute suitability ranking; support
+  changing goals via editable selections; identify missing courses without
+  enrolment/booking workflows. Admin defines skills (mainly bulk edit/upload);
+  advisors may update job/course mappings; usage visibility is aggregated only.
+  High-school scope is out (DEC-CA-001).
 source_status: transcript_received
 source_notes: >-
   VTT: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
@@ -15,5 +18,9 @@ source_notes: >-
   career_advisor (DEC-CA-001). Assumptions: enrolled university end users
   (DEC-CA-002), both exploration modes in MVP (DEC-CA-003), non-absolute ranked
   recommendations (DEC-CA-004), identify-only missing courses (DEC-CA-005).
+  Depth-update 0.2.0: platform_admin authority + skills/competency mapping
+  (DEC-CA-006); admin skill definitions via bulk/upload, advisor mapping updates
+  (DEC-CA-007); catalogue search/select courses (DEC-CA-008); aggregated
+  visibility only (DEC-CA-009); skill/competency overlap ranking (DEC-CA-010).
 approved_by: instructor
-approved_at: "2026-11-03T13:33:00Z"
+approved_at: "2026-11-09T23:43:00Z"
