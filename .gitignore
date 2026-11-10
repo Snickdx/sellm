@@ -15,8 +15,8 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Local runtime stores (SQLite + Chroma)
-storage/
+# Local runtime stores (SQLite + Chroma) — repo-root only (not app/storage/)
+/storage/
 chroma_db_v2/
 venv/
 __pycache__/

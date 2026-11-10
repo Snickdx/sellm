@@ -12,7 +12,7 @@ from typing import Any
 from app.course.examiner.competencies import COMPETENCIES, COMPETENCY_WEIGHTS, RUBRIC_VERSION
 from app.course.examiner.knowledge import gold_rationale_bits, judge_concepts_for
 from app.course.examiner.state import SessionBundle
-from app.course.exit_models import InterviewQuestion
+from app.models.exit import InterviewQuestion
 
 
 def _tokenize(text: str) -> set[str]:

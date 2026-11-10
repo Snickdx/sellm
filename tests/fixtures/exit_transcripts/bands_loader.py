@@ -9,7 +9,7 @@ import yaml
 
 from app.course.examiner.planner import generate_question_plan
 from app.course.examiner.state import SessionBundle
-from app.course.exit_models import (
+from app.models.exit import (
     ExitInterviewSession,
     InterviewAnswer,
     InterviewParticipant,

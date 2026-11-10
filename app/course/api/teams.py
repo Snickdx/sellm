@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from app.course.db import get_db
 from app.course.deps import AuthUser, ensure_team_access, get_current_user, require_instructor
-from app.course.exit_models import (
+from app.models.exit import (
     AuditEvent,
     RepoIndexStatus,
     RepositorySubmission,

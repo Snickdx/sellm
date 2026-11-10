@@ -31,7 +31,7 @@ from app.course.examiner.state import (
     start_session,
     unanswered_question_ids,
 )
-from app.course.exit_models import (
+from app.models.exit import (
     Assessment,
     AuditEvent,
     ConsentStatus,

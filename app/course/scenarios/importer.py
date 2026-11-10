@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
-from app.course.db_models import Scenario, ScenarioFact, ScenarioPersona, ScenarioRecordStatus
+from app.models.scenarios import Scenario, ScenarioFact, ScenarioPersona, ScenarioRecordStatus
 from app.course.scenarios.models import ScenarioPackage
 
 

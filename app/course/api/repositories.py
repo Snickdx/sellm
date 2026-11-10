@@ -10,7 +10,7 @@ from sqlmodel import Session, select
 
 from app.course.db import get_db
 from app.course.deps import AuthUser, ensure_team_access, get_current_user
-from app.course.exit_models import AuditEvent, RepoIndexStatus, RepositorySubmission, Team, TeamMember
+from app.models.exit import AuditEvent, RepoIndexStatus, RepositorySubmission, Team, TeamMember
 from app.course.providers.github import get_repository_provider, parse_repo_url
 from app.course.repo.ingest import analyze_submission, analyze_submission_job
 from app.course.repo.retrieval import (

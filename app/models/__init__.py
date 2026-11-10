@@ -1,0 +1,53 @@
+"""Shared SQLModel table definitions for sellm."""
+
+from app.models.exit import (
+    Assessment,
+    AuditEvent,
+    ConsentStatus,
+    ExitInterviewSession,
+    InterviewAnswer,
+    InterviewParticipant,
+    InterviewQuestion,
+    InterviewStatus,
+    RepoIndexStatus,
+    RepositorySubmission,
+    ReviewStatus,
+    Team,
+    TeamMember,
+    VoiceRecordingStatus,
+    VoiceRoom,
+    VoiceRoomStatus,
+    VoiceUtterance,
+)
+from app.models.scenarios import (
+    MessageRole,
+    Scenario,
+    ScenarioFact,
+    ScenarioPersona,
+    ScenarioRecordStatus,
+)
+
+__all__ = [
+    "Assessment",
+    "AuditEvent",
+    "ConsentStatus",
+    "ExitInterviewSession",
+    "InterviewAnswer",
+    "InterviewParticipant",
+    "InterviewQuestion",
+    "InterviewStatus",
+    "MessageRole",
+    "RepoIndexStatus",
+    "RepositorySubmission",
+    "ReviewStatus",
+    "Scenario",
+    "ScenarioFact",
+    "ScenarioPersona",
+    "ScenarioRecordStatus",
+    "Team",
+    "TeamMember",
+    "VoiceRecordingStatus",
+    "VoiceRoom",
+    "VoiceRoomStatus",
+    "VoiceUtterance",
+]

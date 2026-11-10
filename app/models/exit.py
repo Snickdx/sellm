@@ -72,7 +72,7 @@ class VoiceRecordingStatus(str, Enum):
 
 
 class Team(SQLModel, table=True):
-    __tablename__ = "se_teams"
+    __tablename__ = "teams"
 
     id: str = Field(default_factory=_uuid, primary_key=True)
     name: str
@@ -85,17 +85,17 @@ class Team(SQLModel, table=True):
 
 
 class TeamMember(SQLModel, table=True):
-    __tablename__ = "se_team_members"
-    __table_args__ = (UniqueConstraint("team_id", "user_id", name="uq_se_team_member"),)
+    __tablename__ = "team_members"
+    __table_args__ = (UniqueConstraint("team_id", "user_id", name="uq_team_member"),)
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    team_id: str = Field(foreign_key="se_teams.id", index=True)
+    team_id: str = Field(foreign_key="teams.id", index=True)
     user_id: int = Field(index=True)
     joined_at: datetime = Field(default_factory=_utc_now)
 
 
 class AuditEvent(SQLModel, table=True):
-    __tablename__ = "se_audit_events"
+    __tablename__ = "audit_events"
 
     id: str = Field(default_factory=_uuid, primary_key=True)
     actor_id: Optional[int] = Field(default=None, index=True)
@@ -106,11 +106,11 @@ class AuditEvent(SQLModel, table=True):
 
 
 class RepositorySubmission(SQLModel, table=True):
-    __tablename__ = "se_repository_submissions"
-    __table_args__ = (UniqueConstraint("team_id", "commit_sha", name="uq_se_team_commit"),)
+    __tablename__ = "repository_submissions"
+    __table_args__ = (UniqueConstraint("team_id", "commit_sha", name="uq_team_commit"),)
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    team_id: str = Field(foreign_key="se_teams.id", index=True)
+    team_id: str = Field(foreign_key="teams.id", index=True)
     github_url: str
     owner: str
     repo: str
@@ -126,11 +126,11 @@ class RepositorySubmission(SQLModel, table=True):
 
 
 class ExitInterviewSession(SQLModel, table=True):
-    __tablename__ = "se_exit_interview_sessions"
+    __tablename__ = "exit_interview_sessions"
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    team_id: str = Field(foreign_key="se_teams.id", index=True)
-    repository_submission_id: str = Field(foreign_key="se_repository_submissions.id")
+    team_id: str = Field(foreign_key="teams.id", index=True)
+    repository_submission_id: str = Field(foreign_key="repository_submissions.id")
     status: str = Field(default=InterviewStatus.scheduled.value, index=True)
     consent_status: str = Field(default=ConsentStatus.pending.value)
     target_duration_minutes: int = Field(default=30)
@@ -144,11 +144,11 @@ class ExitInterviewSession(SQLModel, table=True):
 
 
 class InterviewParticipant(SQLModel, table=True):
-    __tablename__ = "se_interview_participants"
-    __table_args__ = (UniqueConstraint("session_id", "user_id", name="uq_se_interview_participant"),)
+    __tablename__ = "interview_participants"
+    __table_args__ = (UniqueConstraint("session_id", "user_id", name="uq_interview_participant"),)
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    session_id: str = Field(foreign_key="se_exit_interview_sessions.id", index=True)
+    session_id: str = Field(foreign_key="exit_interview_sessions.id", index=True)
     # Slot key for examiner turns/scoring. Shared-login sessions use negative
     # synthetic ids (-1, -2, …); display_name is the human label students type in.
     user_id: int = Field(index=True)
@@ -159,10 +159,10 @@ class InterviewParticipant(SQLModel, table=True):
 
 
 class InterviewQuestion(SQLModel, table=True):
-    __tablename__ = "se_interview_questions"
+    __tablename__ = "interview_questions"
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    session_id: str = Field(foreign_key="se_exit_interview_sessions.id", index=True)
+    session_id: str = Field(foreign_key="exit_interview_sessions.id", index=True)
     target_user_id: int = Field(index=True)
     sequence: int = Field(default=0)
     competency: str
@@ -177,10 +177,10 @@ class InterviewQuestion(SQLModel, table=True):
 
 
 class InterviewAnswer(SQLModel, table=True):
-    __tablename__ = "se_interview_answers"
+    __tablename__ = "interview_answers"
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    question_id: str = Field(foreign_key="se_interview_questions.id", index=True)
+    question_id: str = Field(foreign_key="interview_questions.id", index=True)
     user_id: int = Field(index=True)
     modality: str = Field(default="text")
     text: str
@@ -189,11 +189,11 @@ class InterviewAnswer(SQLModel, table=True):
 
 
 class Assessment(SQLModel, table=True):
-    __tablename__ = "se_assessments"
-    __table_args__ = (UniqueConstraint("session_id", "user_id", name="uq_se_assessment_session_user"),)
+    __tablename__ = "assessments"
+    __table_args__ = (UniqueConstraint("session_id", "user_id", name="uq_assessment_session_user"),)
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    session_id: str = Field(foreign_key="se_exit_interview_sessions.id", index=True)
+    session_id: str = Field(foreign_key="exit_interview_sessions.id", index=True)
     user_id: int = Field(index=True)
     provisional_scores: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
     evidence: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
@@ -206,11 +206,11 @@ class Assessment(SQLModel, table=True):
 
 
 class VoiceRoom(SQLModel, table=True):
-    __tablename__ = "se_voice_rooms"
-    __table_args__ = (UniqueConstraint("session_id", name="uq_se_voice_room_session"),)
+    __tablename__ = "voice_rooms"
+    __table_args__ = (UniqueConstraint("session_id", name="uq_voice_room_session"),)
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    session_id: str = Field(foreign_key="se_exit_interview_sessions.id", index=True)
+    session_id: str = Field(foreign_key="exit_interview_sessions.id", index=True)
     room_name: str = Field(unique=True)
     status: str = Field(default=VoiceRoomStatus.idle.value)
     recording_status: str = Field(default=VoiceRecordingStatus.none.value)
@@ -223,14 +223,14 @@ class VoiceRoom(SQLModel, table=True):
 
 
 class VoiceUtterance(SQLModel, table=True):
-    __tablename__ = "se_voice_utterances"
+    __tablename__ = "voice_utterances"
 
     id: str = Field(default_factory=_uuid, primary_key=True)
-    session_id: str = Field(foreign_key="se_exit_interview_sessions.id", index=True)
+    session_id: str = Field(foreign_key="exit_interview_sessions.id", index=True)
     user_id: int = Field(index=True)
     text: str
     is_final: bool = Field(default=True)
     corrected_text: Optional[str] = None
     track_sid: Optional[str] = None
-    committed_answer_id: Optional[str] = Field(default=None, foreign_key="se_interview_answers.id")
+    committed_answer_id: Optional[str] = Field(default=None, foreign_key="interview_answers.id")
     created_at: datetime = Field(default_factory=_utc_now)

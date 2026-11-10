@@ -85,10 +85,10 @@ from app.course.api.voice import router as voice_router
 from app.course.api.policy import router as policy_router
 from app.course.indexing import index_all_scenarios
 from app.course.scenario_pack_adapter import pack_from_persona
-from app.course.db_models import Scenario, ScenarioPersona, ScenarioFact, RequirementsSession, Message  # noqa: F401
-from app.course import exit_models as _exit_models  # noqa: F401 — register SQLModel tables
+import app.models  # noqa: F401 — register course SQLModel tables
 from app.course.db import configure_engine as configure_course_engine
-from sqlmodel import SQLModel as _SESQLModel
+from app.models.migrate import ensure_course_columns, migrate_se_prefix
+from sqlmodel import SQLModel as _CourseSQLModel
 from app.llm_registry import (
     choice_label,
     default_choice_id,
@@ -159,20 +159,11 @@ async def _app_lifespan(_app: FastAPI):
     print(f"✓ Roles ready: {roles}")
     # Ensure YAML scenario + exit-interview tables exist on the shared conversation DB engine
     configure_course_engine(conversation_store.engine)
-    _SESQLModel.metadata.create_all(conversation_store.engine)
-    # Best-effort additive columns for existing SQLite/Postgres installs.
-    try:
-        with conversation_store.engine.begin() as conn:
-            conn.exec_driver_sql(
-                "ALTER TABLE se_interview_participants ADD COLUMN display_name VARCHAR DEFAULT ''"
-            )
-    except Exception:
-        pass
-    try:
-        with conversation_store.engine.begin() as conn:
-            conn.exec_driver_sql("ALTER TABLE se_teams ADD COLUMN participant_names JSON")
-    except Exception:
-        pass
+    rename_actions = migrate_se_prefix(conversation_store.engine)
+    if rename_actions:
+        print(f"✓ Schema migrate: {', '.join(rename_actions)}")
+    _CourseSQLModel.metadata.create_all(conversation_store.engine)
+    ensure_course_columns(conversation_store.engine)
     Path(os.getenv("STORAGE_RECORDINGS_DIR", "./storage/recordings")).mkdir(parents=True, exist_ok=True)
     seed_info = seed_scenarios(engine=conversation_store.engine)
     print(

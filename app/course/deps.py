@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, Request, status
 from sqlmodel import Session, select
 
 from app.course.db import get_db
-from app.course.exit_models import Team, TeamMember
+from app.models.exit import Team, TeamMember
 from app.storage.conversation_store import ROLE_ADMIN, User
 
 

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from sqlmodel import Session, select
 
-from app.course.exit_models import (
+from app.models.exit import (
     Assessment,
     ConsentStatus,
     ExitInterviewSession,

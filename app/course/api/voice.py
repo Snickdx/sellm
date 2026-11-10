@@ -14,7 +14,7 @@ from app.course.api.exit_interviews import _session_access
 from app.course.db import get_db
 from app.course.deps import AuthUser, get_current_user
 from app.course.examiner.state import after_evidence, record_response
-from app.course.exit_models import (
+from app.models.exit import (
     AuditEvent,
     ConsentStatus,
     InterviewAnswer,

@@ -1,4 +1,4 @@
-"""SQLModel tables for imported YAML scenarios and requirements sessions."""
+"""SQLModel tables for imported YAML scenarios."""
 
 from __future__ import annotations
 
@@ -29,8 +29,8 @@ class MessageRole(str, Enum):
 
 
 class Scenario(SQLModel, table=True):
-    __tablename__ = "se_scenarios"
-    __table_args__ = (UniqueConstraint("slug", "version", name="uq_se_scenario_slug_version"),)
+    __tablename__ = "scenarios"
+    __table_args__ = (UniqueConstraint("slug", "version", name="uq_scenario_slug_version"),)
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
     slug: str = Field(index=True)
@@ -46,21 +46,21 @@ class Scenario(SQLModel, table=True):
 
 
 class ScenarioPersona(SQLModel, table=True):
-    __tablename__ = "se_scenario_personas"
-    __table_args__ = (UniqueConstraint("scenario_id", "persona_key", name="uq_se_scenario_persona"),)
+    __tablename__ = "scenario_personas"
+    __table_args__ = (UniqueConstraint("scenario_id", "persona_key", name="uq_scenario_persona"),)
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    scenario_id: str = Field(foreign_key="se_scenarios.id", index=True)
+    scenario_id: str = Field(foreign_key="scenarios.id", index=True)
     persona_key: str
     config: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
 
 
 class ScenarioFact(SQLModel, table=True):
-    __tablename__ = "se_scenario_facts"
-    __table_args__ = (UniqueConstraint("scenario_id", "fact_key", name="uq_se_scenario_fact"),)
+    __tablename__ = "scenario_facts"
+    __table_args__ = (UniqueConstraint("scenario_id", "fact_key", name="uq_scenario_fact"),)
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    scenario_id: str = Field(foreign_key="se_scenarios.id", index=True)
+    scenario_id: str = Field(foreign_key="scenarios.id", index=True)
     fact_key: str
     text: str
     provenance: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
@@ -69,30 +69,3 @@ class ScenarioFact(SQLModel, table=True):
     disclosure: str = Field(default="when_relevant")
     status: str
     origin: str
-
-
-class RequirementsSession(SQLModel, table=True):
-    __tablename__ = "se_requirements_sessions"
-
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    user_id: int = Field(index=True)
-    persona_key: str
-    scenario_slug: str = Field(index=True)
-    scenario_version: str
-    started_at: datetime = Field(default_factory=_utc_now, index=True)
-    ended_at: Optional[datetime] = None
-
-
-class Message(SQLModel, table=True):
-    __tablename__ = "se_messages"
-
-    id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    session_id: str = Field(foreign_key="se_requirements_sessions.id", index=True)
-    participant_id: Optional[int] = Field(default=None, index=True)
-    role: str = Field(index=True)
-    text: str
-    fact_ids: list[Any] = Field(default_factory=list, sa_column=Column(JSON))
-    model_version: Optional[str] = None
-    scenario_version: str
-    usage_json: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=_utc_now, index=True)

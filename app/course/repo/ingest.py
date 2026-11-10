@@ -7,7 +7,7 @@ import logging
 from sqlmodel import Session
 
 from app.course.db import get_engine
-from app.course.exit_models import RepoIndexStatus, RepositorySubmission
+from app.models.exit import RepoIndexStatus, RepositorySubmission
 from app.course.providers.github import get_repository_provider, parse_repo_url
 from app.course.repo.indexer import build_index
 from app.course.settings import Settings, get_settings

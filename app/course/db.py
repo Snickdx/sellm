@@ -20,7 +20,7 @@ def configure_engine(engine: Engine) -> None:
 
 def get_engine() -> Engine:
     if _engine is None:
-        raise RuntimeError("seproject DB engine not configured — call configure_engine first")
+        raise RuntimeError("course DB engine not configured — call configure_engine first")
     return _engine
 
 

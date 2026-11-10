@@ -33,8 +33,7 @@ def client(tmp_path, monkeypatch):
 
     from app.storage.conversation_store import ConversationStore
     from app.course.db import configure_engine
-    from app.course import exit_models  # noqa: F401
-    from app.course import db_models  # noqa: F401
+    import app.models  # noqa: F401 — register SQLModel tables
     from sqlmodel import SQLModel
     from fastapi.testclient import TestClient
 

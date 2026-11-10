@@ -87,7 +87,7 @@ def test_spawn_skip_alternate_promotes_follow_up():
     from sqlmodel import Session, SQLModel, create_engine
 
     from app.course.examiner.state import spawn_skip_alternate
-    from app.course.exit_models import InterviewQuestion
+    from app.models.exit import InterviewQuestion
 
     engine = create_engine("sqlite://")
     SQLModel.metadata.create_all(engine)
