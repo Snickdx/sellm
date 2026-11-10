@@ -145,15 +145,44 @@
     adminShell.classList.toggle("users-wide", mode === "users");
   }
 
-  function bindNav() {
-    document.querySelectorAll(".nav button[data-view]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        view = btn.dataset.view;
-        document.querySelectorAll(".nav button[data-view]").forEach((b) => b.classList.toggle("active", b === btn));
-        selectedConversationId = null;
-        render();
-      });
+  function syncViewTabs() {
+    document.querySelectorAll("[data-view]").forEach((b) => {
+      const on = b.dataset.view === view;
+      b.classList.toggle("active", on);
+      if (b.getAttribute("role") === "tab") b.setAttribute("aria-selected", on ? "true" : "false");
     });
+  }
+
+  function setView(next) {
+    view = next;
+    selectedConversationId = null;
+    syncViewTabs();
+    const url = new URL(location.href);
+    url.searchParams.set("view", view);
+    history.replaceState(null, "", url);
+    closeNav();
+    render();
+  }
+
+  function openNav() {
+    if (!adminShell) return;
+    adminShell.classList.add("nav-open");
+    document.getElementById("navToggle")?.setAttribute("aria-expanded", "true");
+  }
+
+  function closeNav() {
+    if (!adminShell) return;
+    adminShell.classList.remove("nav-open");
+    document.getElementById("navToggle")?.setAttribute("aria-expanded", "false");
+  }
+
+  function bindNav() {
+    document.querySelectorAll("[data-view]").forEach((btn) => {
+      btn.addEventListener("click", () => setView(btn.dataset.view));
+    });
+    document.getElementById("navToggle")?.addEventListener("click", openNav);
+    document.getElementById("navClose")?.addEventListener("click", closeNav);
+    document.getElementById("navBackdrop")?.addEventListener("click", closeNav);
   }
 
   async function loadUsers(group) {
@@ -838,12 +867,8 @@
       `;
       detailBody.querySelectorAll(".token-user").forEach((btn) => {
         btn.addEventListener("click", () => {
-          view = "users";
-          document.querySelectorAll(".nav button[data-view]").forEach((b) =>
-            b.classList.toggle("active", b.dataset.view === "users")
-          );
           selectedUserId = Number(btn.dataset.id);
-          render();
+          setView("users");
         });
       });
     } catch (e) {
@@ -1115,10 +1140,8 @@
     const initial = params.get("view");
     if (initial && ["users", "teams", "tokens", "appkeys", "defaults"].includes(initial)) {
       view = initial;
-      document.querySelectorAll(".nav button[data-view]").forEach((b) =>
-        b.classList.toggle("active", b.dataset.view === view)
-      );
     }
+    syncViewTabs();
     await loadConfigChoices();
     await render();
   }
