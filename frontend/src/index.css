@@ -379,7 +379,7 @@ button:disabled {
 }
 
 .main-body.with-aside {
-  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
 }
 
 .work-aside {
@@ -388,6 +388,23 @@ button:disabled {
   min-height: 0;
   overflow: auto;
   padding: 12px;
+}
+
+.work-aside h2 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #475569;
+}
+
+.work-aside .auth-form {
+  gap: 10px;
+}
+
+.work-aside .auth-form button {
+  width: 100%;
 }
 
 .main-scroll {
@@ -686,7 +703,7 @@ textarea:focus {
   .work-aside {
     border-right: none;
     border-bottom: 1px solid var(--line);
-    max-height: 160px;
+    max-height: 40vh;
   }
 }
 

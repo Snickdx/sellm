@@ -243,8 +243,9 @@ export function ExitInterviewPage() {
     }
   }
 
-  const hub = (
-    <div className="stack">
+  const groupAside = (
+    <div className="stack" style={{ gap: 12 }}>
+      <h2>Group settings</h2>
       {allTeams.length > 1 ? (
         <label className="auth-form" style={{ marginBottom: 0 }}>
           Group
@@ -262,50 +263,50 @@ export function ExitInterviewPage() {
           </select>
         </label>
       ) : null}
+      <p className="hint" style={{ margin: 0 }}>
+        Name and repository URL. No commit hash needed.
+      </p>
+      <form className="auth-form" onSubmit={onSaveSettings}>
+        <label>
+          Group name
+          <input
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            placeholder="Team Alpha"
+            required
+          />
+        </label>
+        <label>
+          Repository URL
+          <input
+            value={githubUrl}
+            onChange={(e) => setGithubUrl(e.target.value)}
+            placeholder="https://github.com/org/repo"
+            required
+          />
+        </label>
+        {repo ? (
+          <p className="muted-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <span>
+              {repo.repo}
+              {repo.commit_sha ? `@${repo.commit_sha.slice(0, 7)}` : ''}
+            </span>
+            <span>{repo.index_status}</span>
+            {repo.index_error ? <span className="error">{repo.index_error}</span> : null}
+          </p>
+        ) : null}
+        {settingsHint ? <p className="hint">{settingsHint}</p> : null}
+        <button type="submit" disabled={busy || !groupName.trim() || !githubUrl.trim()}>
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+      </form>
+    </div>
+  )
 
+  const hub = (
+    <div className="stack">
       <section className="surface">
-        <h2>Group settings</h2>
-        <p className="hint" style={{ marginBottom: 12 }}>
-          Set the group name and repository URL. No commit hash needed.
-        </p>
-        <form className="auth-form" onSubmit={onSaveSettings}>
-          <label>
-            Group name
-            <input
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Team Alpha"
-              required
-            />
-          </label>
-          <label>
-            Repository URL
-            <input
-              value={githubUrl}
-              onChange={(e) => setGithubUrl(e.target.value)}
-              placeholder="https://github.com/org/repo or fixture://demo"
-              required
-            />
-          </label>
-          {repo ? (
-            <p className="muted-row">
-              <span>
-                {repo.repo}
-                {repo.commit_sha ? `@${repo.commit_sha.slice(0, 7)}` : ''}
-              </span>
-              <span>{repo.index_status}</span>
-              {repo.index_error ? <span className="error">{repo.index_error}</span> : null}
-            </p>
-          ) : null}
-          {settingsHint ? <p className="hint">{settingsHint}</p> : null}
-          <button type="submit" disabled={busy || !groupName.trim() || !githubUrl.trim()}>
-            {busy ? 'Saving…' : 'Save group settings'}
-          </button>
-        </form>
-      </section>
-
-      <section className="surface">
-        <h2>New interview</h2>
+        <h2>Start new interview</h2>
         <p className="hint" style={{ marginBottom: 12 }}>
           Enter the interviewee’s group member name, then start.
         </p>
@@ -454,8 +455,9 @@ export function ExitInterviewPage() {
       subtitle={
         team?.name
           ? `${team.name}${repoReady ? '' : ' · repo not ready'}`
-          : 'Group settings, start interview, past sessions'
+          : 'Start interview and review past sessions'
       }
+      aside={groupAside}
     >
       <div className="stack">
         {error && <p className="error">{error}</p>}
