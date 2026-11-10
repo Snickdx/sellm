@@ -37,7 +37,7 @@ export function CourseShell({ title, subtitle, children, aside }: Props) {
           </div>
 
           <nav className="app-nav" aria-label="Primary" onClick={closeNav}>
-            <a href="/">Chats</a>
+            <a href="/">Req Interviews</a>
             <span className="active" aria-current="page">
               Exit interviews
             </span>
