@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from sqlmodel import Session, select
 
-from app.seproject.exit_models import (
+from app.course.exit_models import (
     Assessment,
     ConsentStatus,
     ExitInterviewSession,
@@ -179,3 +179,39 @@ def load_session(db: Session, session_id: str) -> SessionBundle | None:
 
 def unanswered_question_ids(questions: list[InterviewQuestion]) -> list[str]:
     return [str(q.id) for q in questions if q.status in {"pending", "asked", "probed"}]
+
+
+def spawn_skip_alternate(db: Session, skipped: InterviewQuestion) -> InterviewQuestion | None:
+    """Promote the next follow_up into a pending replacement question (quota recovery).
+
+    Returns the new question, or None if no alternates remain.
+    """
+    alts = [str(a).strip() for a in (skipped.follow_ups or []) if str(a).strip()]
+    if not alts:
+        return None
+    prompt, rest = alts[0], alts[1:]
+    # Consumed: clear remaining alts on the skipped row so they aren't reused.
+    skipped.follow_ups = []
+    db.add(skipped)
+
+    max_seq = max((q.sequence for q in db.exec(
+        select(InterviewQuestion).where(InterviewQuestion.session_id == skipped.session_id)
+    ).all()), default=skipped.sequence)
+
+    alt = InterviewQuestion(
+        session_id=skipped.session_id,
+        target_user_id=skipped.target_user_id,
+        sequence=max_seq + 1,
+        competency=skipped.competency,
+        difficulty=skipped.difficulty,
+        prompt=prompt,
+        code_refs=dict(skipped.code_refs or {}),
+        expected_concepts=list(skipped.expected_concepts or []),
+        rubric=skipped.rubric,
+        follow_ups=rest,
+        hypothetical=bool(skipped.hypothetical),
+        status="pending",
+    )
+    db.add(alt)
+    db.flush()
+    return alt

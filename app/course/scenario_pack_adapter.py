@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict
 
-from app.seproject.chat.persona_service import allowed_facts_for_persona, get_persona
-from app.seproject.scenarios.models import ScenarioPackage
+from app.course.chat.persona_service import allowed_facts_for_persona, get_persona
+from app.course.scenarios.models import ScenarioPackage
 
 
 @dataclass

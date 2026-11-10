@@ -1,0 +1,93 @@
+# Career advising — exit-interview answer bands for scorer calibration.
+# Prompts generated at test time from planner + fixed index.
+# low→1–2, mid→3–4, high→5 (provisional heuristic with knowledge pack).
+scenario_slug: career-advising
+repository_sha: cadeadbeef01
+index:
+  commit_sha: cadeadbeef01
+  files:
+  - path: app/services/exploration.py
+    language: python
+    line_count: 120
+  - path: app/services/advising.py
+    language: python
+    line_count: 90
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+  symbols:
+  - name: explore_career_first
+    kind: function
+    path: app/services/exploration.py
+    line_start: 20
+    line_end: 70
+  - name: explore_course_first
+    kind: function
+    path: app/services/exploration.py
+    line_start: 80
+    line_end: 130
+  - name: identify_gaps
+    kind: function
+    path: app/services/advising.py
+    line_start: 30
+    line_end: 60
+  tests:
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+bands:
+  low:
+    label: Weak / evasive
+    student_display_name: Career advising Low
+    expected_score_range:
+    - 1
+    - 2
+    answers:
+      special_feature_pattern: Not sure. Teammate handled that.
+      design_to_code: Looks the same to me.
+      feature_ownership: Mostly pair watched others type.
+      testing: Green suite means done.
+      verification: Agent wrote my section.
+  mid:
+    label: Partial / vague (length without gold terms)
+    student_display_name: Career advising Mid
+    expected_score_range:
+    - 3
+    - 4
+    answers:
+      design_to_code: Sprint one boxes on the whiteboard roughly match what shipped later. Some names
+        moved around when we coded, and I am not sure which relationship stayed faithful versus what we
+        reinvented under pressure.
+      feature_ownership: I made a few edits in the main service path after standup. I cannot find my board
+        card and I did not write down what callers should do when the insert fails.
+      verification: A classmate pushed a big branch and I skimmed it before merge. I trusted the chat
+        summary more than running the app myself, so my check was shallow.
+      special_feature_pattern: The two advising modes felt copy-pasted and inconsistent in the starter.
+        I said we cleaned those paths, but I cannot name the classes we added or the approach we chose.
+      testing: The starter suite checks login and counts rows. That is thin for both advising modes and
+        missing prerequisites, so we planned richer cases later but did not land them before the interview.
+  high:
+    label: Strong / gold-aligned
+    student_display_name: Career advising High
+    expected_score_range:
+    - 5
+    - 5
+    answers:
+      special_feature_pattern: 'For exploration advising pipelines we targeted duplicated career-first
+        and course-first flows in exploration.py. Ranking used absolute wording and course-first skipped
+        missing-course identification. We replaced that with the Template Method pattern: a shared skeleton
+        with mode-specific hooks for match, non-absolute rank, identify gaps, and present.'
+      design_to_code: Sprint 1 class diagram showed Template Method participants for the shared pipeline.
+        Looking at exploration.py, both modes now call the same skeleton. Design drift removed enrol/Banner
+        next-step hints from identify_gaps in advising.py so pattern participants stay on exploration
+        hooks.
+      feature_ownership: 'I personally extracted the shared skeleton in exploration.py and fixed explore_course_first
+        missing_courses. Control flow always runs gap hooks. Trello CA-01 and PR #6 are my commits. Failure
+        mode: high-school profiles must be rejected before exploration results are returned.'
+      testing: 'tests/test_scenario.py is shallow and still passes with absolute career wording. I added
+        a regression assertion that career-first never says You should pursue as a single forced path,
+        and another that course-first returns missing_courses. Coverage gap: perfect overlap absolute
+        wording.'
+      verification: 'AI drafted the Template Method extract in exploration.py. I verified by running both
+        pipeline regression tests and rejecting a patch that kept enrol hints in identify_gaps. PR #6
+        has my review; ownership stayed with me.'

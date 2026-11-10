@@ -29,8 +29,8 @@ def main() -> int:
     except ImportError:
         pass
 
-    from app.seproject.indexing import reload_and_index_scenarios
-    from app.seproject.scenarios.loader import default_scenarios_root
+    from app.course.indexing import reload_and_index_scenarios
+    from app.course.scenarios.loader import default_scenarios_root
 
     vector_rag = None
     neo4j_rag = None

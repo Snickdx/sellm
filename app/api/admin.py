@@ -477,7 +477,7 @@ async def set_app_keys(body: AdminAppKeysSetRequest, request: Request):
 async def reindex_scenarios(request: Request):
     """Reload YAML scenario packages and refresh vector + graph indexes (and in-memory yaml/direct packs)."""
     _require_admin(request)
-    from app.seproject.indexing import reload_and_index_scenarios
+    from app.course.indexing import reload_and_index_scenarios
 
     store = _store(request)
     rag_systems = getattr(request.app.state, "rag_systems", None) or {}

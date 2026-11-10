@@ -9,9 +9,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.seproject.examiner.competencies import COMPETENCIES, COMPETENCY_WEIGHTS, RUBRIC_VERSION
-from app.seproject.examiner.state import SessionBundle
-from app.seproject.exit_models import InterviewQuestion
+from app.course.examiner.competencies import COMPETENCIES, COMPETENCY_WEIGHTS, RUBRIC_VERSION
+from app.course.examiner.knowledge import gold_rationale_bits, judge_concepts_for
+from app.course.examiner.state import SessionBundle
+from app.course.exit_models import InterviewQuestion
 
 
 def _tokenize(text: str) -> set[str]:
@@ -59,12 +60,22 @@ def _score_answer(answer_text: str, expected_concepts: list[str]) -> int:
     return max(1, min(5, base))
 
 
-def score_session(bundle: SessionBundle, repository_sha: str) -> list[dict[str, Any]]:
-    """Return provisional assessment payloads per participant (not yet persisted)."""
+def score_session(
+    bundle: SessionBundle,
+    repository_sha: str,
+    *,
+    scenario_slug: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return provisional assessment payloads per participant (not yet persisted).
+
+    When `scenario_slug` is provided, merges instructor knowledge-pack concepts
+    into scoring (patterns/defects) without putting that gold on the live question.
+    """
     by_user: dict[int, list[InterviewQuestion]] = {}
     for question in bundle.questions:
         by_user.setdefault(question.target_user_id, []).append(question)
 
+    gold_bits = gold_rationale_bits(scenario_slug)
     reports: list[dict[str, Any]] = []
     for user_id, questions in by_user.items():
         competencies_out: list[dict[str, Any]] = []
@@ -96,10 +107,13 @@ def score_session(bundle: SessionBundle, repository_sha: str) -> list[dict[str, 
             scores: list[int] = []
             sufficiencies: list[str] = []
             rationales: list[str] = []
+            gold_concepts = judge_concepts_for(scenario_slug, competency)
             for q in answered:
                 answers = sorted(bundle.answers_for(q.id), key=lambda a: a.created_at)
                 primary = next((a for a in answers if not a.is_probe), answers[-1])
-                score = _score_answer(primary.text, list(q.expected_concepts or []))
+                # Generic prompt concepts + scenario gold (patterns/defects/focus terms).
+                concepts = list(q.expected_concepts or []) + gold_concepts
+                score = _score_answer(primary.text, concepts)
                 suf = _sufficiency(primary.text)
                 scores.append(score)
                 sufficiencies.append(suf)
@@ -115,9 +129,15 @@ def score_session(bundle: SessionBundle, repository_sha: str) -> list[dict[str, 
                         "answer_excerpt": primary.text[:400],
                     }
                 )
-                rationales.append(
-                    f"Q[{q.sequence}] score={score} sufficiency={suf}; concepts={q.expected_concepts}"
+                rationale = (
+                    f"Q[{q.sequence}] score={score} sufficiency={suf}; "
+                    f"prompt_concepts={q.expected_concepts}"
                 )
+                if gold_concepts:
+                    rationale += f"; gold_hits_checked={len(gold_concepts)}"
+                if gold_bits:
+                    rationale += f"; {gold_bits}"
+                rationales.append(rationale)
 
             order = ["insufficient", "low", "moderate", "high"]
             suf_final = min(sufficiencies, key=lambda s: order.index(s) if s in order else 0)

@@ -6,9 +6,9 @@ from pathlib import Path
 
 from sqlmodel import Session
 
-from app.seproject.scenarios.importer import import_package_to_db
-from app.seproject.scenarios.loader import default_scenarios_root
-from app.seproject.scenarios.registry import scenario_registry
+from app.course.scenarios.importer import import_package_to_db
+from app.course.scenarios.loader import default_scenarios_root
+from app.course.scenarios.registry import scenario_registry
 
 
 def seed_scenarios(*, engine=None) -> dict:

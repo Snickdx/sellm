@@ -1,0 +1,65 @@
+# Instructor-only. Never copy into templates/career-advising or student forks.
+scenario: career-advising
+starter_version: "0.2.0"
+design_pattern_opportunity: >-
+  Template Method for dual exploration pipelines (career-first / course-first).
+  Replace duplicated steps in app/services/exploration.py with a shared skeleton and
+  mode-specific hooks (match, rank non-absolutely, identify gaps, present).
+
+notes:
+  - Passwords use FastStart Argon2 (pwdlib); login strips password — not a seeded defect.
+  - Code is split across advising_auth/advising/exploration — not a god object.
+  - Base: uwidcit/faststart @ 96ccfce.
+
+defects:
+  - id: CA-DEF-001
+    category: architecture
+    summary: >-
+      Career-first and course-first are copy-pasted pipelines with inconsistent
+      ranking wording and gap handling instead of a shared template method.
+    evidence: app/services/exploration.py
+    related_acceptance: [3, 4, 7]
+    severity: high
+    intended_fix: Template Method
+
+  - id: CA-DEF-002
+    category: functional
+    summary: Career-first returns absolute “You should pursue …” wording / single forced path.
+    evidence: exploration.explore_career_first ranking wording
+    related_acceptance: [4]
+    severity: high
+
+  - id: CA-DEF-003
+    category: functional
+    summary: Course-first skips missing-course identification (empty missing_courses).
+    evidence: exploration.explore_course_first
+    related_acceptance: [7]
+    severity: high
+
+  - id: CA-DEF-004
+    category: functional
+    summary: Career-first and gaps endpoints include enrol/Banner next-step hints.
+    evidence: explore_career_first enrol_hint; app/services/advising.py identify_gaps next_step
+    related_acceptance: [8]
+    severity: high
+
+  - id: CA-DEF-005
+    category: functional
+    summary: High-school audience accepted and still receives exploration results.
+    evidence: app/services/advising.py upsert_profile; exploration.explore_course_first HS branch
+    related_acceptance: [1]
+    severity: medium
+
+  - id: CA-DEF-006
+    category: functional
+    summary: Perfect course overlap flips course-first top result to absolute wording.
+    evidence: exploration.explore_course_first score >= 1.0 branch
+    related_acceptance: [4]
+    severity: medium
+
+  - id: CA-DEF-007
+    category: testing
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+    related_acceptance: []
+    severity: low

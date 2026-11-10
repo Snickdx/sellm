@@ -1,0 +1,91 @@
+# Instructor-only judge gold. Sourced from instructor/private + templates ASSIGNMENT.md
+slug: thesis-tracker
+title: Postgrad milestones
+special_feature: Domain actions executed and audited
+starter_version: "0.2.0"
+intended_pattern: Command
+intended_pattern_aliases:
+  - command pattern
+  - audit trail
+  - append-only
+  - invoker
+  - command history
+focus_paths:
+  - app/services/commands.py
+  - app/services/feedback.py
+  - app/services/progress.py
+architecture_defect:
+  id: TT-DEF-001
+  summary: >-
+    No real Command objects; services mutate state directly. event_log is
+    optional (silent skip), missing for submissions, and mutable via rewrite_last.
+  evidence: commands.py; feedback.py; progress.py
+  intended_fix: Command + immutable command history
+defects:
+  - id: TT-DEF-001
+    category: architecture
+    severity: high
+    summary: Inline mutations + mutable optional event_log instead of Command history.
+    evidence: app/services/commands.py
+  - id: TT-DEF-002
+    category: functional
+    severity: high
+    summary: Student submissions never recorded in audit log.
+    evidence: feedback.submit_work
+  - id: TT-DEF-003
+    category: functional
+    severity: high
+    summary: Feedback completion uses silent=True — no audit event.
+    evidence: feedback.complete_feedback
+  - id: TT-DEF-004
+    category: functional
+    severity: high
+    summary: Progress notes rewrite_last then record — mutable history.
+    evidence: progress.add_note
+  - id: TT-DEF-005
+    category: functional
+    severity: high
+    summary: Supervisor capacity not enforced on pairing.
+    evidence: pairings.create_pairing
+  - id: TT-DEF-006
+    category: functional
+    severity: medium
+    summary: Empty notes can complete feedback.
+    evidence: feedback.complete_feedback
+  - id: TT-DEF-007
+    category: functional
+    severity: high
+    summary: Coordinator overdue flag inverted.
+    evidence: feedback.list_feedback
+  - id: TT-DEF-008
+    category: functional
+    severity: medium
+    summary: Grad-studies summary not audited; omits submissions.
+    evidence: progress.grad_studies_summary
+  - id: TT-DEF-009
+    category: testing
+    severity: low
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+judge_concepts:
+  special_feature_pattern:
+    - command
+    - audit
+    - history
+    - append
+    - invoker
+    - event_log
+  design_to_code:
+    - commands
+    - audit
+    - command
+  feature_ownership:
+    - commands
+    - feedback
+  testing:
+    - regression
+    - audit
+    - silent
+  verification:
+    - commands
+    - review

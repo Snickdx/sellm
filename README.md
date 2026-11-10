@@ -551,7 +551,7 @@ Popular alternatives:
 │   ├── security/
 │   │   └── secret_store.py   # Fernet-encrypted API key storage
 │   ├── scenario/            # Excel scenario_pack, stakeholder_prompt, direct_model
-│   ├── seproject/           # YAML scenario loader, persona chat, scenario APIs
+│   ├── course/              # YAML scenarios, persona chat, exit examiner APIs
 │   ├── llm_wrapper.py       # Stakeholder LLM generation (no template fallback)
 │   ├── llm_registry.py      # Model discovery, dropdown, Ollama name resolution
 │   ├── stakeholder_tone.py  # Plain-language post-processing for stakeholders
@@ -592,7 +592,10 @@ Popular alternatives:
 ├── docs/
 │   ├── SETUP_LLM.md         # LLM setup guide
 │   ├── DEPLOY_EASYPANEL.md  # Production on EasyPanel
-
+│   ├── EXIT_INTERVIEWS.md   # Exit interview dry-run
+│   └── known-limitations.md # Pilot limitations (sellm-local copy)
+├── instructor/
+│   └── private/<slug>/      # Defect manifests + hidden tests (not student-facing)
 ├── requirements.txt         # Python dependencies
 ├── .env.example             # Env template (copy to app/.env for local dev)
 ├── data.xlsx                # Excel knowledge base (RAG / direct modes)

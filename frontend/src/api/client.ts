@@ -12,7 +12,7 @@ export interface MeResponse {
   role: UserRole
 }
 
-/** Normalized view for UI code ported from seproject (`id`, `display_name`). */
+/** Normalized view for UI code (`id`, `display_name`). */
 export interface User extends MeResponse {
   id: number
   display_name: string
@@ -265,6 +265,10 @@ export async function fetchExitSession(sessionId: string): Promise<ExitSession> 
   return request(`/api/exit-sessions/${sessionId}`)
 }
 
+export async function deleteExitSession(sessionId: string): Promise<{ ok: boolean; id: string }> {
+  return request(`/api/exit-sessions/${sessionId}`, { method: 'DELETE' })
+}
+
 export async function createExitSession(
   teamId: string,
   body: {
@@ -319,8 +323,68 @@ export async function finishExitSession(
   return request(`/api/exit-sessions/${sessionId}/finish`, { method: 'POST' })
 }
 
-export async function fetchExitReport(sessionId: string): Promise<unknown> {
-  return request(`/api/admin/exit-sessions/${sessionId}/report`)
+export interface CompetencyEvidence {
+  question_id: string
+  answer_id: string
+  repository_path?: string | null
+  line_range?: number[] | null
+  sha?: string | null
+  prompt?: string
+  answer_excerpt?: string
+}
+
+export interface CompetencyScore {
+  name: string
+  score: number | null
+  max_score: number
+  weight: number
+  evidence_sufficiency: string
+  evidence: CompetencyEvidence[]
+  rationale: string
+  follow_up_recommended: boolean
+}
+
+export interface ExitAssessment {
+  id: string
+  student_id: number
+  display_name: string
+  provisional: boolean
+  review_status: string
+  provisional_scores: {
+    competencies?: CompetencyScore[]
+    provisional?: boolean
+  } | null
+  evidence: {
+    coverage_warnings?: string[]
+    repository_sha?: string
+  } | null
+  reviewer_notes: string | null
+  rubric_version: string | null
+  finalized_at: string | null
+}
+
+export interface ExitReport {
+  session_id: string
+  status: string
+  repository_sha: string | null
+  assessments: ExitAssessment[]
+  unanswered_question_ids: string[]
+}
+
+export async function fetchExitReport(sessionId: string): Promise<ExitReport> {
+  return request(`/api/exit-sessions/${sessionId}/report`)
+}
+
+/** Authenticated recording download as a blob object URL (caller must revoke). */
+export async function fetchRecordingObjectUrl(sessionId: string): Promise<string> {
+  const response = await fetch(url(`/api/exit-sessions/${sessionId}/recording`), {
+    headers: { ...authHeaders() },
+  })
+  if (!response.ok) {
+    throw new Error(response.status === 404 ? 'No recording available' : `Recording failed (${response.status})`)
+  }
+  const blob = await response.blob()
+  return URL.createObjectURL(blob)
 }
 
 export interface PolicyDoc {
@@ -381,6 +445,9 @@ export async function leaveVoiceRoom(sessionId: string): Promise<void> {
 export async function startVoiceRecording(sessionId: string): Promise<{
   recording_indicator: boolean
   recording_status: string
+  mode?: 'browser' | 'egress'
+  egress_id?: string | null
+  note?: string
 }> {
   return request(`/api/exit-sessions/${sessionId}/voice/recording/start`, { method: 'POST' })
 }
@@ -390,6 +457,35 @@ export async function stopVoiceRecording(sessionId: string): Promise<{
   playback_url?: string
 }> {
   return request(`/api/exit-sessions/${sessionId}/voice/recording/stop`, { method: 'POST' })
+}
+
+export async function uploadVoiceRecording(
+  sessionId: string,
+  blob: Blob,
+  filename = `exit-${sessionId}.webm`,
+): Promise<{ recording_status: string; playback_url?: string; bytes: number }> {
+  const body = new FormData()
+  body.append('file', blob, filename)
+  const response = await fetch(url(`/api/exit-sessions/${sessionId}/voice/recording/upload`), {
+    method: 'POST',
+    headers: { ...authHeaders() },
+    body,
+  })
+  if (!response.ok) {
+    let detail = `Upload failed (${response.status})`
+    try {
+      const data = (await response.json()) as { detail?: unknown }
+      if (typeof data.detail === 'string') detail = data.detail
+    } catch {
+      // ignore
+    }
+    throw new Error(detail)
+  }
+  return (await response.json()) as {
+    recording_status: string
+    playback_url?: string
+    bytes: number
+  }
 }
 
 export async function postVoiceUtterance(

@@ -1,0 +1,86 @@
+# Instructor-only judge gold. Sourced from instructor/private + templates ASSIGNMENT.md
+slug: uwi-connect
+title: Campus networking / info sharing
+special_feature: Notifications on publish / campaign send
+starter_version: "0.2.0"
+intended_pattern: Observer
+intended_pattern_aliases:
+  - observer pattern
+  - subject
+  - subscribers
+  - notification bus
+focus_paths:
+  - app/services/notifications.py
+  - app/services/boards.py
+  - app/services/campaigns.py
+architecture_defect:
+  id: UC-DEF-001
+  summary: >-
+    Notification “Observer” is a module-level callback list with duplicate
+    subscribe, swallowed errors, inconsistent audience rules, and subjects that
+    bypass or double-write notifications.
+  evidence: notifications.py; boards.publish_listing; campaigns.send_campaign
+  intended_fix: Observer pattern for publish/campaign notifications
+defects:
+  - id: UC-DEF-001
+    category: architecture
+    severity: high
+    summary: Global callback list instead of real Observer subjects/observers.
+    evidence: app/services/notifications.py
+  - id: UC-DEF-002
+    category: functional
+    severity: high
+    summary: Admin publish of jobs does not notify (only events).
+    evidence: boards.publish_listing
+  - id: UC-DEF-003
+    category: functional
+    severity: high
+    summary: Campaign send notifies unverified users.
+    evidence: notifications._persist_to_all_users
+  - id: UC-DEF-004
+    category: functional
+    severity: medium
+    summary: Campaign send duplicates admin notifications.
+    evidence: campaigns.send_campaign
+  - id: UC-DEF-005
+    category: functional
+    severity: high
+    summary: Event listings publish immediately on submit.
+    evidence: boards.submit_listing
+  - id: UC-DEF-006
+    category: functional
+    severity: medium
+    summary: Browse with kind filter includes pending listings.
+    evidence: boards.browse_published
+  - id: UC-DEF-007
+    category: functional
+    severity: medium
+    summary: verify_email ignores institutional domain.
+    evidence: users.verify_email
+  - id: UC-DEF-008
+    category: testing
+    severity: low
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+judge_concepts:
+  special_feature_pattern:
+    - observer
+    - notification
+    - publish
+    - campaign
+    - subscribe
+    - verified
+  design_to_code:
+    - notifications
+    - observer
+    - publish
+  feature_ownership:
+    - notifications
+    - campaigns
+  testing:
+    - regression
+    - notify
+    - verified
+  verification:
+    - notifications
+    - review

@@ -1,0 +1,72 @@
+# Instructor-only. Never copy into templates/library or student forks.
+scenario: library
+starter_version: "0.2.0"
+design_pattern_opportunity: >-
+  Strategy (or composed policies) for same-slot conflict/capacity resolution
+  in app/services/conflicts.py: CapacityGuard, EarlierRequestWins, LargerCohortOverride
+  instead of nested procedural resolve_slot_request.
+
+notes:
+  - Passwords use PBKDF2; login strips password_hash — not a seeded defect.
+  - Modules split across auth/bookings/conflicts — not a god object.
+
+defects:
+  - id: LIB-DEF-001
+    category: architecture
+    summary: >-
+      Conflict/capacity policy is one nested function with inverted FCFS,
+      auto larger-cohort "override", aggregate capacity ignored, cancelled
+      bookings still block, coexist-on-slot overbooking.
+    evidence: app/services/conflicts.py resolve_slot_request
+    related_acceptance: [7, 8, 9]
+    severity: high
+    intended_fix: Strategy pattern for booking-slot resolution
+
+  - id: LIB-DEF-002
+    category: functional
+    summary: Capacity checked per request only — multiple accepted bookings overbook room.
+    evidence: app/services/conflicts.py resolve_slot_request headcount > capacity only
+    related_acceptance: [7]
+    severity: high
+
+  - id: LIB-DEF-003
+    category: functional
+    summary: Earlier-request-wins inverted (sorts created_at then picks last).
+    evidence: app/services/conflicts.py ordered[-1] as champion
+    related_acceptance: [8]
+    severity: high
+
+  - id: LIB-DEF-004
+    category: functional
+    summary: Larger cohort auto-displaces without explicit coordinator override flag.
+    evidence: app/services/conflicts.py headcount > champion headcount path
+    related_acceptance: [8, 9]
+    severity: high
+
+  - id: LIB-DEF-005
+    category: functional
+    summary: New lecturer requests auto-accepted (skip pending coordinator review).
+    evidence: app/services/bookings.py request_booking status = accepted
+    related_acceptance: [2]
+    severity: medium
+
+  - id: LIB-DEF-006
+    category: functional
+    summary: Incomplete bookings allowed (empty course_code / resources).
+    evidence: app/services/bookings.py request_booking weak validation
+    related_acceptance: [4]
+    severity: medium
+
+  - id: LIB-DEF-007
+    category: functional
+    summary: Cancelled bookings still returned by confirmation lookup; cancelled counted in conflicts.
+    evidence: app/services/bookings.py get_confirmation; conflicts active status includes cancelled
+    related_acceptance: [6, 8]
+    severity: medium
+
+  - id: LIB-DEF-008
+    category: testing
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+    related_acceptance: []
+    severity: low

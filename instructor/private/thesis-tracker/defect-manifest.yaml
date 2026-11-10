@@ -1,0 +1,82 @@
+# Instructor-only. Never copy into templates/thesis-tracker or student forks.
+scenario: thesis-tracker
+starter_version: "0.2.0"
+design_pattern_opportunity: >-
+  Command pattern with append-only command history / audit trail. Replace
+  inline mutations + optional/mutable event_log (app/services/commands.py) with Command
+  objects (pair, submit, request/complete feedback, add progress note, export
+  summary) executed via an invoker that records actor + payload for every
+  successful action.
+
+notes:
+  - Passwords use PBKDF2; login strips password_hash — not a seeded defect.
+
+defects:
+  - id: TT-DEF-001
+    category: architecture
+    summary: >-
+      No real Command objects; services mutate state directly. event_log is
+      optional (silent skip), missing for submissions, and mutable via
+      rewrite_last — not a trustworthy audit trail.
+    evidence: app/services/commands.py; app/services/feedback.py (submit_work, complete_feedback); app/services/progress.py add_note
+    related_acceptance: [10]
+    severity: high
+    intended_fix: Command + immutable command history
+
+  - id: TT-DEF-002
+    category: functional
+    summary: Student submissions never recorded in audit log.
+    evidence: app/services/feedback.py submit_work returns without commands.record
+    related_acceptance: [5, 10]
+    severity: high
+
+  - id: TT-DEF-003
+    category: functional
+    summary: Feedback completion uses silent=True — no audit event.
+    evidence: feedback.complete_feedback commands.record(..., silent=True)
+    related_acceptance: [6, 10]
+    severity: high
+
+  - id: TT-DEF-004
+    category: functional
+    summary: >-
+      Progress notes call rewrite_last before record, clobbering the previous
+      audit row (mutable / non-append-only history).
+    evidence: progress.add_note → commands.rewrite_last then commands.record
+    related_acceptance: [10]
+    severity: high
+
+  - id: TT-DEF-005
+    category: functional
+    summary: Supervisor capacity not enforced — pairing still created when over cap.
+    evidence: pairings.create_pairing over_capacity warning only
+    related_acceptance: [4]
+    severity: high
+
+  - id: TT-DEF-006
+    category: functional
+    summary: Empty notes can complete feedback.
+    evidence: feedback.complete_feedback accepts notes=""
+    related_acceptance: [6]
+    severity: medium
+
+  - id: TT-DEF-007
+    category: functional
+    summary: Coordinator overdue flag inverted (future due marked overdue).
+    evidence: feedback.list_feedback for_coordinator branch
+    related_acceptance: [7]
+    severity: high
+
+  - id: TT-DEF-008
+    category: functional
+    summary: Grad-studies summary not audited; omits submissions list.
+    evidence: progress.grad_studies_summary
+    related_acceptance: [9, 10]
+    severity: medium
+
+  - id: TT-DEF-009
+    category: testing
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+    related_acceptance: []
+    severity: low

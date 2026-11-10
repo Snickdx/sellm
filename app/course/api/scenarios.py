@@ -5,10 +5,10 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from app.seproject.chat.draft_review import review_draft
-from app.seproject.chat.persona_service import allowed_facts_for_persona, facts_as_dicts, get_persona
-from app.seproject.scenarios.filter import facts_for_persona
-from app.seproject.scenarios.registry import scenario_registry
+from app.course.chat.draft_review import review_draft
+from app.course.chat.persona_service import allowed_facts_for_persona, facts_as_dicts, get_persona
+from app.course.scenarios.filter import facts_for_persona
+from app.course.scenarios.registry import scenario_registry
 
 router = APIRouter(prefix="/api/scenarios", tags=["scenarios"])
 
@@ -78,7 +78,7 @@ def get_scenario(slug: str, version: str | None = None) -> dict:
     package = scenario_registry.get(slug, version)
     if package is None:
         raise HTTPException(status_code=404, detail="Scenario not found")
-    from app.seproject.scenarios.filter import student_safe_scenario_view
+    from app.course.scenarios.filter import student_safe_scenario_view
 
     return student_safe_scenario_view(package)
 

@@ -9,18 +9,18 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from app.seproject.db import get_db
-from app.seproject.deps import AuthUser, ensure_team_access, get_current_user, require_instructor
-from app.seproject.exit_models import (
+from app.course.db import get_db
+from app.course.deps import AuthUser, ensure_team_access, get_current_user, require_instructor
+from app.course.exit_models import (
     AuditEvent,
     RepoIndexStatus,
     RepositorySubmission,
     Team,
     TeamMember,
 )
-from app.seproject.providers.github import get_repository_provider, parse_repo_url
-from app.seproject.repo.ingest import analyze_submission, analyze_submission_job
-from app.seproject.settings import get_settings
+from app.course.providers.github import get_repository_provider, parse_repo_url
+from app.course.repo.ingest import analyze_submission, analyze_submission_job
+from app.course.settings import get_settings
 from app.storage.conversation_store import User
 
 router = APIRouter(tags=["teams"])

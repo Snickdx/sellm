@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.seproject.db_models import ScenarioFact
+from app.course.db_models import ScenarioFact
 
 STOPWORDS = {
     "the",

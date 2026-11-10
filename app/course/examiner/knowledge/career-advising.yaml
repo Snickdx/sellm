@@ -1,0 +1,81 @@
+# Instructor-only judge gold. Sourced from instructor/private + templates ASSIGNMENT.md
+slug: career-advising
+title: Career advising
+special_feature: Exploration / advising pipelines
+starter_version: "0.2.0"
+intended_pattern: Template Method
+intended_pattern_aliases:
+  - template method
+  - shared skeleton
+  - pipeline
+  - career-first
+  - course-first
+focus_paths:
+  - app/services/exploration.py
+  - app/services/advising.py
+architecture_defect:
+  id: CA-DEF-001
+  summary: >-
+    Career-first and course-first are copy-pasted pipelines with inconsistent
+    ranking wording and gap handling instead of a shared template method.
+  evidence: app/services/exploration.py
+  intended_fix: Template Method
+defects:
+  - id: CA-DEF-001
+    category: architecture
+    severity: high
+    summary: Duplicated exploration pipelines instead of Template Method.
+    evidence: app/services/exploration.py
+  - id: CA-DEF-002
+    category: functional
+    severity: high
+    summary: Career-first returns absolute “You should pursue …” wording.
+    evidence: exploration.explore_career_first
+  - id: CA-DEF-003
+    category: functional
+    severity: high
+    summary: Course-first skips missing-course identification.
+    evidence: exploration.explore_course_first
+  - id: CA-DEF-004
+    category: functional
+    severity: high
+    summary: Career-first and gaps endpoints include enrol/Banner next-step hints.
+    evidence: exploration; advising.identify_gaps
+  - id: CA-DEF-005
+    category: functional
+    severity: medium
+    summary: High-school audience accepted and still receives exploration results.
+    evidence: advising.upsert_profile
+  - id: CA-DEF-006
+    category: functional
+    severity: medium
+    summary: Perfect course overlap flips course-first top result to absolute wording.
+    evidence: exploration.explore_course_first
+  - id: CA-DEF-007
+    category: testing
+    severity: low
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+judge_concepts:
+  special_feature_pattern:
+    - template
+    - pipeline
+    - exploration
+    - career
+    - course
+    - ranking
+    - gaps
+  design_to_code:
+    - exploration
+    - template
+    - pipeline
+  feature_ownership:
+    - exploration
+    - advising
+  testing:
+    - regression
+    - absolute
+    - gaps
+  verification:
+    - exploration
+    - review

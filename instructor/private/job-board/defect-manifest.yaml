@@ -1,0 +1,81 @@
+# Instructor-only. Never copy into templates/job-board or student forks.
+scenario: job-board
+starter_version: "0.2.0"
+design_pattern_opportunity: >-
+  State pattern (or explicit state machine) for application lifecycle.
+  Replace app/services/lifecycle.py flag+status soup and nested conditionals with
+  one state type per status and allowed transitions only.
+
+notes:
+  - Passwords use FastStart Argon2 (pwdlib); login strips password — not a seeded defect.
+  - Code is split across board_auth/listings/applications/lifecycle — not a god object.
+  - Base: uwidcit/faststart @ 96ccfce.
+
+defects:
+  - id: JB-DEF-001
+    category: functional
+    summary: Employer submit publishes immediately (skips pending + admin gate).
+    evidence: app/services/listings.py submit_listing status = "published"
+    related_acceptance: [4]
+    severity: high
+
+  - id: JB-DEF-002
+    category: functional
+    summary: Graduate job list includes pending and past-deadline listings.
+    evidence: app/services/listings.py list_jobs_for_graduates unrestricted SELECT
+    related_acceptance: [4, 6]
+    severity: high
+
+  - id: JB-DEF-003
+    category: functional
+    summary: Subscribe/apply ignore programme eligibility (DCIT).
+    evidence: app/services/listings.py subscribe; app/services/applications.py apply
+    related_acceptance: [8]
+    severity: high
+
+  - id: JB-DEF-004
+    category: functional
+    summary: Publish does not notify; notify is a separate manual admin call.
+    evidence: listings.publish_listing notified=False; notify_subscribers separate
+    related_acceptance: [7]
+    severity: medium
+
+  - id: JB-DEF-005
+    category: functional
+    summary: External-link listings still create on-platform application rows.
+    evidence: applications.apply ignores apply_mode
+    related_acceptance: [5, 13]
+    severity: medium
+
+  - id: JB-DEF-006
+    category: architecture
+    summary: >-
+      Application lifecycle tracked poorly — status string plus four boolean
+      flags updated via nested if/elif; invalid transitions allowed (submit→hire,
+      reject→shortlist, hire after reject); reopen leaves terminal flags set;
+      graduate list uses derived_status_from_flags which disagrees with status.
+    evidence: app/services/lifecycle.py; applications.transition_application; my_applications
+    related_acceptance: [10, 11]
+    severity: high
+    intended_fix: State pattern (per-status objects / explicit transition table)
+
+  - id: JB-DEF-007
+    category: functional
+    summary: Admin (and any employer) may transition any application — not owner-only.
+    evidence: applications.transition_application role check
+    related_acceptance: [12]
+    severity: high
+
+  - id: JB-DEF-008
+    category: security
+    summary: IDOR — any employer can list applicants for any listing_id.
+    evidence: applications.listing_applicants skips employer_id ownership check
+    related_acceptance: [15]
+    severity: high
+
+  - id: JB-DEF-009
+    category: testing
+    summary: Public tests are shallow (health/login/list length) and pass with defects.
+    evidence: tests/test_scenario.py
+    related_acceptance: []
+    severity: low

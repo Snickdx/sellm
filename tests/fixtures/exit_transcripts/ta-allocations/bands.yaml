@@ -1,0 +1,88 @@
+# TA allocation — exit-interview answer bands for scorer calibration.
+# Prompts generated at test time from planner + fixed index.
+# low→1–2, mid→3–4, high→5 (provisional heuristic with knowledge pack).
+scenario_slug: ta-allocations
+repository_sha: tadeadbeef01
+index:
+  commit_sha: tadeadbeef01
+  files:
+  - path: app/services/strategies.py
+    language: python
+    line_count: 100
+  - path: app/services/allocations.py
+    language: python
+    line_count: 90
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+  symbols:
+  - name: auto_select_ta
+    kind: function
+    path: app/services/strategies.py
+    line_start: 20
+    line_end: 70
+  - name: assign_manual
+    kind: function
+    path: app/services/allocations.py
+    line_start: 15
+    line_end: 55
+  tests:
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+bands:
+  low:
+    label: Weak / evasive
+    student_display_name: TA allocation Low
+    expected_score_range:
+    - 1
+    - 2
+    answers:
+      special_feature_pattern: Not sure. Teammate handled that.
+      design_to_code: Looks the same to me.
+      feature_ownership: Mostly pair watched others type.
+      testing: Green suite means done.
+      verification: Agent wrote my section.
+  mid:
+    label: Partial / vague (length without gold terms)
+    student_display_name: TA allocation Mid
+    expected_score_range:
+    - 3
+    - 4
+    answers:
+      design_to_code: Sprint one boxes on the whiteboard roughly match what shipped later. Some names
+        moved around when we coded, and I am not sure which relationship stayed faithful versus what we
+        reinvented under pressure.
+      feature_ownership: I made a few edits in the main service path after standup. I cannot find my board
+        card and I did not write down what callers should do when the insert fails.
+      verification: A classmate pushed a big branch and I skimmed it before merge. I trusted the chat
+        summary more than running the app myself, so my check was shallow.
+      special_feature_pattern: Automatic TA picks felt inconsistent across modes in the starter. I said
+        we cleaned how ranking works, but I cannot name the classes we added or the approach we chose.
+      testing: The starter suite checks login and counts rows. That is thin for weekly hour caps and ranking
+        modes, so we planned richer cases later but did not land them before the interview.
+  high:
+    label: Strong / gold-aligned
+    student_display_name: TA allocation High
+    expected_score_range:
+    - 5
+    - 5
+    answers:
+      special_feature_pattern: 'For auto-allocation ranking modes we targeted the nested mode switch in
+        strategies.py. experience_first hard-filtered the pool, least_loaded and round_robin skipped the
+        weekly cap, and unknown modes fell back to the first TA. We replaced that with the Strategy pattern:
+        ranking strategies behind one interface while hard 20h and budget guards stay outside ranking.'
+      design_to_code: Sprint 1 class diagram showed Strategy participants for experience_first, least_loaded,
+        and round_robin. Looking at allocations.py, assign_manual now enforces weekly cap before insert.
+        Design drift moved ranking into strategies.py so capacity guards are not buried inside stringly
+        mode branches.
+      feature_ownership: 'I personally rewrote auto_select_ta in strategies.py and fixed assign_manual
+        over-cap inserts in allocations.py. Control flow rejects over 20h and over budget. Trello TA-02
+        and PR #4 are my commits. Failure mode: empty experienced pool must soft-fall back, not hard-error.'
+      testing: 'tests/test_scenario.py is shallow and still passes when manual assign exceeds the weekly
+        cap. I added a regression assertion that over-cap assign_manual raises, and another that least_loaded
+        never projects above WEEKLY_HOUR_CAP. Coverage gap: unknown mode must not silently pick the first
+        TA.'
+      verification: 'AI drafted Strategy classes in strategies.py. I verified with cap/budget regression
+        tests and rejected a patch that kept experience as a hard filter. PR #4 has my review; ownership
+        stayed with me after that review.'

@@ -7,7 +7,7 @@ from typing import Any
 
 from jose import jwt
 
-from app.seproject.settings import Settings
+from app.course.settings import Settings
 
 
 def mint_livekit_token(

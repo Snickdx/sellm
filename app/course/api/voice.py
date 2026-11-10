@@ -5,16 +5,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from app.seproject.api.exit_interviews import _session_access
-from app.seproject.db import get_db
-from app.seproject.deps import AuthUser, get_current_user
-from app.seproject.examiner.state import after_evidence, record_response
-from app.seproject.exit_models import (
+from app.course.api.exit_interviews import _session_access
+from app.course.db import get_db
+from app.course.deps import AuthUser, get_current_user
+from app.course.examiner.state import after_evidence, record_response
+from app.course.exit_models import (
     AuditEvent,
     ConsentStatus,
     InterviewAnswer,
@@ -24,10 +24,10 @@ from app.seproject.exit_models import (
     VoiceRoomStatus,
     VoiceUtterance,
 )
-from app.seproject.ops import metrics as ops_metrics
-from app.seproject.settings import Settings, get_settings
-from app.seproject.voice.egress import local_recording_path, start_room_composite_egress, stop_egress
-from app.seproject.voice.tokens import mint_livekit_token, room_name_for_session
+from app.course.ops import metrics as ops_metrics
+from app.course.settings import Settings, get_settings
+from app.course.voice.egress import local_recording_path, start_room_composite_egress, stop_egress
+from app.course.voice.tokens import mint_livekit_token, room_name_for_session
 
 router = APIRouter(tags=["voice"])
 
@@ -194,52 +194,115 @@ def start_recording(
     if bundle.session.consent_status != ConsentStatus.granted.value:
         raise HTTPException(status_code=400, detail="Consent required before recording")
     room = _get_or_create_room(db, bundle.session.id)
-    if not settings.livekit_configured:
-        ops_metrics.incr("recording_failures")
-        room.recording_status = VoiceRecordingStatus.failed.value
-        room.recording_indicator = False
-        db.commit()
-        raise HTTPException(
-            status_code=503,
-            detail="Recording requires LiveKit. Text mode remains available.",
-        )
 
-    room.recording_status = VoiceRecordingStatus.starting.value
-    db.commit()
-    try:
-        result = start_room_composite_egress(
-            settings=settings,
-            room_name=room.room_name,
-            session_id=bundle.session.id,
-        )
-        egress_id = result.get("egress_id") or result.get("egressId")
-        if not egress_id:
-            raise RuntimeError(f"No egress_id in response: {result}")
-        room.egress_id = str(egress_id)
-        room.recording_status = VoiceRecordingStatus.recording.value
-        room.recording_indicator = True
-        room.local_file_path = str(local_recording_path(settings, bundle.session.id))
-        db.add(
-            AuditEvent(
-                actor_id=user.id,
-                action="voice.recording_start",
-                target_id=str(bundle.session.id),
-                metadata_json=f'{{"egress_id":"{room.egress_id}"}}',
+    # LiveKit Cloud egress needs object storage. Without S3, browser uploads the video.
+    use_egress = settings.livekit_configured and settings.recordings_s3_configured
+    if use_egress:
+        room.recording_status = VoiceRecordingStatus.starting.value
+        db.commit()
+        try:
+            result = start_room_composite_egress(
+                settings=settings,
+                room_name=room.room_name,
+                session_id=bundle.session.id,
             )
-        )
-        db.commit()
-    except Exception as exc:  # noqa: BLE001
-        ops_metrics.incr("recording_failures")
-        room.recording_status = VoiceRecordingStatus.failed.value
-        room.recording_indicator = False
-        db.commit()
-        raise HTTPException(status_code=502, detail=f"Failed to start recording: {exc}") from exc
+            egress_id = result.get("egress_id") or result.get("egressId")
+            if not egress_id:
+                raise RuntimeError(f"No egress_id in response: {result}")
+            room.egress_id = str(egress_id)
+            room.recording_status = VoiceRecordingStatus.recording.value
+            room.recording_indicator = True
+            room.local_file_path = str(local_recording_path(settings, bundle.session.id))
+            db.add(
+                AuditEvent(
+                    actor_id=user.id,
+                    action="voice.recording_start",
+                    target_id=str(bundle.session.id),
+                    metadata_json=f'{{"egress_id":"{room.egress_id}","mode":"egress"}}',
+                )
+            )
+            db.commit()
+            return {
+                "recording_status": room.recording_status,
+                "recording_indicator": room.recording_indicator,
+                "egress_id": room.egress_id,
+                "mode": "egress",
+                "note": "Participants must see the recording indicator before speaking.",
+            }
+        except Exception as exc:  # noqa: BLE001
+            ops_metrics.incr("recording_failures")
+            # Fall through to browser capture if egress fails.
+            room.egress_id = None
+            room.recording_status = VoiceRecordingStatus.failed.value
+            room.recording_indicator = False
+            db.commit()
+            # continue to browser mode below
 
+    room.recording_status = VoiceRecordingStatus.recording.value
+    room.recording_indicator = True
+    room.local_file_path = str(local_recording_path(settings, bundle.session.id, ext="webm"))
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="voice.recording_start",
+            target_id=str(bundle.session.id),
+            metadata_json='{"mode":"browser"}',
+        )
+    )
+    db.commit()
     return {
         "recording_status": room.recording_status,
         "recording_indicator": room.recording_indicator,
         "egress_id": room.egress_id,
-        "note": "Participants must see the recording indicator before speaking.",
+        "mode": "browser",
+        "note": "Browser will capture camera+mic video and upload when the interview ends.",
+    }
+
+
+@router.post("/exit-sessions/{session_id}/voice/recording/upload")
+async def upload_recording(
+    session_id: str,
+    file: UploadFile = File(...),
+    user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    """Accept a browser MediaRecorder blob (camera + mic) for the exit session."""
+    bundle = _session_access(db, session_id, user)
+    if bundle.session.consent_status != ConsentStatus.granted.value:
+        raise HTTPException(status_code=400, detail="Consent required before uploading recording")
+
+    filename = file.filename or "recording.webm"
+    ext = Path(filename).suffix.lstrip(".") or "webm"
+    if ext.lower() not in {"webm", "mp4", "mkv", "ogg"}:
+        raise HTTPException(status_code=400, detail="Unsupported recording format")
+
+    dest = local_recording_path(settings, bundle.session.id, ext=ext)
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty recording upload")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+
+    room = _get_or_create_room(db, bundle.session.id)
+    room.local_file_path = str(dest.resolve())
+    room.recording_status = VoiceRecordingStatus.ready.value
+    room.recording_indicator = False
+    room.playback_url = f"/api/exit-sessions/{bundle.session.id}/recording"
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="voice.recording_upload",
+            target_id=str(bundle.session.id),
+            metadata_json=f'{{"bytes":{len(data)},"path":"{dest.name}"}}',
+        )
+    )
+    db.commit()
+    return {
+        "recording_status": room.recording_status,
+        "recording_indicator": False,
+        "playback_url": room.playback_url,
+        "bytes": len(data),
     }
 
 
@@ -276,9 +339,13 @@ def stop_recording(
         # File lands in S3; playback endpoint may proxy later — mark ready with API URL.
         room.recording_status = VoiceRecordingStatus.ready.value
     else:
-        # Egress accepted stop; file may still be flushing to disk.
-        room.recording_status = VoiceRecordingStatus.ready.value
-        room.local_file_path = str(local_path)
+        # Browser upload may still be in flight; leave processing until upload lands.
+        if room.egress_id:
+            room.recording_status = VoiceRecordingStatus.ready.value
+            room.local_file_path = str(local_path)
+        else:
+            room.recording_status = VoiceRecordingStatus.processing.value
+            room.local_file_path = str(local_path)
 
     db.add(
         AuditEvent(
@@ -308,15 +375,28 @@ def download_recording(
     room = db.exec(select(VoiceRoom).where(VoiceRoom.session_id == bundle.session.id)).first()
     if room is None:
         raise HTTPException(status_code=404, detail="No recording for session")
-    path = Path(room.local_file_path) if room.local_file_path else local_recording_path(
-        settings, bundle.session.id
-    )
-    if not path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Recording file not found on disk yet (check S3/egress if using cloud storage).",
-        )
-    return FileResponse(path, media_type="video/mp4", filename=path.name)
+
+    candidates: list[Path] = []
+    if room.local_file_path:
+        candidates.append(Path(room.local_file_path))
+        # Older rows may store a CWD-relative path; also try resolved.
+        rel = Path(room.local_file_path)
+        if not rel.is_absolute():
+            candidates.append((Path.cwd() / rel).resolve())
+    for ext in ("webm", "mp4", "mkv", "ogg"):
+        candidates.append(local_recording_path(settings, bundle.session.id, ext=ext))
+
+    path = next((p for p in candidates if p.exists()), None)
+    if path is None:
+        detail = "Recording file not found on disk."
+        if room.recording_status == VoiceRecordingStatus.processing.value:
+            detail = "Recording still processing — try again shortly."
+        elif room.recording_status == VoiceRecordingStatus.ready.value:
+            detail = "Recording was marked ready but the file is missing on the server."
+        raise HTTPException(status_code=404, detail=detail)
+    suffix = path.suffix.lower()
+    media = "video/webm" if suffix == ".webm" else "video/mp4"
+    return FileResponse(path, media_type=media, filename=path.name)
 
 
 @router.post("/exit-sessions/{session_id}/voice/utterances")

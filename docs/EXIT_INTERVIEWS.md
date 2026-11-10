@@ -58,6 +58,13 @@ FastAPI serves `frontend/dist` at `/course/`.
 
 Provisional scores use **answer text only**. Accent, appearance, and vocal confidence are never accepted or graded.
 
+Scenario gold (intended patterns, seeded defects, focus paths) lives in:
+
+- `instructor/private/<slug>/defect-manifest.yaml` — authoring SoT
+- `app/course/examiner/knowledge/<slug>.yaml` — runtime judge packs
+
+Do not put defect IDs or intended pattern names into student-facing prompts. See `docs/examiner-calibration.md` and `docs/known-limitations.md`.
+
 ## Offline fixture
 
 `fixture://demo` maps to `tests/fixtures/repos/demo`. Useful for CI and classroom dry-runs without GitHub.

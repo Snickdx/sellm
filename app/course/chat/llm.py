@@ -9,7 +9,7 @@ from typing import Any, Protocol
 
 import httpx
 
-from app.seproject.settings import Settings
+from app.course.settings import Settings
 
 
 @dataclass

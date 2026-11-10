@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.seproject.scenarios.models import Disclosure, KnowledgeFact, ScenarioPackage
+from app.course.scenarios.models import Disclosure, KnowledgeFact, ScenarioPackage
 
 
 def facts_for_persona(

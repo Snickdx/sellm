@@ -8,7 +8,7 @@ description: >-
   validating scenarios, checking persona leakage, or before freezing an
   approved version in sellm.
 compatibility: >-
-  Requires sellm app modules under app/seproject/scenarios and scenarios/<slug>/.
+  Requires sellm app modules under app/course/scenarios and scenarios/<slug>/.
   Reindex via POST /api/admin/scenarios/reindex or scripts/reindex_scenarios.py.
 metadata:
   role: instructor-authoring
@@ -33,7 +33,7 @@ Verify that a scenario package under **`sellm/scenarios/<slug>/`** is safe to lo
 
 ```bash
 cd sellm
-python -c "from pathlib import Path; from app.seproject.scenarios.loader import load_scenario_package; from app.seproject.scenarios.validator import validate_scenario_package; p=load_scenario_package(Path('scenarios/<slug>')); issues=validate_scenario_package(p); print('\n'.join(f'{i.severity}: {i.code}: {i.message}' for i in issues) or 'OK')"
+python -c "from pathlib import Path; from app.course.scenarios.loader import load_scenario_package; from app.course.scenarios.validator import validate_scenario_package; p=load_scenario_package(Path('scenarios/<slug>')); issues=validate_scenario_package(p); print('\n'.join(f'{i.severity}: {i.code}: {i.message}' for i in issues) or 'OK')"
 ```
 
 Optional reindex (required before claiming runtime-ready):

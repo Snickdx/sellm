@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from app.seproject.settings import Settings
+from app.course.settings import Settings
 
 GITHUB_URL_RE = re.compile(
     r"^(?:https?://)?(?:www\.)?github\.com/(?P<owner>[^/]+)/(?P<repo>[^/#?]+?)(?:\.git)?/?$",

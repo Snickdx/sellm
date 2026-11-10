@@ -1,0 +1,74 @@
+# Instructor-only. Never copy into templates/student-accommodation or student forks.
+scenario: student-accommodation
+starter_version: "0.2.0"
+design_pattern_opportunity: >-
+  State pattern for listing lifecycle: pending → verified → active|inactive
+  (or rejected / resubmit). Replace app/services/lifecycle.py status+flag soup with
+  per-state objects and allowed transitions only.
+
+notes:
+  - Base: uwidcit/faststart @ 96ccfce.
+  - Passwords use FastStart Argon2 (pwdlib); login strips password — not a seeded defect.
+  - Overlaps conceptually with job-board State (applications); here the subject
+    is listing publish/visibility lifecycle.
+
+defects:
+  - id: SA-DEF-001
+    category: architecture
+    summary: >-
+      Listing lifecycle tracked poorly — status string plus four flags; activate
+      from pending; verify rejected without resubmit; resubmit leaves rejected;
+      visible_to_students trusts flag_active alone.
+    evidence: app/services/lifecycle.py
+    related_acceptance: [5, 6, 7, 8]
+    severity: high
+    intended_fix: State pattern for listing lifecycle
+
+  - id: SA-DEF-002
+    category: functional
+    summary: Activate allowed from pending (skips admin verify).
+    evidence: lifecycle.apply_action activate branch
+    related_acceptance: [5, 7]
+    severity: high
+
+  - id: SA-DEF-003
+    category: functional
+    summary: Students can see listings with flag_active even if status is pending.
+    evidence: lifecycle.visible_to_students
+    related_acceptance: [6]
+    severity: high
+
+  - id: SA-DEF-004
+    category: functional
+    summary: Any landlord can transition any listing (no ownership check).
+    evidence: listings.transition (app/services/listings.py)
+    related_acceptance: [5]
+    severity: medium
+
+  - id: SA-DEF-005
+    category: functional
+    summary: Area not restricted to St. Augustine / Mount Hope on submit.
+    evidence: listings.submit_listing; ALLOWED_AREAS unused
+    related_acceptance: [2]
+    severity: medium
+
+  - id: SA-DEF-006
+    category: functional
+    summary: Empty amenities allowed; amenity filter is raw substring.
+    evidence: listings.submit_listing; browse_for_students
+    related_acceptance: [9]
+    severity: medium
+
+  - id: SA-DEF-007
+    category: functional
+    summary: Students can message pending/rejected listings.
+    evidence: listings.send_message
+    related_acceptance: [10]
+    severity: medium
+
+  - id: SA-DEF-008
+    category: testing
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+    related_acceptance: []
+    severity: low

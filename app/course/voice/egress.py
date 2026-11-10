@@ -8,8 +8,8 @@ from typing import Any
 
 import httpx
 
-from app.seproject.settings import Settings
-from app.seproject.voice.tokens import livekit_http_base, mint_livekit_api_token
+from app.course.settings import Settings
+from app.course.voice.tokens import livekit_http_base, mint_livekit_api_token
 
 logger = logging.getLogger(__name__)
 
@@ -100,5 +100,10 @@ def stop_egress(*, settings: Settings, egress_id: str) -> dict[str, Any]:
         return response.json()
 
 
-def local_recording_path(settings: Settings, session_id: str) -> Path:
-    return Path(settings.storage_recordings_dir) / f"exit-{session_id}.mp4"
+def local_recording_path(settings: Settings, session_id: str, *, ext: str = "mp4") -> Path:
+    safe_ext = (ext or "mp4").lstrip(".").lower() or "mp4"
+    out_dir = Path(settings.storage_recordings_dir)
+    if not out_dir.is_absolute():
+        out_dir = (Path.cwd() / out_dir).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir / f"exit-{session_id}.{safe_ext}"

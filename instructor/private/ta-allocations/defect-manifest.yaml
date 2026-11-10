@@ -1,0 +1,58 @@
+# Instructor-only. Never copy into templates/ta-allocations or student forks.
+scenario: ta-allocations
+starter_version: "0.2.0"
+design_pattern_opportunity: >-
+  Strategy for auto-allocation policies (experience_first, least_loaded,
+  round_robin). Replace app/services/strategies.py stringly nested mode switch with a
+  Strategy interface; keep hard 20h/budget guards outside ranking strategies.
+
+notes:
+  - Passwords use FastStart Argon2 (pwdlib); login strips password — not a seeded defect.
+  - Strategy also used on library (conflict resolution); here the subject is
+    auto TA selection for a course.
+
+defects:
+  - id: TA-DEF-001
+    category: architecture
+    summary: >-
+      Auto-allocation is one nested mode function; experience is a hard filter;
+      least_loaded/round_robin skip weekly cap; unknown mode falls back to first TA.
+    evidence: app/services/strategies.py auto_select_ta
+    related_acceptance: [6, 8]
+    severity: high
+    intended_fix: Strategy pattern for auto-allocation
+
+  - id: TA-DEF-002
+    category: functional
+    summary: Manual assign still inserts when over 20h weekly cap (warn-only).
+    evidence: app/services/allocations.py assign_manual over_cap still INSERT
+    related_acceptance: [4]
+    severity: high
+
+  - id: TA-DEF-003
+    category: functional
+    summary: Manual assign over budget still inserts without decrementing budget.
+    evidence: app/services/allocations.py assign_manual over_budget path
+    related_acceptance: [5]
+    severity: high
+
+  - id: TA-DEF-004
+    category: functional
+    summary: experience_first hard-requires prior experience (should be soft).
+    evidence: app/services/strategies.py experienced pool empty → error
+    related_acceptance: [6]
+    severity: high
+
+  - id: TA-DEF-005
+    category: functional
+    summary: least_loaded can project above WEEKLY_HOUR_CAP without rejecting.
+    evidence: app/services/strategies.py least_loaded branch
+    related_acceptance: [4, 8]
+    severity: high
+
+  - id: TA-DEF-006
+    category: testing
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py (and starter unit/integration tests)
+    related_acceptance: []
+    severity: low

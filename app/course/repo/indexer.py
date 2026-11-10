@@ -5,9 +5,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.seproject.settings import Settings
-from app.seproject.providers.github import RepoRef, RepositoryProvider, TreeEntry
-from app.seproject.repo.filters import guess_language, should_exclude_path
+from app.course.settings import Settings
+from app.course.providers.github import RepoRef, RepositoryProvider, TreeEntry
+from app.course.repo.filters import guess_language, should_exclude_path
 
 PY_DEF_RE = re.compile(r"^(?P<indent>\s*)(async\s+)?def\s+(?P<name>[A-Za-z_]\w*)\s*\(")
 PY_CLASS_RE = re.compile(r"^(?P<indent>\s*)class\s+(?P<name>[A-Za-z_]\w*)\s*[\(:]")

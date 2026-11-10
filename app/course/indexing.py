@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from app.seproject.scenarios.filter import facts_for_persona
-from app.seproject.scenarios.models import ScenarioPackage
-from app.seproject.scenarios.registry import scenario_registry
+from app.course.scenarios.filter import facts_for_persona
+from app.course.scenarios.models import ScenarioPackage
+from app.course.scenarios.registry import scenario_registry
 
 
 def _persona_system_role(persona) -> str:
@@ -113,7 +113,7 @@ def reload_and_index_scenarios(*, engine=None, vector_rag=None, neo4j_rag=None) 
     Direct/yaml preprompt modes read the in-memory registry + persona pack adapter, so a
     reload is required before those modes see YAML edits without an app restart.
     """
-    from app.seproject.seed import seed_scenarios
+    from app.course.seed import seed_scenarios
 
     seed_info = seed_scenarios(engine=engine)
     index_info = index_all_scenarios(vector_rag=vector_rag, neo4j_rag=neo4j_rag)

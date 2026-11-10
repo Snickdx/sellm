@@ -1,0 +1,97 @@
+# Library workshop booking — exit-interview answer bands for scorer calibration.
+# Prompts generated at test time from planner + fixed index.
+# low→1–2, mid→3–4, high→5 (provisional heuristic with knowledge pack).
+scenario_slug: library
+repository_sha: libdeadbeef01
+index:
+  commit_sha: libdeadbeef01
+  files:
+  - path: app/services/conflicts.py
+    language: python
+    line_count: 120
+  - path: app/services/bookings.py
+    language: python
+    line_count: 90
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+  symbols:
+  - name: resolve_slot_request
+    kind: function
+    path: app/services/conflicts.py
+    line_start: 40
+    line_end: 95
+  - name: request_booking
+    kind: function
+    path: app/services/bookings.py
+    line_start: 20
+    line_end: 55
+  tests:
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+bands:
+  low:
+    label: Weak / evasive
+    student_display_name: Library workshop booking Low
+    expected_score_range:
+    - 1
+    - 2
+    answers:
+      special_feature_pattern: Not sure. Teammate handled that.
+      design_to_code: Looks the same to me.
+      feature_ownership: Mostly pair watched others type.
+      testing: Green suite means done.
+      verification: Agent wrote my section.
+  mid:
+    label: Partial / vague (length without gold terms)
+    student_display_name: Library workshop booking Mid
+    expected_score_range:
+    - 3
+    - 4
+    answers:
+      design_to_code: Sprint one boxes on the whiteboard roughly match what shipped later. Some names
+        moved around when we coded, and I am not sure which relationship stayed faithful versus what we
+        reinvented under pressure.
+      feature_ownership: I made a few edits in the main service path after standup. I cannot find my board
+        card and I did not write down what callers should do when the insert fails.
+      verification: A classmate pushed a big branch and I skimmed it before merge. I trusted the chat
+        summary more than running the app myself, so my check was shallow.
+      special_feature_pattern: Two lecturers wanted the room at once and the starter behaved oddly. I
+        described the problem in standup and said we cleaned the booking logic, but I cannot name the
+        classes we added or the approach we chose.
+      testing: The starter suite checks login and counts rows. That is thin for workshop rooms fighting
+        over time, so we planned richer cases later but did not land them before the interview.
+  high:
+    label: Strong / gold-aligned
+    student_display_name: Library workshop booking High
+    expected_score_range:
+    - 5
+    - 5
+    answers:
+      special_feature_pattern: 'For same-slot conflict resolution we targeted the inherited nested resolve_slot_request
+        in conflicts.py. Capacity was checked per request only so rooms overbooked, earlier-request-wins
+        was inverted, and larger cohorts auto-overrode without a coordinator flag. We replaced that with
+        the Strategy pattern: CapacityGuard, EarlierRequestWins, and LargerCohortOverride as separate
+        policies composing around the slot.'
+      design_to_code: In the Sprint 1 class diagram we drew Strategy participants for capacity and conflict
+        policies. Looking at app/services/bookings.py, request_booking still creates the booking then
+        should hand off to conflicts strategies. During Sprint 2 we refactored so bookings no longer embeds
+        nested slot rules — that design drift was intentional to keep strategy participants in conflicts.py
+        instead of duplicating capacity checks here.
+      feature_ownership: 'I personally rewrote request_booking in app/services/bookings.py so incomplete
+        bookings are rejected and new lecturer requests stay pending for coordinator review. Control flow
+        now validates course_code and resources, then inserts pending. Trello card LIB-12 and PR #18 on
+        main show my commits. Callers must handle ValidationError when course_code is empty — that was
+        the failure mode we missed in the starter, and cancelled bookings no longer count as active in
+        conflicts.'
+      testing: tests/test_scenario.py only asserts shallow health and list length, so it still passes
+        with overbook defects. For same-slot conflict resolution I added a regression assertion that two
+        accepted bookings cannot exceed room capacity on the same slot, and another that earlier-request-wins
+        keeps the first pending request when headcounts tie. The important missing gap was cancelled bookings
+        still blocking the slot — next test should cover that.
+      verification: 'AI drafted the first Strategy extract near conflicts.py. I personally verified by
+        running the capacity regression tests, walking resolve_slot_request on paper, and rejecting an
+        agent patch that dropped the coordinator override flag. PR #18 on main has my review comments;
+        I refuse agent code without tests for overbook and cancelled-slot cases. Ownership stayed with
+        me after that review.'

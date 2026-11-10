@@ -5,10 +5,10 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from app.seproject.chat.llm import PersonaReply, get_llm_provider
-from app.seproject.scenarios.filter import facts_for_persona
-from app.seproject.scenarios.models import KnowledgeFact, Persona, ScenarioPackage
-from app.seproject.settings import Settings, get_settings
+from app.course.chat.llm import PersonaReply, get_llm_provider
+from app.course.scenarios.filter import facts_for_persona
+from app.course.scenarios.models import KnowledgeFact, Persona, ScenarioPackage
+from app.course.settings import Settings, get_settings
 
 INJECTION_PATTERNS = [
     re.compile(p, re.I)

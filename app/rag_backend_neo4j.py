@@ -230,7 +230,7 @@ class RequirementsRAGNeo4j:
 
         Returns total relationship count created for YAML scenarios.
         """
-        from app.seproject.scenarios.filter import facts_for_persona
+        from app.course.scenarios.filter import facts_for_persona
 
         edges = 0
         with self.driver.session() as session:

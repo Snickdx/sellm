@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from app.seproject.scenarios.models import (
+from app.course.scenarios.models import (
     EvaluationFile,
     GapsFile,
     KnowledgeFact,
@@ -17,7 +17,7 @@ from app.seproject.scenarios.models import (
     ScenarioPackage,
     ScenarioStatus,
 )
-from app.seproject.scenarios.vtt import parse_vtt_file
+from app.course.scenarios.vtt import parse_vtt_file
 
 
 def _read_yaml(path: Path) -> Any:

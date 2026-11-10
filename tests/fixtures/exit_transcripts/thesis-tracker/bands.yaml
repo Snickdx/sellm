@@ -1,0 +1,97 @@
+# Postgrad milestones — exit-interview answer bands for scorer calibration.
+# Prompts generated at test time from planner + fixed index.
+# low→1–2, mid→3–4, high→5 (provisional heuristic with knowledge pack).
+scenario_slug: thesis-tracker
+repository_sha: ttdeadbeef01
+index:
+  commit_sha: ttdeadbeef01
+  files:
+  - path: app/services/commands.py
+    language: python
+    line_count: 110
+  - path: app/services/feedback.py
+    language: python
+    line_count: 90
+  - path: app/services/progress.py
+    language: python
+    line_count: 80
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+  symbols:
+  - name: record
+    kind: function
+    path: app/services/commands.py
+    line_start: 15
+    line_end: 50
+  - name: submit_work
+    kind: function
+    path: app/services/feedback.py
+    line_start: 20
+    line_end: 55
+  - name: add_note
+    kind: function
+    path: app/services/progress.py
+    line_start: 10
+    line_end: 40
+  tests:
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+bands:
+  low:
+    label: Weak / evasive
+    student_display_name: Postgrad milestones Low
+    expected_score_range:
+    - 1
+    - 2
+    answers:
+      special_feature_pattern: Not sure. Teammate handled that.
+      design_to_code: Looks the same to me.
+      feature_ownership: Mostly pair watched others type.
+      testing: Green suite means done.
+      verification: Agent wrote my section.
+  mid:
+    label: Partial / vague (length without gold terms)
+    student_display_name: Postgrad milestones Mid
+    expected_score_range:
+    - 3
+    - 4
+    answers:
+      design_to_code: Sprint one boxes on the whiteboard roughly match what shipped later. Some names
+        moved around when we coded, and I am not sure which relationship stayed faithful versus what we
+        reinvented under pressure.
+      feature_ownership: I made a few edits in the main service path after standup. I cannot find my board
+        card and I did not write down what callers should do when the insert fails.
+      verification: A classmate pushed a big branch and I skimmed it before merge. I trusted the chat
+        summary more than running the app myself, so my check was shallow.
+      special_feature_pattern: Some student submissions seemed to disappear after save in the starter.
+        I said we cleaned how that work is kept, but I cannot name the classes we added or the approach
+        we chose.
+      testing: The starter suite checks login and counts rows. That is thin for whether every milestone
+        step leaves a trustworthy record, so we planned richer cases later but did not land them before
+        the interview.
+  high:
+    label: Strong / gold-aligned
+    student_display_name: Postgrad milestones High
+    expected_score_range:
+    - 5
+    - 5
+    answers:
+      special_feature_pattern: 'For domain actions executed and audited we targeted the optional mutable
+        event_log in commands.py. Submissions skipped record, feedback used silent=True, and progress
+        notes called rewrite_last before record. We replaced that with the Command pattern: Command objects
+        plus an invoker that appends immutable command history for every successful action.'
+      design_to_code: Sprint 1 class diagram showed Command participants for submit, feedback, and progress
+        notes. Looking at feedback.py, submit_work now goes through the invoker instead of mutating then
+        optionally logging. Design drift removed rewrite_last so command history stays append-only in
+        commands.py.
+      feature_ownership: 'I personally implemented record in commands.py and wired submit_work plus complete_feedback.
+        Control flow always appends actor and payload. Trello TT-01 and PR #7 are my commits. Failure
+        mode: callers must not pass silent=True — that was how audit events disappeared in the starter.'
+      testing: 'tests/test_scenario.py is shallow and still passes with missing submission audit rows.
+        I added a regression assertion that submit_work appends a command history entry, and another that
+        add_note does not clobber the previous row. Coverage gap: coordinator overdue flag inversion.'
+      verification: 'AI drafted Command classes near commands.py. I verified by running audit regression
+        tests, inspecting append-only history, and rejecting a patch that kept rewrite_last. PR #7 has
+        my review; ownership stayed with me after that.'

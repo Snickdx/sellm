@@ -8,19 +8,19 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from app.seproject.db import get_db
-from app.seproject.deps import AuthUser, ensure_team_access, get_current_user
-from app.seproject.exit_models import AuditEvent, RepoIndexStatus, RepositorySubmission, Team, TeamMember
-from app.seproject.providers.github import get_repository_provider, parse_repo_url
-from app.seproject.repo.ingest import analyze_submission, analyze_submission_job
-from app.seproject.repo.retrieval import (
+from app.course.db import get_db
+from app.course.deps import AuthUser, ensure_team_access, get_current_user
+from app.course.exit_models import AuditEvent, RepoIndexStatus, RepositorySubmission, Team, TeamMember
+from app.course.providers.github import get_repository_provider, parse_repo_url
+from app.course.repo.ingest import analyze_submission, analyze_submission_job
+from app.course.repo.retrieval import (
     get_file,
     get_symbol,
     get_tests,
     search_code,
     strip_contents_for_api,
 )
-from app.seproject.settings import get_settings
+from app.course.settings import get_settings
 
 router = APIRouter(tags=["repositories"])
 

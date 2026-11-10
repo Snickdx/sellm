@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.seproject.settings import Settings
+from app.course.settings import Settings
 
 
 def policy_document(settings: Settings) -> dict[str, Any]:

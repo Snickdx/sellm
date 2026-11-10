@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from sqlmodel import Session, select
 
-from app.seproject.db_models import Scenario, ScenarioFact, ScenarioPersona, ScenarioRecordStatus
-from app.seproject.scenarios.models import ScenarioPackage
+from app.course.db_models import Scenario, ScenarioFact, ScenarioPersona, ScenarioRecordStatus
+from app.course.scenarios.models import ScenarioPackage
 
 
 def import_package_to_db(session: Session, package: ScenarioPackage, *, source_path: str | None = None) -> Scenario:

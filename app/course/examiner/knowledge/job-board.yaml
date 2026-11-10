@@ -1,0 +1,95 @@
+# Instructor-only judge gold. Do not expose intended_pattern / defect IDs in student prompts.
+# Sourced from instructor/private/job-board/defect-manifest.yaml + templates/job-board/ASSIGNMENT.md
+slug: job-board
+title: Job board
+special_feature: Application lifecycle / transitions
+starter_version: "0.2.0"
+intended_pattern: State
+intended_pattern_aliases:
+  - state pattern
+  - state machine
+  - explicit transitions
+  - transition table
+focus_paths:
+  - app/services/lifecycle.py
+  - app/services/applications.py
+  - app/services/listings.py
+architecture_defect:
+  id: JB-DEF-006
+  summary: >-
+    Application lifecycle tracked poorly — status string plus four boolean flags
+    updated via nested if/elif; invalid transitions allowed; reopen leaves terminal
+    flags set; derived_status_from_flags disagrees with status.
+  evidence: app/services/lifecycle.py; applications.transition_application; my_applications
+  intended_fix: State pattern (per-status objects / explicit transition table)
+defects:
+  - id: JB-DEF-001
+    category: functional
+    severity: high
+    summary: Employer submit publishes immediately (skips pending + admin gate).
+    evidence: app/services/listings.py submit_listing
+  - id: JB-DEF-002
+    category: functional
+    severity: high
+    summary: Graduate job list includes pending and past-deadline listings.
+    evidence: app/services/listings.py list_jobs_for_graduates
+  - id: JB-DEF-003
+    category: functional
+    severity: high
+    summary: Subscribe/apply ignore programme eligibility (DCIT).
+    evidence: listings.subscribe; applications.apply
+  - id: JB-DEF-004
+    category: functional
+    severity: medium
+    summary: Publish does not notify; notify is a separate manual admin call.
+    evidence: listings.publish_listing
+  - id: JB-DEF-005
+    category: functional
+    severity: medium
+    summary: External-link listings still create on-platform application rows.
+    evidence: applications.apply ignores apply_mode
+  - id: JB-DEF-006
+    category: architecture
+    severity: high
+    summary: Flag+status soup with illegal transitions in application lifecycle.
+    evidence: app/services/lifecycle.py
+  - id: JB-DEF-007
+    category: functional
+    severity: high
+    summary: Admin (and any employer) may transition any application — not owner-only.
+    evidence: applications.transition_application
+  - id: JB-DEF-008
+    category: security
+    severity: high
+    summary: IDOR — any employer can list applicants for any listing_id.
+    evidence: applications.listing_applicants
+  - id: JB-DEF-009
+    category: testing
+    severity: low
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+judge_concepts:
+  special_feature_pattern:
+    - lifecycle
+    - transition
+    - status
+    - flags
+    - nested
+    - hire
+    - reject
+    - shortlist
+  design_to_code:
+    - lifecycle
+    - transition
+    - state
+  feature_ownership:
+    - lifecycle
+    - applications
+  testing:
+    - regression
+    - shallow
+    - lifecycle
+    - transition
+  verification:
+    - lifecycle
+    - review

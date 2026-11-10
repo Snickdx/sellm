@@ -1,0 +1,76 @@
+# Instructor-only judge gold. Sourced from instructor/private + templates ASSIGNMENT.md
+slug: ta-allocations
+title: TA allocation
+special_feature: Auto-allocation ranking modes
+starter_version: "0.2.0"
+intended_pattern: Strategy
+intended_pattern_aliases:
+  - strategy pattern
+  - ranking strategy
+  - experience_first
+  - least_loaded
+  - round_robin
+focus_paths:
+  - app/services/strategies.py
+  - app/services/allocations.py
+architecture_defect:
+  id: TA-DEF-001
+  summary: >-
+    Auto-allocation is one nested mode function; experience is a hard filter;
+    least_loaded/round_robin skip weekly cap; unknown mode falls back to first TA.
+  evidence: app/services/strategies.py auto_select_ta
+  intended_fix: Strategy pattern for auto-allocation
+defects:
+  - id: TA-DEF-001
+    category: architecture
+    severity: high
+    summary: Nested mode switch instead of Strategy interface for auto-allocation.
+    evidence: app/services/strategies.py
+  - id: TA-DEF-002
+    category: functional
+    severity: high
+    summary: Manual assign still inserts when over 20h weekly cap.
+    evidence: allocations.assign_manual
+  - id: TA-DEF-003
+    category: functional
+    severity: high
+    summary: Manual assign over budget still inserts without decrementing budget.
+    evidence: allocations.assign_manual
+  - id: TA-DEF-004
+    category: functional
+    severity: high
+    summary: experience_first hard-requires prior experience (should be soft).
+    evidence: strategies.py experienced pool
+  - id: TA-DEF-005
+    category: functional
+    severity: high
+    summary: least_loaded can project above WEEKLY_HOUR_CAP without rejecting.
+    evidence: strategies least_loaded branch
+  - id: TA-DEF-006
+    category: testing
+    severity: low
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+judge_concepts:
+  special_feature_pattern:
+    - strategy
+    - allocation
+    - ranking
+    - experience
+    - least_loaded
+    - round_robin
+    - capacity
+  design_to_code:
+    - strategies
+    - strategy
+    - allocation
+  feature_ownership:
+    - strategies
+    - allocations
+  testing:
+    - regression
+    - cap
+    - budget
+  verification:
+    - strategies
+    - review

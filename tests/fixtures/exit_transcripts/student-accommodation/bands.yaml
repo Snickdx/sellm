@@ -1,0 +1,93 @@
+# Student housing — exit-interview answer bands for scorer calibration.
+# Prompts generated at test time from planner + fixed index.
+# low→1–2, mid→3–4, high→5 (provisional heuristic with knowledge pack).
+scenario_slug: student-accommodation
+repository_sha: sadeadbeef01
+index:
+  commit_sha: sadeadbeef01
+  files:
+  - path: app/services/lifecycle.py
+    language: python
+    line_count: 120
+  - path: app/services/listings.py
+    language: python
+    line_count: 100
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+  symbols:
+  - name: apply_action
+    kind: function
+    path: app/services/lifecycle.py
+    line_start: 25
+    line_end: 80
+  - name: visible_to_students
+    kind: function
+    path: app/services/lifecycle.py
+    line_start: 90
+    line_end: 110
+  - name: submit_listing
+    kind: function
+    path: app/services/listings.py
+    line_start: 20
+    line_end: 50
+  tests:
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+bands:
+  low:
+    label: Weak / evasive
+    student_display_name: Student housing Low
+    expected_score_range:
+    - 1
+    - 2
+    answers:
+      special_feature_pattern: Not sure. Teammate handled that.
+      design_to_code: Looks the same to me.
+      feature_ownership: Mostly pair watched others type.
+      testing: Green suite means done.
+      verification: Agent wrote my section.
+  mid:
+    label: Partial / vague (length without gold terms)
+    student_display_name: Student housing Mid
+    expected_score_range:
+    - 3
+    - 4
+    answers:
+      design_to_code: Sprint one boxes on the whiteboard roughly match what shipped later. Some names
+        moved around when we coded, and I am not sure which relationship stayed faithful versus what we
+        reinvented under pressure.
+      feature_ownership: I made a few edits in the main service path after standup. I cannot find my board
+        card and I did not write down what callers should do when the insert fails.
+      verification: A classmate pushed a big branch and I skimmed it before merge. I trusted the chat
+        summary more than running the app myself, so my check was shallow.
+      special_feature_pattern: Listings could show up for students while still awaiting review. I said
+        we cleaned how publish statuses work, but I cannot name the classes we added or the approach we
+        chose.
+      testing: The starter suite checks login and counts rows. That is thin for how housing posts move
+        from review to visible, so we planned richer cases later but did not land them before the interview.
+  high:
+    label: Strong / gold-aligned
+    student_display_name: Student housing High
+    expected_score_range:
+    - 5
+    - 5
+    answers:
+      special_feature_pattern: 'For listing lifecycle transitions we targeted the status-plus-flags soup
+        in lifecycle.py. Activate from pending skipped verify, visible_to_students trusted flag_active
+        alone, and resubmit left rejected. We replaced that with the State pattern: pending → verified
+        → active|inactive with an explicit transition table.'
+      design_to_code: Sprint 1 class diagram showed State participants for listing statuses. Looking at
+        listings.py, transition now calls lifecycle apply_action instead of flipping flags. Design drift
+        moved visibility rules into visible_to_students so students never see pending or rejected posts.
+      feature_ownership: 'I personally rewrote apply_action and visible_to_students in lifecycle.py. Control
+        flow blocks activate from pending. Trello SA-01 and PR #5 are my commits. Failure mode: landlords
+        without ownership must get ForbiddenError on transition — that was missing in the starter.'
+      testing: 'tests/test_scenario.py is shallow and still passes when pending listings are student-visible.
+        I added a regression assertion that activate from pending raises, and another that flag_active
+        alone does not make a pending listing visible. Coverage gap: area restriction to St. Augustine
+        / Mount Hope.'
+      verification: 'AI drafted the State extract in lifecycle.py. I verified with visibility regression
+        tests and rejected a patch that re-enabled activate-from-pending. PR #5 has my review; ownership
+        stayed with me after that review.'

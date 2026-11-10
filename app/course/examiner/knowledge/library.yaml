@@ -1,0 +1,85 @@
+# Instructor-only judge gold. Sourced from instructor/private + templates ASSIGNMENT.md
+slug: library
+title: Library workshop booking
+special_feature: Same-slot conflict resolution
+starter_version: "0.2.0"
+intended_pattern: Strategy
+intended_pattern_aliases:
+  - strategy pattern
+  - policy
+  - capacity guard
+  - earlier request wins
+focus_paths:
+  - app/services/conflicts.py
+  - app/services/bookings.py
+architecture_defect:
+  id: LIB-DEF-001
+  summary: >-
+    Conflict/capacity policy is one nested function with inverted FCFS, auto
+    larger-cohort override, aggregate capacity ignored, cancelled bookings still
+    block, coexist-on-slot overbooking.
+  evidence: app/services/conflicts.py resolve_slot_request
+  intended_fix: Strategy pattern for booking-slot resolution
+defects:
+  - id: LIB-DEF-001
+    category: architecture
+    severity: high
+    summary: Nested conflict policy instead of Strategy policies.
+    evidence: app/services/conflicts.py
+  - id: LIB-DEF-002
+    category: functional
+    severity: high
+    summary: Capacity checked per request only — overbooking allowed.
+    evidence: conflicts.resolve_slot_request
+  - id: LIB-DEF-003
+    category: functional
+    severity: high
+    summary: Earlier-request-wins inverted (picks last after sort).
+    evidence: conflicts ordered[-1]
+  - id: LIB-DEF-004
+    category: functional
+    severity: high
+    summary: Larger cohort auto-displaces without explicit override flag.
+    evidence: conflicts headcount path
+  - id: LIB-DEF-005
+    category: functional
+    severity: medium
+    summary: New lecturer requests auto-accepted (skip coordinator review).
+    evidence: bookings.request_booking
+  - id: LIB-DEF-006
+    category: functional
+    severity: medium
+    summary: Incomplete bookings allowed (empty course_code / resources).
+    evidence: bookings.request_booking
+  - id: LIB-DEF-007
+    category: functional
+    severity: medium
+    summary: Cancelled bookings still block / appear in confirmation.
+    evidence: bookings.get_confirmation; conflicts
+  - id: LIB-DEF-008
+    category: testing
+    severity: low
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+judge_concepts:
+  special_feature_pattern:
+    - conflict
+    - capacity
+    - strategy
+    - policy
+    - override
+    - slot
+  design_to_code:
+    - conflicts
+    - strategy
+    - capacity
+  feature_ownership:
+    - conflicts
+    - bookings
+  testing:
+    - regression
+    - overbook
+    - capacity
+  verification:
+    - conflicts
+    - review

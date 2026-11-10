@@ -27,6 +27,8 @@
   let users = [];
   let selectedUserId = null;
   let selectedConversationId = null;
+  let selectedTeamId = null;
+  let scenariosCache = null;
   let llmChoices = [];
   let appSettings = null;
   let selectedRoleDefaults = "student";
@@ -143,6 +145,8 @@
     if (!adminShell) return;
     adminShell.classList.toggle("with-list", mode === "list");
     adminShell.classList.toggle("users-wide", mode === "users");
+    const fab = document.getElementById("createTeamFab");
+    if (fab) fab.hidden = mode !== "list";
   }
 
   function syncViewTabs() {
@@ -156,6 +160,10 @@
   function setView(next) {
     view = next;
     selectedConversationId = null;
+    if (view !== "teams") {
+      selectedTeamId = null;
+      closeTeamCreateModal();
+    }
     syncViewTabs();
     const url = new URL(location.href);
     url.searchParams.set("view", view);
@@ -619,30 +627,39 @@
       const user = await api(`/api/admin/users/${userId}`);
       const convos = await api(`/api/admin/users/${userId}/conversations`);
       if (modalTitle) modalTitle.textContent = `${user.username} · notes & transcripts`;
+      if (!selectedConversationId && convos.length) selectedConversationId = convos[0].id;
       host.innerHTML = `
-        <div class="grid-2">
-          <div class="field"><label>Group</label><input id="uGroup" value="${escapeAttr(user.group_name || "")}" placeholder="e.g. morning, cohort-a" /></div>
-          <div class="field"><label>Tokens used</label><input id="uUsed" type="number" min="0" value="${user.tokens_used}" /></div>
-          <div class="field"><label>New password (optional)</label><input id="uPassword" type="password" placeholder="Leave blank to keep" /></div>
-          <div class="field"><label>Effective</label>
-            <div style="font-size:12px;color:#64748b;padding-top:8px;">
-              ${escapeHtml(modeLabel(user.effective_response_mode))} · ${escapeHtml(llmLabel(user.effective_llm_choice))} · ${fmtTokens(user.token_limit)} tokens
-              ${user.budget_is_override || user.mode_is_override || user.llm_is_override ? " (has overrides)" : " (from role)"}
+        <div class="user-detail-shell">
+          <div class="user-detail-form">
+            <div class="user-detail-fields">
+              <div class="field"><label>Group</label><input id="uGroup" value="${escapeAttr(user.group_name || "")}" placeholder="e.g. morning, cohort-a" /></div>
+              <div class="field"><label>Tokens used</label><input id="uUsed" type="number" min="0" value="${user.tokens_used}" /></div>
+              <div class="field"><label>New password (optional)</label><input id="uPassword" type="password" placeholder="Leave blank to keep" /></div>
+              <div class="field"><label>Effective</label>
+                <div class="effective-meta">
+                  ${escapeHtml(modeLabel(user.effective_response_mode))} · ${escapeHtml(llmLabel(user.effective_llm_choice))} · ${fmtTokens(user.token_limit)} tokens
+                  ${user.budget_is_override || user.mode_is_override || user.llm_is_override ? " (has overrides)" : " (from role)"}
+                </div>
+              </div>
+            </div>
+            <div class="field field-notes"><label>Admin notes</label><textarea id="uNotes" rows="2" placeholder="Instructor notes…">${escapeHtml(user.admin_notes || "")}</textarea></div>
+            <div class="actions">
+              <button type="button" class="btn btn-primary" id="saveUserBtn">Save details</button>
+              <button type="button" class="btn btn-secondary" id="resetTokensBtn">Reset tokens used</button>
+              <button type="button" class="btn btn-secondary" id="resetDefaultsBtn">Reset mode/LLM/budget to role</button>
+              <button type="button" class="btn btn-secondary" id="clearGroupBtn">Clear group</button>
+              <button type="button" class="btn btn-secondary" id="closeEditorBtn">Close</button>
+            </div>
+            <div id="userStatus" class="status"></div>
+          </div>
+          <div class="user-detail-transcripts">
+            <h3>Transcripts (${convos.length})</h3>
+            <div class="transcript-master-detail">
+              <div id="convoList" class="transcript-master"></div>
+              <div id="transcriptPanel" class="transcript-detail"></div>
             </div>
           </div>
         </div>
-        <div class="field"><label>Admin notes</label><textarea id="uNotes" rows="3" placeholder="Instructor notes…">${escapeHtml(user.admin_notes || "")}</textarea></div>
-        <div class="actions">
-          <button type="button" class="btn btn-primary" id="saveUserBtn">Save details</button>
-          <button type="button" class="btn btn-secondary" id="resetTokensBtn">Reset tokens used</button>
-          <button type="button" class="btn btn-secondary" id="resetDefaultsBtn">Reset mode/LLM/budget to role</button>
-          <button type="button" class="btn btn-secondary" id="clearGroupBtn">Clear group</button>
-          <button type="button" class="btn btn-secondary" id="closeEditorBtn">Close</button>
-        </div>
-        <div id="userStatus" class="status"></div>
-        <h3 style="margin:18px 0 8px;font-size:14px;">Transcripts (${convos.length})</h3>
-        <div id="convoList"></div>
-        <div id="transcriptPanel" style="margin-top:12px;"></div>
       `;
       const status = document.getElementById("userStatus");
       document.getElementById("saveUserBtn").addEventListener("click", async () => {
@@ -705,8 +722,12 @@
       });
 
       const convoList = document.getElementById("convoList");
+      const transcriptPanel = document.getElementById("transcriptPanel");
       if (!convos.length) {
-        convoList.innerHTML = `<p class="meta" style="font-size:12px;color:#64748b;">No conversations yet.</p>`;
+        convoList.innerHTML = `<p class="meta" style="font-size:12px;color:#64748b;padding:14px;">No conversations yet.</p>`;
+        if (transcriptPanel) {
+          transcriptPanel.innerHTML = `<div class="empty-transcript">No transcripts for this user.</div>`;
+        }
       } else {
         convos.forEach((c) => {
           const btn = document.createElement("button");
@@ -718,12 +739,17 @@
           `;
           btn.addEventListener("click", async () => {
             selectedConversationId = c.id;
-            await renderSelectedUserEditor(userId);
+            convoList.querySelectorAll(".convo-item").forEach((el) => el.classList.remove("active"));
+            btn.classList.add("active");
+            await renderTranscript(userId, c.id);
           });
           convoList.appendChild(btn);
         });
+        if (selectedConversationId) await renderTranscript(userId, selectedConversationId);
+        else if (transcriptPanel) {
+          transcriptPanel.innerHTML = `<div class="empty-transcript">Select a conversation.</div>`;
+        }
       }
-      if (selectedConversationId) await renderTranscript(userId, selectedConversationId);
     } catch (e) {
       host.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
     }
@@ -745,7 +771,7 @@
         )
         .join("");
       panel.innerHTML = `
-        <div class="actions" style="margin-bottom:8px;">
+        <div class="actions">
           <a class="btn btn-secondary" href="/api/admin/users/${userId}/conversations/${conversationId}/download?format=txt" id="dlTxt">Download .txt</a>
           <a class="btn btn-secondary" href="/api/admin/users/${userId}/conversations/${conversationId}/download?format=md" id="dlMd">Download .md</a>
           <a class="btn btn-secondary" href="/api/admin/users/${userId}/conversations/${conversationId}/download?format=json" id="dlJson">Download .json</a>
@@ -908,7 +934,7 @@
     try {
       const data = await api("/api/admin/app-keys");
       const byProvider = Object.fromEntries((data.keys || []).map((k) => [k.provider, k]));
-      detailBody.innerHTML = PROVIDERS.map((p) => {
+      const cards = PROVIDERS.map((p) => {
         const existing = byProvider[p.id] || {};
         return `
           <div class="provider-card" data-provider="${p.id}">
@@ -923,7 +949,9 @@
               <input type="checkbox" class="app-clear" /> Clear key
             </label>
           </div>`;
-      }).join("") + `
+      }).join("");
+      detailBody.innerHTML = `
+        <div class="app-keys-grid">${cards}</div>
         <div class="actions"><button type="button" class="btn btn-primary" id="saveAppKeys">Save app keys</button></div>
         <div id="appKeyStatus" class="status"></div>
         <p style="margin-top:12px;font-size:12px;color:#64748b;">After saving, open <strong>Default model / mode</strong> to pick an app-wide default that uses these keys.</p>
@@ -981,24 +1009,205 @@
       .filter(Boolean);
   }
 
+  async function loadScenarios() {
+    if (scenariosCache) return scenariosCache;
+    try {
+      scenariosCache = await api("/api/scenarios");
+    } catch {
+      scenariosCache = [];
+    }
+    return scenariosCache;
+  }
+
+  function scenarioSelectHtml(scenarios, selected, id) {
+    const opts = [`<option value="">(none)</option>`].concat(
+      (scenarios || []).map((s) => {
+        const slug = s.slug || "";
+        const label = s.title ? `${s.title} (${slug})` : slug;
+        const sel = slug === (selected || "") ? "selected" : "";
+        return `<option value="${escapeAttr(slug)}" ${sel}>${escapeHtml(label)}</option>`;
+      })
+    );
+    return `<select id="${id}">${opts.join("")}</select>`;
+  }
+
+  function closeTeamCreateModal() {
+    const modal = document.getElementById("teamCreateModal");
+    const body = document.getElementById("teamCreateModalBody");
+    if (modal) {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+    if (body) body.innerHTML = "";
+  }
+
+  async function openTeamCreateModal(students, scenarios) {
+    const modal = document.getElementById("teamCreateModal");
+    const body = document.getElementById("teamCreateModalBody");
+    if (!modal || !body) return;
+    const ownerOptions = (students || [])
+      .map(
+        (u) =>
+          `<option value="${escapeAttr(u.username)}">${escapeHtml(u.username)}</option>`
+      )
+      .join("");
+    body.innerHTML = `
+      <p style="font-size:13px;color:#64748b;margin:0 0 12px;">
+        Group name, scenario, repository (no commit hash), member names, and one student login.
+      </p>
+      <div class="team-detail-grid">
+        <div class="field"><label>Group name</label><input id="teamName" placeholder="Team Alpha" /></div>
+        <div class="field"><label>Scenario</label>${scenarioSelectHtml(scenarios, "", "teamScenario")}</div>
+        <div class="field field-span"><label>Repository URL</label><input id="teamRepo" placeholder="https://github.com/org/repo or fixture://demo" /></div>
+        <div class="field field-span"><label>Group member names</label>
+          <textarea id="teamParticipantNames" rows="3" placeholder="Alex Rivera&#10;Jordan Lee"></textarea>
+        </div>
+        <div class="field field-span"><label>Student login</label>
+          <select id="teamOwner">${ownerOptions || "<option value=\"\">No student accounts</option>"}</select>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <button type="button" class="btn btn-primary" id="createTeamBtn">Create group</button>
+        <button type="button" class="btn btn-secondary" id="cancelCreateTeamBtn">Cancel</button>
+      </div>
+      <div id="teamStatus" class="status"></div>
+    `;
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    const status = document.getElementById("teamStatus");
+    document.getElementById("cancelCreateTeamBtn")?.addEventListener("click", closeTeamCreateModal);
+    document.getElementById("createTeamBtn")?.addEventListener("click", async () => {
+      try {
+        const name = document.getElementById("teamName")?.value.trim();
+        const owner = document.getElementById("teamOwner")?.value.trim();
+        const scenario = document.getElementById("teamScenario")?.value.trim();
+        const githubUrl = document.getElementById("teamRepo")?.value.trim();
+        const participantNames = parseNameLines(document.getElementById("teamParticipantNames")?.value);
+        if (!name || !owner) {
+          setStatus(status, "Group name and student login are required.", "err");
+          return;
+        }
+        const created = await api("/api/admin/teams", {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            owner_username: owner,
+            scenario_slug: scenario || null,
+            github_url: githubUrl || null,
+            participant_names: participantNames,
+          }),
+        });
+        if (created?.id) selectedTeamId = created.id;
+        closeTeamCreateModal();
+        await renderTeams();
+      } catch (e) {
+        setStatus(status, e.message, "err");
+      }
+    });
+  }
+
+  function paintTeamDetail(team, students, scenarios) {
+    if (!team) {
+      detailTitle.textContent = "Group setup";
+      detailBody.innerHTML = `<p style="color:#64748b;font-size:14px;">Select a team, or use <strong>Create group</strong> to add one.</p>`;
+      return;
+    }
+    detailTitle.textContent = team.name || "Group setup";
+    const members = (team.members || []).map((m) => m.username);
+    const studentNames = new Set((students || []).map((u) => u.username));
+    const selectedLogin =
+      members.find((name) => studentNames.has(name)) || members[0] || "";
+    const loginOptions =
+      (students || [])
+        .map((u) => {
+          const sel = u.username === selectedLogin ? "selected" : "";
+          return `<option value="${escapeAttr(u.username)}" ${sel}>${escapeHtml(u.username)}</option>`;
+        })
+        .join("") || `<option value="">No student accounts</option>`;
+    const namesText = (team.participant_names || []).join("\n");
+    const repoUrl = team.repository?.github_url || "";
+    const repoStatus = team.repository
+      ? `${team.repository.repo}@${String(team.repository.commit_sha || "").slice(0, 7)} · ${team.repository.index_status}`
+      : "No repository yet";
+    detailBody.innerHTML = `
+      <p class="meta" style="margin:0 0 12px;">id <code>${escapeHtml(team.id)}</code> · ${escapeHtml(repoStatus)}</p>
+      <div class="team-detail-grid">
+        <div class="field"><label>Group name</label><input id="editTeamName" value="${escapeAttr(team.name)}" /></div>
+        <div class="field"><label>Scenario</label>${scenarioSelectHtml(scenarios, team.scenario_slug || "", "editTeamScenario")}</div>
+        <div class="field field-span"><label>Repository URL</label><input id="editTeamRepo" value="${escapeAttr(repoUrl)}" placeholder="https://github.com/org/repo" /></div>
+        <div class="field field-span"><label>Group member names</label>
+          <textarea id="editTeamNames" rows="3">${escapeHtml(namesText)}</textarea>
+        </div>
+        <div class="field field-span"><label>Student login</label>
+          <select id="editTeamLogin">${loginOptions}</select>
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <button type="button" class="btn btn-primary" id="saveTeamDetailsBtn">Save group details</button>
+        <button type="button" class="btn btn-secondary" id="deleteTeamBtn">Delete team</button>
+        <a class="btn btn-secondary" href="/course/teams/${encodeURIComponent(team.id)}/exit/">Open interview</a>
+      </div>
+      <div id="teamMemberStatus" class="status"></div>
+    `;
+    document.getElementById("saveTeamDetailsBtn")?.addEventListener("click", async () => {
+      const ms = document.getElementById("teamMemberStatus");
+      try {
+        const username = document.getElementById("editTeamLogin")?.value.trim();
+        if (!username) {
+          setStatus(ms, "Pick one student login.", "err");
+          return;
+        }
+        await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            name: document.getElementById("editTeamName")?.value.trim(),
+            scenario_slug: document.getElementById("editTeamScenario")?.value.trim() || null,
+            github_url: document.getElementById("editTeamRepo")?.value.trim() || null,
+            participant_names: parseNameLines(document.getElementById("editTeamNames")?.value),
+          }),
+        });
+        await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, {
+          method: "PUT",
+          body: JSON.stringify({ usernames: [username] }),
+        });
+        setStatus(ms, "Group details saved.", "ok");
+        await renderTeams();
+      } catch (e) {
+        setStatus(ms, e.message, "err");
+      }
+    });
+    document.getElementById("deleteTeamBtn")?.addEventListener("click", async () => {
+      const ms = document.getElementById("teamMemberStatus");
+      if (!confirm("Delete this team?")) return;
+      try {
+        await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: "DELETE" });
+        selectedTeamId = null;
+        await renderTeams();
+      } catch (e) {
+        setStatus(ms, e.message, "err");
+      }
+    });
+  }
+
   async function renderTeams() {
     listTitle.textContent = "Teams";
     detailTitle.textContent = "Group setup";
     listToolbar.innerHTML = "";
     listBody.innerHTML = `<p class="status">Loading…</p>`;
     detailBody.innerHTML = `<p class="status">Loading…</p>`;
+    const fab = document.getElementById("createTeamFab");
+    if (fab) fab.hidden = false;
     try {
-      const [teams, userRows] = await Promise.all([
+      const [teams, userRows, scenarios] = await Promise.all([
         api("/api/admin/teams"),
         api("/api/admin/users"),
+        loadScenarios(),
       ]);
-      const students = (userRows || []).filter((u) => (u.role || "student") !== "admin");
-      const ownerOptions = students
-        .map(
-          (u) =>
-            `<option value="${escapeAttr(u.username)}">${escapeHtml(u.username)} · ${escapeHtml(u.role || "student")}</option>`
-        )
-        .join("");
+      const students = (userRows || []).filter((u) => (u.role || "student") === "student");
+      if (selectedTeamId && !(teams || []).some((t) => t.id === selectedTeamId)) {
+        selectedTeamId = null;
+      }
+      if (!selectedTeamId && (teams || []).length) selectedTeamId = teams[0].id;
 
       listBody.innerHTML =
         (teams || [])
@@ -1008,155 +1217,31 @@
             const repoMeta = repo
               ? `${repo.repo || "repo"} · ${repo.index_status}`
               : "no repo";
+            const active = t.id === selectedTeamId ? " active" : "";
             return `
-            <button type="button" class="user-item team-item" data-id="${escapeAttr(t.id)}">
+            <button type="button" class="user-item team-item${active}" data-id="${escapeAttr(t.id)}">
               <div class="name">${escapeHtml(t.name)}</div>
               <div class="meta">${escapeHtml(t.scenario_slug || "no scenario")} · ${escapeHtml(repoMeta)} · ${escapeHtml(members)}</div>
             </button>`;
           })
-          .join("") || `<p class="meta" style="padding:12px;">No teams yet. Create one on the right.</p>`;
+          .join("") || `<p class="meta" style="padding:12px;">No teams yet. Use Create group.</p>`;
 
-      detailBody.innerHTML = `
-        <p style="font-size:13px;color:#64748b;margin:0 0 12px;">
-          All team content lives here: group name, scenario, repository (no commit hash), member names,
-          and the cohort login students share.
-        </p>
-        <div class="field"><label>Group name</label><input id="teamName" placeholder="Team Alpha" /></div>
-        <div class="field"><label>Scenario slug</label><input id="teamScenario" placeholder="library" /></div>
-        <div class="field"><label>Repository URL</label><input id="teamRepo" placeholder="https://github.com/org/repo or fixture://demo" /></div>
-        <div class="field"><label>Group member names</label>
-          <textarea id="teamParticipantNames" rows="3" placeholder="Alex Rivera&#10;Jordan Lee"></textarea>
-        </div>
-        <div class="field"><label>Owner cohort username</label>
-          <select id="teamOwner">${ownerOptions || "<option value=\"\">No student accounts</option>"}</select>
-        </div>
-        <div class="actions"><button type="button" class="btn btn-primary" id="createTeamBtn">Create team</button></div>
-        <div id="teamStatus" class="status"></div>
-        <div id="teamDetail" style="margin-top:16px;"></div>
-      `;
-
-      const status = document.getElementById("teamStatus");
-      document.getElementById("createTeamBtn")?.addEventListener("click", async () => {
-        try {
-          const name = document.getElementById("teamName")?.value.trim();
-          const owner = document.getElementById("teamOwner")?.value.trim();
-          const scenario = document.getElementById("teamScenario")?.value.trim();
-          const githubUrl = document.getElementById("teamRepo")?.value.trim();
-          const participantNames = parseNameLines(document.getElementById("teamParticipantNames")?.value);
-          if (!name || !owner) {
-            setStatus(status, "Group name and owner username are required.", "err");
-            return;
-          }
-          await api("/api/admin/teams", {
-            method: "POST",
-            body: JSON.stringify({
-              name,
-              owner_username: owner,
-              scenario_slug: scenario || null,
-              github_url: githubUrl || null,
-              participant_names: participantNames,
-            }),
-          });
-          setStatus(status, "Team created and tied to " + owner + ".", "ok");
-          await renderTeams();
-        } catch (e) {
-          setStatus(status, e.message, "err");
-        }
-      });
+      const selected = (teams || []).find((t) => t.id === selectedTeamId) || null;
+      paintTeamDetail(selected, students, scenarios);
 
       listBody.querySelectorAll(".team-item").forEach((btn) => {
         btn.addEventListener("click", () => {
-          const team = (teams || []).find((t) => t.id === btn.dataset.id);
-          if (!team) return;
-          const members = (team.members || []).map((m) => m.username);
-          const memberChecks = students
-            .map((u) => {
-              const checked = members.includes(u.username) ? "checked" : "";
-              return `<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0;">
-                <input type="checkbox" class="team-member" value="${escapeAttr(u.username)}" ${checked} />
-                ${escapeHtml(u.username)}
-              </label>`;
-            })
-            .join("");
-          const namesText = (team.participant_names || []).join("\n");
-          const repoUrl = team.repository?.github_url || "";
-          const repoStatus = team.repository
-            ? `${team.repository.repo}@${String(team.repository.commit_sha || "").slice(0, 7)} · ${team.repository.index_status}`
-            : "No repository yet";
-          const panel = document.getElementById("teamDetail");
-          if (!panel) return;
-          panel.innerHTML = `
-            <h3 style="font-size:14px;margin:0 0 8px;">${escapeHtml(team.name)}</h3>
-            <p class="meta" style="margin:0 0 8px;">id <code>${escapeHtml(team.id)}</code> · ${escapeHtml(repoStatus)}</p>
-            <div class="field"><label>Group name</label><input id="editTeamName" value="${escapeAttr(team.name)}" /></div>
-            <div class="field"><label>Scenario slug</label><input id="editTeamScenario" value="${escapeAttr(team.scenario_slug || "")}" /></div>
-            <div class="field"><label>Repository URL</label><input id="editTeamRepo" value="${escapeAttr(repoUrl)}" placeholder="https://github.com/org/repo" /></div>
-            <div class="field"><label>Group member names</label>
-              <textarea id="editTeamNames" rows="3">${escapeHtml(namesText)}</textarea>
-            </div>
-            <div class="actions">
-              <button type="button" class="btn btn-primary" id="saveTeamDetailsBtn">Save group details</button>
-            </div>
-            <p style="font-size:13px;margin:14px 0 8px;">Cohort logins that can open this team:</p>
-            <div style="max-height:180px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
-              ${memberChecks || "<p class='meta'>No student users.</p>"}
-            </div>
-            <div class="actions" style="margin-top:10px;">
-              <button type="button" class="btn btn-primary" id="saveMembersBtn">Save logins</button>
-              <button type="button" class="btn btn-secondary" id="deleteTeamBtn">Delete team</button>
-              <a class="btn btn-secondary" href="/course/teams/${encodeURIComponent(team.id)}/exit/">Open interview</a>
-            </div>
-            <div id="teamMemberStatus" class="status"></div>
-          `;
-          document.getElementById("saveTeamDetailsBtn")?.addEventListener("click", async () => {
-            const ms = document.getElementById("teamMemberStatus");
-            try {
-              await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, {
-                method: "PATCH",
-                body: JSON.stringify({
-                  name: document.getElementById("editTeamName")?.value.trim(),
-                  scenario_slug: document.getElementById("editTeamScenario")?.value.trim() || null,
-                  github_url: document.getElementById("editTeamRepo")?.value.trim() || null,
-                  participant_names: parseNameLines(document.getElementById("editTeamNames")?.value),
-                }),
-              });
-              setStatus(ms, "Group details saved.", "ok");
-              await renderTeams();
-            } catch (e) {
-              setStatus(ms, e.message, "err");
-            }
-          });
-          document.getElementById("saveMembersBtn")?.addEventListener("click", async () => {
-            const ms = document.getElementById("teamMemberStatus");
-            try {
-              const usernames = [...panel.querySelectorAll(".team-member:checked")].map((el) => el.value);
-              if (!usernames.length) {
-                setStatus(ms, "Pick at least one cohort username.", "err");
-                return;
-              }
-              await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, {
-                method: "PUT",
-                body: JSON.stringify({ usernames }),
-              });
-              setStatus(ms, "Logins updated.", "ok");
-              await renderTeams();
-            } catch (e) {
-              setStatus(ms, e.message, "err");
-            }
-          });
-          document.getElementById("deleteTeamBtn")?.addEventListener("click", async () => {
-            const ms = document.getElementById("teamMemberStatus");
-            if (!confirm("Delete this team?")) return;
-            try {
-              await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: "DELETE" });
-              setStatus(ms, "Deleted.", "ok");
-              await renderTeams();
-            } catch (e) {
-              setStatus(ms, e.message, "err");
-            }
-          });
+          selectedTeamId = btn.dataset.id;
+          listBody.querySelectorAll(".team-item").forEach((el) => el.classList.remove("active"));
+          btn.classList.add("active");
+          const team = (teams || []).find((t) => t.id === selectedTeamId);
+          paintTeamDetail(team, students, scenarios);
         });
       });
+
+      if (fab) {
+        fab.onclick = () => openTeamCreateModal(students, scenarios);
+      }
     } catch (e) {
       listBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
       detailBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
@@ -1241,8 +1326,17 @@
       paintUsersTable();
     }
   });
+  document.getElementById("teamCreateModalClose")?.addEventListener("click", closeTeamCreateModal);
+  document.getElementById("teamCreateModal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) closeTeamCreateModal();
+  });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
+    const teamModal = document.getElementById("teamCreateModal");
+    if (teamModal?.classList.contains("open")) {
+      closeTeamCreateModal();
+      return;
+    }
     const modal = document.getElementById("userDetailModal");
     if (modal?.classList.contains("open")) {
       selectedUserId = null;

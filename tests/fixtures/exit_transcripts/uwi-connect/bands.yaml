@@ -1,0 +1,99 @@
+# Campus networking / info sharing — exit-interview answer bands for scorer calibration.
+# Prompts generated at test time from planner + fixed index.
+# low→1–2, mid→3–4, high→5 (provisional heuristic with knowledge pack).
+scenario_slug: uwi-connect
+repository_sha: ucdeadbeef01
+index:
+  commit_sha: ucdeadbeef01
+  files:
+  - path: app/services/notifications.py
+    language: python
+    line_count: 100
+  - path: app/services/boards.py
+    language: python
+    line_count: 90
+  - path: app/services/campaigns.py
+    language: python
+    line_count: 80
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+  symbols:
+  - name: notify_observers
+    kind: function
+    path: app/services/notifications.py
+    line_start: 20
+    line_end: 60
+  - name: publish_listing
+    kind: function
+    path: app/services/boards.py
+    line_start: 30
+    line_end: 70
+  - name: send_campaign
+    kind: function
+    path: app/services/campaigns.py
+    line_start: 25
+    line_end: 65
+  tests:
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+bands:
+  low:
+    label: Weak / evasive
+    student_display_name: Campus networking / info sharing Low
+    expected_score_range:
+    - 1
+    - 2
+    answers:
+      special_feature_pattern: Not sure. Teammate handled that.
+      design_to_code: Looks the same to me.
+      feature_ownership: Mostly pair watched others type.
+      testing: Green suite means done.
+      verification: Agent wrote my section.
+  mid:
+    label: Partial / vague (length without gold terms)
+    student_display_name: Campus networking / info sharing Mid
+    expected_score_range:
+    - 3
+    - 4
+    answers:
+      design_to_code: Sprint one boxes on the whiteboard roughly match what shipped later. Some names
+        moved around when we coded, and I am not sure which relationship stayed faithful versus what we
+        reinvented under pressure.
+      feature_ownership: I made a few edits in the main service path after standup. I cannot find my board
+        card and I did not write down what callers should do when the insert fails.
+      verification: A classmate pushed a big branch and I skimmed it before merge. I trusted the chat
+        summary more than running the app myself, so my check was shallow.
+      special_feature_pattern: Publishing and campaigns somehow messaged people inconsistently. I said
+        we cleaned the notify path in standup, but I cannot name the classes we added or the approach
+        we chose.
+      testing: The starter suite checks login and counts rows. That is thin for who gets messaged when
+        something is published, so we planned richer cases later but did not land them before the interview.
+  high:
+    label: Strong / gold-aligned
+    student_display_name: Campus networking / info sharing High
+    expected_score_range:
+    - 5
+    - 5
+    answers:
+      special_feature_pattern: 'For notifications on publish and campaign send we targeted the module-level
+        callback list in notifications.py. Subjects bypassed or double-wrote events, campaigns notified
+        unverified users, and job publish skipped notify. We replaced that with the Observer pattern:
+        boards and campaigns as subjects, verified-alumni subscribers as observers, with consistent audience
+        rules.'
+      design_to_code: Sprint 1 class diagram showed Observer subjects for publish_listing and send_campaign.
+        Looking at boards.py, publish_listing now notifies for jobs and events instead of only events.
+        Design drift moved fan-out into the observer bus so campaigns.py no longer inserts admin rows
+        twice.
+      feature_ownership: 'I personally fixed publish_listing in boards.py and cleaned send_campaign in
+        campaigns.py so unverified users are excluded. Control flow goes subject → notify_observers →
+        persist. Trello UC-03 and PR #9 show my commits. Failure mode: callers must not assume campaign.sent
+        always reaches every account.'
+      testing: 'tests/test_scenario.py is shallow and still passes with missing job notifications. I added
+        a regression assertion that publishing a job creates a notification for verified alumni only,
+        and another that campaign send does not duplicate admin rows. Coverage gap: institutional email
+        domain on verify_email.'
+      verification: 'AI drafted the Observer extract in notifications.py. I verified by running publish/campaign
+        regression tests and rejecting a patch that reintroduced the global callback list. PR #9 has my
+        review comments; ownership stayed with me after that review of the notification bus.'

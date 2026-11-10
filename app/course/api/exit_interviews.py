@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from app.seproject.db import get_db
-from app.seproject.deps import AuthUser, ensure_team_access, get_current_user, require_instructor
-from app.seproject.examiner.competencies import RUBRIC_VERSION
-from app.seproject.examiner.planner import generate_question_plan
-from app.seproject.examiner.scorer import score_session
-from app.seproject.examiner.state import (
+from app.course.db import get_db
+from app.course.deps import AuthUser, ensure_team_access, get_current_user, require_instructor
+from app.course.examiner.competencies import RUBRIC_VERSION
+from app.course.examiner.planner import generate_question_plan
+from app.course.examiner.scorer import score_session
+from app.course.examiner.state import (
     SessionBundle,
     advance_to_question,
     after_evidence,
@@ -26,10 +27,11 @@ from app.seproject.examiner.state import (
     ordered_participants,
     pending_questions_for,
     record_response,
+    spawn_skip_alternate,
     start_session,
     unanswered_question_ids,
 )
-from app.seproject.exit_models import (
+from app.course.exit_models import (
     Assessment,
     AuditEvent,
     ConsentStatus,
@@ -42,6 +44,8 @@ from app.seproject.exit_models import (
     RepositorySubmission,
     ReviewStatus,
     Team,
+    VoiceRoom,
+    VoiceUtterance,
 )
 
 router = APIRouter(tags=["exit-interviews"])
@@ -239,6 +243,7 @@ def create_exit_session(
         participant_user_ids=slot_ids,
         index=repo.index_json,
         questions_per_student=body.questions_per_student,
+        scenario_slug=team.scenario_slug,
     )
 
     session = ExitInterviewSession(
@@ -303,6 +308,77 @@ def get_exit_session(
     db: Session = Depends(get_db),
 ) -> dict:
     return _serialize_session(_session_access(db, session_id, user))
+
+
+@router.delete("/exit-sessions/{session_id}")
+def delete_exit_session(
+    session_id: str,
+    user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Delete an exit interview and related answers, assessments, and recording file."""
+    bundle = _session_access(db, session_id, user)
+    session = bundle.session
+
+    # Clear FK pointer before removing questions.
+    session.current_question_id = None
+    db.add(session)
+    db.flush()
+
+    questions = list(
+        db.exec(select(InterviewQuestion).where(InterviewQuestion.session_id == session.id)).all()
+    )
+    question_ids = [q.id for q in questions]
+
+    # Utterances may reference answers; remove them first.
+    for utterance in db.exec(
+        select(VoiceUtterance).where(VoiceUtterance.session_id == session.id)
+    ).all():
+        db.delete(utterance)
+
+    if question_ids:
+        for answer in db.exec(
+            select(InterviewAnswer).where(InterviewAnswer.question_id.in_(question_ids))  # type: ignore[attr-defined]
+        ).all():
+            db.delete(answer)
+
+    for question in questions:
+        db.delete(question)
+
+    for assessment in db.exec(select(Assessment).where(Assessment.session_id == session.id)).all():
+        db.delete(assessment)
+
+    for participant in db.exec(
+        select(InterviewParticipant).where(InterviewParticipant.session_id == session.id)
+    ).all():
+        db.delete(participant)
+
+    recording_path: Path | None = None
+    room = db.exec(select(VoiceRoom).where(VoiceRoom.session_id == session.id)).first()
+    if room is not None:
+        if room.local_file_path:
+            recording_path = Path(room.local_file_path)
+        db.delete(room)
+
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="exit_session.delete",
+            target_id=str(session.id),
+            metadata_json=None,
+        )
+    )
+    db.delete(session)
+    db.commit()
+
+    if recording_path is not None:
+        try:
+            if recording_path.exists():
+                recording_path.unlink()
+        except OSError:
+            pass
+
+    return {"ok": True, "id": session_id}
 
 
 @router.get("/teams/{team_id}/exit-sessions")
@@ -407,6 +483,58 @@ def next_question(
         InterviewStatus.finalized.value,
     }:
         raise HTTPException(status_code=400, detail="Interview is finished")
+
+    # Skip / leave the active question and advance (voice "next", UI Next).
+    if session.status in {
+        InterviewStatus.question.value,
+        InterviewStatus.optional_probe.value,
+        InterviewStatus.response.value,
+    }:
+        current: InterviewQuestion | None = None
+        if session.current_question_id is not None:
+            current = db.get(InterviewQuestion, session.current_question_id)
+
+        # Skipping a probe keeps the main answer — only drop the probe turn.
+        if session.status == InterviewStatus.optional_probe.value and current is not None:
+            current.status = "answered"
+            for q in bundle.questions:
+                if q.id == current.id:
+                    q.status = "answered"
+            after_evidence(bundle)
+            if session.status == InterviewStatus.student_turn.value and session.current_participant_user_id:
+                pending = pending_questions_for(bundle.questions, session.current_participant_user_id)
+                if pending:
+                    advance_to_question(session, pending[0])
+            db.commit()
+            return _serialize_session(load_session(db, session_id))  # type: ignore[arg-type]
+
+        alternate: InterviewQuestion | None = None
+        if current is not None and current.status in {"asked", "probed", "answered"}:
+            # Prefer a follow_up alternate so the student can still meet quota.
+            if current.status in {"asked", "probed"}:
+                alternate = spawn_skip_alternate(db, current)
+            current.status = "skipped"
+            for q in bundle.questions:
+                if q.id == current.id:
+                    q.status = "skipped"
+
+        if alternate is not None:
+            advance_to_question(session, alternate)
+            db.commit()
+            return _serialize_session(load_session(db, session_id))  # type: ignore[arg-type]
+
+        after_evidence(bundle)
+        if session.status == InterviewStatus.student_turn.value and session.current_participant_user_id:
+            # Reload pending after possible alternate insert on other paths.
+            refreshed = load_session(db, session_id)
+            assert refreshed is not None
+            pending = pending_questions_for(
+                refreshed.questions, session.current_participant_user_id
+            )
+            if pending:
+                advance_to_question(session, pending[0])
+        db.commit()
+        return _serialize_session(load_session(db, session_id))  # type: ignore[arg-type]
 
     if session.status in {
         InterviewStatus.student_turn.value,
@@ -564,7 +692,9 @@ def finish_session(
     assert bundle is not None
     repo = db.get(RepositorySubmission, bundle.session.repository_submission_id)
     sha = repo.commit_sha if repo else ""
-    reports = score_session(bundle, sha)
+    team = db.get(Team, bundle.session.team_id)
+    scenario_slug = team.scenario_slug if team else None
+    reports = score_session(bundle, sha, scenario_slug=scenario_slug)
 
     for old in db.exec(select(Assessment).where(Assessment.session_id == bundle.session.id)).all():
         db.delete(old)

@@ -1,0 +1,75 @@
+# Instructor-only. Never copy into templates/uwi-connect or student forks.
+scenario: uwi-connect
+starter_version: "0.2.0"
+design_pattern_opportunity: >-
+  Observer for notifications: listing publish and campaign send should be
+  subjects that notify verified-alumni observers. Replace the global callback
+  list in app/services/notifications.py and eliminate bypass/duplicate fan-out paths.
+
+notes:
+  - Passwords use FastStart Argon2 (pwdlib); login strips password/password_hash.
+  - Services split across board_auth/accounts/boards/campaigns/notifications (app/services).
+  - Base: uwidcit/faststart FastStart shell; domain API under /api.
+
+defects:
+  - id: UC-DEF-001
+    category: architecture
+    summary: >-
+      Notification “Observer” is a module-level callback list with duplicate
+      subscribe, swallowed errors, inconsistent audience rules, and subjects that
+      bypass or double-write notifications.
+    evidence: app/services/notifications.py; app/services/boards.py publish_listing; app/services/campaigns.py send_campaign
+    related_acceptance: [7, 9, 10, 11]
+    severity: high
+    intended_fix: Observer pattern for publish/campaign notifications
+
+  - id: UC-DEF-002
+    category: functional
+    summary: Admin publish of jobs does not notify (only event path calls notify).
+    evidence: boards.publish_listing notified only when kind == event
+    related_acceptance: [7]
+    severity: high
+
+  - id: UC-DEF-003
+    category: functional
+    summary: Campaign send notifies unverified users via default observer.
+    evidence: notifications._persist_to_all_users skips verified check for campaign.sent
+    related_acceptance: [1, 9]
+    severity: high
+
+  - id: UC-DEF-004
+    category: functional
+    summary: Campaign send duplicates admin notifications (observer + direct insert).
+    evidence: campaigns.send_campaign second insert loop
+    related_acceptance: [10]
+    severity: medium
+
+  - id: UC-DEF-005
+    category: functional
+    summary: Event listings publish immediately on submit (skip pending admin gate).
+    evidence: boards.submit_listing status published for kind event
+    related_acceptance: [4, 5]
+    severity: high
+
+  - id: UC-DEF-006
+    category: functional
+    summary: Browse with kind filter includes pending listings.
+    evidence: boards.browse_published kind branch status IN published,pending
+    related_acceptance: [5]
+    severity: medium
+
+  - id: UC-DEF-007
+    category: functional
+    summary: verify_email ignores institutional domain; looks_like_uwi_email unused.
+    evidence: users.verify_email; users.looks_like_uwi_email
+    related_acceptance: [1]
+    severity: medium
+
+  - id: UC-DEF-008
+    category: testing
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+    related_acceptance: []
+    severity: low
+
+

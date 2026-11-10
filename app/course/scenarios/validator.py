@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.seproject.scenarios.loader import load_scenario_package
-from app.seproject.scenarios.models import FactOrigin, FactStatus, ScenarioPackage, ScenarioStatus
+from app.course.scenarios.loader import load_scenario_package
+from app.course.scenarios.models import FactOrigin, FactStatus, ScenarioPackage, ScenarioStatus
 
 
 @dataclass(frozen=True)

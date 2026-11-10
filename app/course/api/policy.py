@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from app.seproject.ops.policy import policy_document
-from app.seproject.settings import Settings, get_settings
+from app.course.ops.policy import policy_document
+from app.course.settings import Settings, get_settings
 
 router = APIRouter(tags=["policy"])
 

@@ -1,0 +1,85 @@
+# Instructor-only judge gold. Sourced from instructor/private + templates ASSIGNMENT.md
+slug: student-accommodation
+title: Student housing
+special_feature: Listing lifecycle / transitions
+starter_version: "0.2.0"
+intended_pattern: State
+intended_pattern_aliases:
+  - state pattern
+  - state machine
+  - listing lifecycle
+  - transitions
+focus_paths:
+  - app/services/lifecycle.py
+  - app/services/listings.py
+architecture_defect:
+  id: SA-DEF-001
+  summary: >-
+    Listing lifecycle tracked poorly — status string plus four flags; activate
+    from pending; verify rejected without resubmit; visible_to_students trusts
+    flag_active alone.
+  evidence: app/services/lifecycle.py
+  intended_fix: State pattern for listing lifecycle
+defects:
+  - id: SA-DEF-001
+    category: architecture
+    severity: high
+    summary: Status+flag soup with illegal listing transitions.
+    evidence: app/services/lifecycle.py
+  - id: SA-DEF-002
+    category: functional
+    severity: high
+    summary: Activate allowed from pending (skips admin verify).
+    evidence: lifecycle.apply_action
+  - id: SA-DEF-003
+    category: functional
+    severity: high
+    summary: Students can see listings with flag_active even if pending.
+    evidence: lifecycle.visible_to_students
+  - id: SA-DEF-004
+    category: functional
+    severity: medium
+    summary: Any landlord can transition any listing (no ownership check).
+    evidence: listings.transition
+  - id: SA-DEF-005
+    category: functional
+    severity: medium
+    summary: Area not restricted to St. Augustine / Mount Hope on submit.
+    evidence: listings.submit_listing
+  - id: SA-DEF-006
+    category: functional
+    severity: medium
+    summary: Empty amenities allowed; amenity filter is raw substring.
+    evidence: listings.submit_listing; browse_for_students
+  - id: SA-DEF-007
+    category: functional
+    severity: medium
+    summary: Students can message pending/rejected listings.
+    evidence: listings.send_message
+  - id: SA-DEF-008
+    category: testing
+    severity: low
+    summary: Public tests are shallow and pass with defects.
+    evidence: tests/test_scenario.py
+judge_concepts:
+  special_feature_pattern:
+    - lifecycle
+    - listing
+    - transition
+    - pending
+    - verified
+    - flags
+  design_to_code:
+    - lifecycle
+    - state
+    - listing
+  feature_ownership:
+    - lifecycle
+    - listings
+  testing:
+    - regression
+    - activate
+    - pending
+  verification:
+    - lifecycle
+    - review

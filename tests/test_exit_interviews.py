@@ -45,6 +45,10 @@ def test_admin_team_setup_student_starts_without_names(client):
     session = created.json()
     session_id = session["id"]
     assert [p["display_name"] for p in session["participants"]] == ["Alex Rivera", "Jordan Lee"]
+    # COMP 3613 tree: first two competencies; library special-feature wording
+    alex_qs = [q for q in session["questions"] if q["target_user_id"] == session["participants"][0]["user_id"]]
+    assert [q["competency"] for q in alex_qs] == ["special_feature_pattern", "design_to_code"]
+    assert any("Same-slot conflict resolution" in q["prompt"] for q in alex_qs)
 
     cons = client.post(
         f"/api/exit-sessions/{session_id}/consent",

@@ -1,0 +1,94 @@
+# Job board — exit-interview answer bands for scorer calibration.
+# Prompts generated at test time from planner + fixed index.
+# low→1–2, mid→3–4, high→5 (provisional heuristic with knowledge pack).
+scenario_slug: job-board
+repository_sha: jbdeadbeef01
+index:
+  commit_sha: jbdeadbeef01
+  files:
+  - path: app/services/lifecycle.py
+    language: python
+    line_count: 140
+  - path: app/services/applications.py
+    language: python
+    line_count: 110
+  - path: app/services/listings.py
+    language: python
+    line_count: 100
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+  symbols:
+  - name: apply_action
+    kind: function
+    path: app/services/lifecycle.py
+    line_start: 30
+    line_end: 90
+  - name: transition_application
+    kind: function
+    path: app/services/applications.py
+    line_start: 40
+    line_end: 80
+  tests:
+  - path: tests/test_scenario.py
+    language: python
+    line_count: 40
+bands:
+  low:
+    label: Weak / evasive
+    student_display_name: Job board Low
+    expected_score_range:
+    - 1
+    - 2
+    answers:
+      special_feature_pattern: Not sure. Teammate handled that.
+      design_to_code: Looks the same to me.
+      feature_ownership: Mostly pair watched others type.
+      testing: Green suite means done.
+      verification: Agent wrote my section.
+  mid:
+    label: Partial / vague (length without gold terms)
+    student_display_name: Job board Mid
+    expected_score_range:
+    - 3
+    - 4
+    answers:
+      design_to_code: Sprint one boxes on the whiteboard roughly match what shipped later. Some names
+        moved around when we coded, and I am not sure which relationship stayed faithful versus what we
+        reinvented under pressure.
+      feature_ownership: I made a few edits in the main service path after standup. I cannot find my board
+        card and I did not write down what callers should do when the insert fails.
+      verification: A classmate pushed a big branch and I skimmed it before merge. I trusted the chat
+        summary more than running the app myself, so my check was shallow.
+      special_feature_pattern: Applications could move into weird statuses in the starter. I told the
+        team we cleaned that path, but I cannot name the classes we introduced or the approach we settled
+        on.
+      testing: The starter suite checks login and list length. That is thin for how applications move
+        between statuses, so we planned richer cases later but did not land them before the interview.
+  high:
+    label: Strong / gold-aligned
+    student_display_name: Job board High
+    expected_score_range:
+    - 5
+    - 5
+    answers:
+      special_feature_pattern: 'For application lifecycle transitions we targeted the inherited flag-plus-status
+        soup in lifecycle.py. Nested if/elif allowed illegal moves like submit to hire and reject to shortlist,
+        and derived_status_from_flags disagreed with status. We replaced that with the State pattern:
+        one state object per status and an explicit transition table so only legal moves remain.'
+      design_to_code: Sprint 1 class diagram showed State participants for pending, shortlisted, hired,
+        and rejected. Looking at applications.py, transition_application now delegates to lifecycle apply_action
+        instead of flipping four boolean flags. That design drift was intentional so pattern participants
+        live in lifecycle.py rather than scattering status strings across listings and applications.
+      feature_ownership: 'I personally rewrote apply_action in app/services/lifecycle.py and wired transition_application
+        in applications.py. Control flow rejects illegal transitions and clears terminal flags on reopen.
+        Trello JB-06 and PR #11 on main are my commits. Callers must handle IllegalTransitionError — that
+        failure mode was missing when hire after reject still succeeded in the starter.'
+      testing: 'tests/test_scenario.py only checks shallow health and list length, so it still passes
+        with illegal lifecycle transitions. I added a regression assertion that reject then shortlist
+        raises, and another that hire is unreachable from submitted without shortlist. Coverage gap remaining:
+        IDOR on listing_applicants.'
+      verification: 'AI drafted the first State extract near lifecycle.py. I verified by running transition
+        regression tests, walking the transition table on paper, and rejecting an agent patch that left
+        flag_hired set after reopen. PR #11 has my review; I refuse agent code without tests for illegal
+        transitions. Ownership stayed with me.'

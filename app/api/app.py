@@ -74,20 +74,20 @@ from app.storage.conversation_store import (
 )
 from app.tweaks.behavior_tweaks import BehaviorTweaksStore
 from app.llm_wrapper import LLMWrapper
-from app.seproject.seed import seed_scenarios
-from app.seproject.scenarios.registry import scenario_registry
-from app.seproject.chat.persona_service import generate_validated_reply, get_persona
-from app.seproject.api.scenarios import router as scenarios_router
-from app.seproject.api.teams import router as teams_router
-from app.seproject.api.repositories import router as repositories_router
-from app.seproject.api.exit_interviews import router as exit_interviews_router
-from app.seproject.api.voice import router as voice_router
-from app.seproject.api.policy import router as policy_router
-from app.seproject.indexing import index_all_scenarios
-from app.seproject.scenario_pack_adapter import pack_from_persona
-from app.seproject.db_models import Scenario, ScenarioPersona, ScenarioFact, RequirementsSession, Message  # noqa: F401
-from app.seproject import exit_models as _exit_models  # noqa: F401 — register SQLModel tables
-from app.seproject.db import configure_engine as configure_seproject_engine
+from app.course.seed import seed_scenarios
+from app.course.scenarios.registry import scenario_registry
+from app.course.chat.persona_service import generate_validated_reply, get_persona
+from app.course.api.scenarios import router as scenarios_router
+from app.course.api.teams import router as teams_router
+from app.course.api.repositories import router as repositories_router
+from app.course.api.exit_interviews import router as exit_interviews_router
+from app.course.api.voice import router as voice_router
+from app.course.api.policy import router as policy_router
+from app.course.indexing import index_all_scenarios
+from app.course.scenario_pack_adapter import pack_from_persona
+from app.course.db_models import Scenario, ScenarioPersona, ScenarioFact, RequirementsSession, Message  # noqa: F401
+from app.course import exit_models as _exit_models  # noqa: F401 — register SQLModel tables
+from app.course.db import configure_engine as configure_course_engine
 from sqlmodel import SQLModel as _SESQLModel
 from app.llm_registry import (
     choice_label,
@@ -158,7 +158,7 @@ async def _app_lifespan(_app: FastAPI):
     roles = {u.username: getattr(u, "role", None) for u in conversation_store.list_users() if u.username in ("nick", "wayne", "claudine", "snick")}
     print(f"✓ Roles ready: {roles}")
     # Ensure YAML scenario + exit-interview tables exist on the shared conversation DB engine
-    configure_seproject_engine(conversation_store.engine)
+    configure_course_engine(conversation_store.engine)
     _SESQLModel.metadata.create_all(conversation_store.engine)
     # Best-effort additive columns for existing SQLite/Postgres installs.
     try:

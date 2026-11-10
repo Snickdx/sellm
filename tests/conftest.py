@@ -27,14 +27,14 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("REPO_FIXTURE_ROOT", str(FIXTURE_ROOT))
     monkeypatch.setenv("STORAGE_RECORDINGS_DIR", str(recordings))
 
-    from app.seproject.settings import get_settings
+    from app.course.settings import get_settings
 
     get_settings.cache_clear()
 
     from app.storage.conversation_store import ConversationStore
-    from app.seproject.db import configure_engine
-    from app.seproject import exit_models  # noqa: F401
-    from app.seproject import db_models  # noqa: F401
+    from app.course.db import configure_engine
+    from app.course import exit_models  # noqa: F401
+    from app.course import db_models  # noqa: F401
     from sqlmodel import SQLModel
     from fastapi.testclient import TestClient
 

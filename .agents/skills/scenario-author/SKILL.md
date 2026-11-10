@@ -11,7 +11,7 @@ description: >-
   synthetic assumptions. Never fabricate stakeholder quotes.
 compatibility: >-
   Requires the sellm application root with scenarios/<slug>/ layout,
-  app/seproject validators/loaders, and reindex via
+  app/course validators/loaders, and reindex via
   POST /api/admin/scenarios/reindex or scripts/reindex_scenarios.py.
   Do not store course transcripts or secrets in this skill.
 metadata:
@@ -91,10 +91,10 @@ Many interviewees hold **operational / administrative authority over the target 
 
 ```bash
 cd sellm
-python -c "from pathlib import Path; from app.seproject.scenarios.vtt import parse_vtt_file; from app.seproject.scenarios.loader import load_scenario_package; print('use loader/validator modules')"
+python -c "from pathlib import Path; from app.course.scenarios.vtt import parse_vtt_file; from app.course.scenarios.loader import load_scenario_package; print('use loader/validator modules')"
 ```
 
-Prefer existing `normalized/cues.jsonl`. If re-parsing is needed, use `app.seproject.scenarios.vtt.parse_vtt_file` and write cues under `scenarios/<slug>/normalized/`.
+Prefer existing `normalized/cues.jsonl`. If re-parsing is needed, use `app.course.scenarios.vtt.parse_vtt_file` and write cues under `scenarios/<slug>/normalized/`.
 
 Preserve timestamps, cue IDs, speaker labels, and speaker-confidence flags. Do not silently guess speakers.
 
@@ -152,7 +152,7 @@ Assumption records require `status: assumed`, `origin: instructor`, `decision_id
 
 ```bash
 cd sellm
-python -c "from pathlib import Path; from app.seproject.scenarios.loader import load_scenario_package; from app.seproject.scenarios.validator import validate_scenario_package; p=load_scenario_package(Path('scenarios/<slug>')); print(validate_scenario_package(p))"
+python -c "from pathlib import Path; from app.course.scenarios.loader import load_scenario_package; from app.course.scenarios.validator import validate_scenario_package; p=load_scenario_package(Path('scenarios/<slug>')); print(validate_scenario_package(p))"
 ```
 
 Prefer invoking **scenario-validator**. Then **always reindex**:

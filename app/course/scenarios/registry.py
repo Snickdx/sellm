@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from app.seproject.scenarios.filter import student_safe_scenario_view
-from app.seproject.scenarios.loader import default_scenarios_root, load_scenario_package
-from app.seproject.scenarios.models import ScenarioPackage, ScenarioStatus
-from app.seproject.scenarios.validator import has_errors, validate_scenario_package
+from app.course.scenarios.filter import student_safe_scenario_view
+from app.course.scenarios.loader import default_scenarios_root, load_scenario_package
+from app.course.scenarios.models import ScenarioPackage, ScenarioStatus
+from app.course.scenarios.validator import has_errors, validate_scenario_package
 
 
 class ScenarioRegistry:
