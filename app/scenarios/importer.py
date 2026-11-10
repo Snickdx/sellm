@@ -13,11 +13,12 @@ def import_package_to_db(session: Session, package: ScenarioPackage, *, source_p
         select(Scenario).where(Scenario.slug == package.meta.slug, Scenario.version == package.meta.version)
     ).first()
     if existing is not None:
-        # cascade-delete children then parent
+        # cascade-delete children then parent (flush between so SQLite FK checks pass)
         for persona in session.exec(select(ScenarioPersona).where(ScenarioPersona.scenario_id == existing.id)).all():
             session.delete(persona)
         for fact in session.exec(select(ScenarioFact).where(ScenarioFact.scenario_id == existing.id)).all():
             session.delete(fact)
+        session.flush()
         session.delete(existing)
         session.flush()
 
