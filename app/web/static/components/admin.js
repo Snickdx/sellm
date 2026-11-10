@@ -948,9 +948,16 @@
     }
   }
 
+  function parseNameLines(raw) {
+    return String(raw || "")
+      .split(/[\n,]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
   async function renderTeams() {
     listTitle.textContent = "Teams";
-    detailTitle.textContent = "Assign cohort login";
+    detailTitle.textContent = "Group setup";
     listToolbar.innerHTML = "";
     listBody.innerHTML = `<p class="status">Loading…</p>`;
     detailBody.innerHTML = `<p class="status">Loading…</p>`;
@@ -971,21 +978,29 @@
         (teams || [])
           .map((t) => {
             const members = (t.members || []).map((m) => m.username).join(", ") || "—";
+            const repo = t.repository;
+            const repoMeta = repo
+              ? `${repo.repo || "repo"} · ${repo.index_status}`
+              : "no repo";
             return `
             <button type="button" class="user-item team-item" data-id="${escapeAttr(t.id)}">
               <div class="name">${escapeHtml(t.name)}</div>
-              <div class="meta">${escapeHtml(t.scenario_slug || "no scenario")} · ${escapeHtml(members)}</div>
+              <div class="meta">${escapeHtml(t.scenario_slug || "no scenario")} · ${escapeHtml(repoMeta)} · ${escapeHtml(members)}</div>
             </button>`;
           })
           .join("") || `<p class="meta" style="padding:12px;">No teams yet. Create one on the right.</p>`;
 
       detailBody.innerHTML = `
         <p style="font-size:13px;color:#64748b;margin:0 0 12px;">
-          Create a team and attach a <strong>cohort credential</strong> (shared login). Students use that
-          account for chats and exit interviews; they type real names at the interview.
+          All team content lives here: group name, scenario, repository (no commit hash), member names,
+          and the cohort login students share.
         </p>
-        <div class="field"><label>Team name</label><input id="teamName" placeholder="Team Alpha" /></div>
-        <div class="field"><label>Scenario slug (optional)</label><input id="teamScenario" placeholder="uwi-connect" /></div>
+        <div class="field"><label>Group name</label><input id="teamName" placeholder="Team Alpha" /></div>
+        <div class="field"><label>Scenario slug</label><input id="teamScenario" placeholder="library" /></div>
+        <div class="field"><label>Repository URL</label><input id="teamRepo" placeholder="https://github.com/org/repo or fixture://demo" /></div>
+        <div class="field"><label>Group member names</label>
+          <textarea id="teamParticipantNames" rows="3" placeholder="Alex Rivera&#10;Jordan Lee"></textarea>
+        </div>
         <div class="field"><label>Owner cohort username</label>
           <select id="teamOwner">${ownerOptions || "<option value=\"\">No student accounts</option>"}</select>
         </div>
@@ -1000,8 +1015,10 @@
           const name = document.getElementById("teamName")?.value.trim();
           const owner = document.getElementById("teamOwner")?.value.trim();
           const scenario = document.getElementById("teamScenario")?.value.trim();
+          const githubUrl = document.getElementById("teamRepo")?.value.trim();
+          const participantNames = parseNameLines(document.getElementById("teamParticipantNames")?.value);
           if (!name || !owner) {
-            setStatus(status, "Team name and owner username are required.", "err");
+            setStatus(status, "Group name and owner username are required.", "err");
             return;
           }
           await api("/api/admin/teams", {
@@ -1010,6 +1027,8 @@
               name,
               owner_username: owner,
               scenario_slug: scenario || null,
+              github_url: githubUrl || null,
+              participant_names: participantNames,
             }),
           });
           setStatus(status, "Team created and tied to " + owner + ".", "ok");
@@ -1033,22 +1052,54 @@
               </label>`;
             })
             .join("");
+          const namesText = (team.participant_names || []).join("\n");
+          const repoUrl = team.repository?.github_url || "";
+          const repoStatus = team.repository
+            ? `${team.repository.repo}@${String(team.repository.commit_sha || "").slice(0, 7)} · ${team.repository.index_status}`
+            : "No repository yet";
           const panel = document.getElementById("teamDetail");
           if (!panel) return;
           panel.innerHTML = `
             <h3 style="font-size:14px;margin:0 0 8px;">${escapeHtml(team.name)}</h3>
-            <p class="meta" style="margin:0 0 8px;">id <code>${escapeHtml(team.id)}</code></p>
-            <p style="font-size:13px;margin:0 0 8px;">Members (cohort logins that can open this team):</p>
-            <div style="max-height:220px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+            <p class="meta" style="margin:0 0 8px;">id <code>${escapeHtml(team.id)}</code> · ${escapeHtml(repoStatus)}</p>
+            <div class="field"><label>Group name</label><input id="editTeamName" value="${escapeAttr(team.name)}" /></div>
+            <div class="field"><label>Scenario slug</label><input id="editTeamScenario" value="${escapeAttr(team.scenario_slug || "")}" /></div>
+            <div class="field"><label>Repository URL</label><input id="editTeamRepo" value="${escapeAttr(repoUrl)}" placeholder="https://github.com/org/repo" /></div>
+            <div class="field"><label>Group member names</label>
+              <textarea id="editTeamNames" rows="3">${escapeHtml(namesText)}</textarea>
+            </div>
+            <div class="actions">
+              <button type="button" class="btn btn-primary" id="saveTeamDetailsBtn">Save group details</button>
+            </div>
+            <p style="font-size:13px;margin:14px 0 8px;">Cohort logins that can open this team:</p>
+            <div style="max-height:180px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
               ${memberChecks || "<p class='meta'>No student users.</p>"}
             </div>
             <div class="actions" style="margin-top:10px;">
-              <button type="button" class="btn btn-primary" id="saveMembersBtn">Save members</button>
+              <button type="button" class="btn btn-primary" id="saveMembersBtn">Save logins</button>
               <button type="button" class="btn btn-secondary" id="deleteTeamBtn">Delete team</button>
-              <a class="btn btn-secondary" href="/course/teams/${encodeURIComponent(team.id)}/exit/">Open exit interview</a>
+              <a class="btn btn-secondary" href="/course/teams/${encodeURIComponent(team.id)}/exit/">Open interview</a>
             </div>
             <div id="teamMemberStatus" class="status"></div>
           `;
+          document.getElementById("saveTeamDetailsBtn")?.addEventListener("click", async () => {
+            const ms = document.getElementById("teamMemberStatus");
+            try {
+              await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, {
+                method: "PATCH",
+                body: JSON.stringify({
+                  name: document.getElementById("editTeamName")?.value.trim(),
+                  scenario_slug: document.getElementById("editTeamScenario")?.value.trim() || null,
+                  github_url: document.getElementById("editTeamRepo")?.value.trim() || null,
+                  participant_names: parseNameLines(document.getElementById("editTeamNames")?.value),
+                }),
+              });
+              setStatus(ms, "Group details saved.", "ok");
+              await renderTeams();
+            } catch (e) {
+              setStatus(ms, e.message, "err");
+            }
+          });
           document.getElementById("saveMembersBtn")?.addEventListener("click", async () => {
             const ms = document.getElementById("teamMemberStatus");
             try {
@@ -1061,7 +1112,7 @@
                 method: "PUT",
                 body: JSON.stringify({ usernames }),
               });
-              setStatus(ms, "Members updated.", "ok");
+              setStatus(ms, "Logins updated.", "ok");
               await renderTeams();
             } catch (e) {
               setStatus(ms, e.message, "err");

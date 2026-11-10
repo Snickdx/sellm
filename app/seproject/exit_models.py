@@ -78,6 +78,8 @@ class Team(SQLModel, table=True):
     name: str
     scenario_slug: Optional[str] = None
     scenario_version: Optional[str] = None
+    # Real names for the exit interview (set in Admin → Teams).
+    participant_names: Optional[list[str]] = Field(default=None, sa_column=Column(JSON))
     invite_code: str = Field(index=True, unique=True)
     created_at: datetime = Field(default_factory=_utc_now, index=True)
 

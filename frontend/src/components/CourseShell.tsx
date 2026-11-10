@@ -8,20 +8,12 @@ type Props = {
   subtitle?: string
   children: ReactNode
   aside?: ReactNode
-  /** Extra child-tab row under Exit Interviews (e.g. team-specific). */
-  tabs?: Array<{ to: string; label: string; end?: boolean }>
 }
 
-const EXIT_TABS = [
-  { to: '/', label: 'Overview', end: true },
-  { to: '/policy', label: 'Policy', end: true },
-]
-
-export function CourseShell({ title, subtitle, children, aside, tabs }: Props) {
+export function CourseShell({ title, subtitle, children, aside }: Props) {
   const { user, logout } = useAuth()
   const [navOpen, setNavOpen] = useState(false)
   const admin = isInstructor(user)
-  const childTabs = tabs ?? EXIT_TABS
 
   function closeNav() {
     setNavOpen(false)
@@ -52,16 +44,10 @@ export function CourseShell({ title, subtitle, children, aside, tabs }: Props) {
             {admin ? <a href="/admin">Admin</a> : null}
           </nav>
 
-          <div className="nav-section-label">Exit interviews</div>
-          <nav className="nav-links child-tabs" onClick={closeNav}>
-            {childTabs.map((t) => (
-              <NavLink key={t.to} to={t.to} end={t.end}>
-                {t.label}
-              </NavLink>
-            ))}
-          </nav>
-
           <div className="nav-footer">
+            <NavLink to="/policy" className="nav-policy" onClick={closeNav}>
+              Consent &amp; policy
+            </NavLink>
             <span className="nav-user">
               {user?.display_name ?? '…'} · {user?.role ?? ''}
             </span>
@@ -87,14 +73,6 @@ export function CourseShell({ title, subtitle, children, aside, tabs }: Props) {
               {subtitle ? <p>{subtitle}</p> : null}
             </div>
           </header>
-
-          <div className="child-tab-bar" role="tablist" aria-label="Exit interview sections">
-            {childTabs.map((t) => (
-              <NavLink key={t.to} to={t.to} end={t.end} role="tab">
-                {t.label}
-              </NavLink>
-            ))}
-          </div>
 
           <div className={`main-body${aside ? ' with-aside' : ''}`}>
             {aside ? <aside className="work-aside">{aside}</aside> : null}

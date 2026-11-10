@@ -27,6 +27,7 @@ export interface Team {
   name: string
   scenario_slug: string | null
   scenario_version: string | null
+  participant_names?: string[]
   created_at: string
 }
 
@@ -258,11 +259,11 @@ export async function fetchExitSession(sessionId: string): Promise<ExitSession> 
 export async function createExitSession(
   teamId: string,
   body: {
-    participant_names: string[]
+    participant_names?: string[]
     repository_submission_id?: string
     target_duration_minutes?: number
     questions_per_student?: number
-  },
+  } = {},
 ): Promise<ExitSession> {
   return request(`/api/teams/${teamId}/exit-session`, {
     method: 'POST',

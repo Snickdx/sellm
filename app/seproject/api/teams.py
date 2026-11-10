@@ -33,6 +33,20 @@ class TeamCreateRequest(BaseModel):
     # Cohort username that owns/shares this team login (required for admin create).
     owner_username: str | None = None
     member_usernames: list[str] = Field(default_factory=list)
+    # Real names used when students start the exit interview.
+    participant_names: list[str] = Field(default_factory=list)
+    github_url: str | None = Field(default=None, max_length=500)
+    branch: str | None = Field(default=None, max_length=200)
+
+
+class TeamUpdateRequest(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    scenario_slug: str | None = None
+    scenario_version: str | None = None
+    participant_names: list[str] | None = None
+    github_url: str | None = Field(default=None, max_length=500)
+    branch: str | None = Field(default=None, max_length=200)
+    analyze_now: bool = True
 
 
 class TeamMembersRequest(BaseModel):
@@ -51,11 +65,13 @@ class TeamOut(BaseModel):
     name: str
     scenario_slug: str | None
     scenario_version: str | None
+    participant_names: list[str] = Field(default_factory=list)
     created_at: str | None
 
 
 class TeamDetailOut(TeamOut):
     members: list[TeamMemberOut]
+    repository: dict | None = None
 
 
 class GroupSetupRequest(BaseModel):
@@ -74,14 +90,56 @@ class GroupSetupOut(BaseModel):
     repository: dict
 
 
+def _normalize_names(names: list[str] | None) -> list[str]:
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw in names or []:
+        name = " ".join(str(raw).split()).strip()
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(name)
+    return cleaned
+
+
+def _repo_out(row: RepositorySubmission | None) -> dict | None:
+    if row is None:
+        return None
+    return {
+        "id": row.id,
+        "team_id": row.team_id,
+        "github_url": row.github_url,
+        "owner": row.owner,
+        "repo": row.repo,
+        "branch": row.branch,
+        "commit_sha": row.commit_sha,
+        "index_status": row.index_status,
+        "index_error": row.index_error,
+        "attempt_count": row.attempt_count,
+        "summary": row.summary_json,
+    }
+
+
 def _team_out(team: Team) -> TeamOut:
     return TeamOut(
         id=team.id,
         name=team.name,
         scenario_slug=team.scenario_slug,
         scenario_version=team.scenario_version,
+        participant_names=list(team.participant_names or []),
         created_at=team.created_at.isoformat() if team.created_at else None,
     )
+
+
+def _latest_repo(db: Session, team_id: str) -> RepositorySubmission | None:
+    return db.exec(
+        select(RepositorySubmission)
+        .where(RepositorySubmission.team_id == team_id)
+        .order_by(RepositorySubmission.updated_at.desc())
+    ).first()
 
 
 def _team_detail(db: Session, team: Team) -> TeamDetailOut:
@@ -101,7 +159,11 @@ def _team_detail(db: Session, team: Team) -> TeamDetailOut:
         for m in members_rows
     ]
     base = _team_out(team)
-    return TeamDetailOut(**base.model_dump(), members=members)
+    return TeamDetailOut(
+        **base.model_dump(),
+        members=members,
+        repository=_repo_out(_latest_repo(db, team.id)),
+    )
 
 
 def _unique_invite(db: Session) -> str:
@@ -128,13 +190,22 @@ def _add_member(db: Session, team_id: str, user_id: int, existing: set[int]) -> 
     existing.add(user_id)
 
 
+def _maybe_analyze(background: BackgroundTasks, row: RepositorySubmission) -> None:
+    if row.index_status == RepoIndexStatus.ready.value:
+        return
+    if os.getenv("TESTING") == "1":
+        return
+    background.add_task(analyze_submission_job, row.id)
+
+
 @router.post("/admin/teams", response_model=TeamDetailOut, status_code=status.HTTP_201_CREATED)
 def create_team_admin(
     body: TeamCreateRequest,
+    background: BackgroundTasks,
     instructor: AuthUser = Depends(require_instructor),
     db: Session = Depends(get_db),
 ) -> TeamDetailOut:
-    """Admin creates a team and assigns it to a cohort credential (owner_username)."""
+    """Admin creates a team: cohort owner, scenario, repo, and interview member names."""
     owner_name = (body.owner_username or "").strip()
     if not owner_name:
         raise HTTPException(
@@ -143,10 +214,12 @@ def create_team_admin(
         )
     owner = _resolve_username(db, owner_name)
 
+    names = _normalize_names(body.participant_names)
     team = Team(
         name=body.name.strip(),
         scenario_slug=body.scenario_slug,
         scenario_version=body.scenario_version,
+        participant_names=names or None,
         invite_code=_unique_invite(db),
     )
     db.add(team)
@@ -158,6 +231,18 @@ def create_team_admin(
         member = _resolve_username(db, raw)
         _add_member(db, team.id, int(member.id), existing)
 
+    repo_row: RepositorySubmission | None = None
+    if (body.github_url or "").strip():
+        repo_row = _upsert_team_repo(
+            db,
+            team=team,
+            github_url=body.github_url.strip(),
+            branch=body.branch,
+            actor_id=instructor.id,
+        )
+        if os.getenv("TESTING") == "1":
+            analyze_submission(db, repo_row.id)
+
     db.add(
         AuditEvent(
             actor_id=instructor.id,
@@ -168,6 +253,60 @@ def create_team_admin(
     )
     db.commit()
     db.refresh(team)
+    if repo_row is not None:
+        db.refresh(repo_row)
+        _maybe_analyze(background, repo_row)
+    return _team_detail(db, team)
+
+
+@router.patch("/admin/teams/{team_id}", response_model=TeamDetailOut)
+def update_team_admin(
+    team_id: str,
+    body: TeamUpdateRequest,
+    background: BackgroundTasks,
+    instructor: AuthUser = Depends(require_instructor),
+    db: Session = Depends(get_db),
+) -> TeamDetailOut:
+    """Admin updates group details: name, scenario, member names, repo URL."""
+    team = db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    if body.name is not None:
+        team.name = body.name.strip()
+    if body.scenario_slug is not None:
+        team.scenario_slug = body.scenario_slug.strip() or None
+    if body.scenario_version is not None:
+        team.scenario_version = body.scenario_version
+    if body.participant_names is not None:
+        team.participant_names = _normalize_names(body.participant_names) or None
+
+    repo_row: RepositorySubmission | None = None
+    if (body.github_url or "").strip():
+        repo_row = _upsert_team_repo(
+            db,
+            team=team,
+            github_url=body.github_url.strip(),
+            branch=body.branch,
+            actor_id=instructor.id,
+        )
+        if body.analyze_now and os.getenv("TESTING") == "1":
+            analyze_submission(db, repo_row.id)
+
+    db.add(
+        AuditEvent(
+            actor_id=instructor.id,
+            action="team.update",
+            target_id=team.id,
+            metadata_json=None,
+        )
+    )
+    db.commit()
+    db.refresh(team)
+    if repo_row is not None:
+        db.refresh(repo_row)
+        if body.analyze_now:
+            _maybe_analyze(background, repo_row)
     return _team_detail(db, team)
 
 

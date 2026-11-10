@@ -48,10 +48,10 @@ router = APIRouter(tags=["exit-interviews"])
 
 
 class CreateExitSessionRequest(BaseModel):
-    # Optional — defaults to the team's latest ready repository from group setup.
+    # Optional — defaults to the team's latest ready repository from Admin → Teams.
     repository_submission_id: str | None = None
-    # Real names typed at the laptop — teammates share the cohort login.
-    participant_names: list[str] = Field(min_length=1)
+    # Optional — defaults to participant_names configured on the team in Admin.
+    participant_names: list[str] = Field(default_factory=list)
     target_duration_minutes: int = Field(default=30, ge=10, le=120)
     questions_per_student: int = Field(default=5, ge=1, le=5)
 
@@ -226,7 +226,13 @@ def create_exit_session(
     if repo.index_status != RepoIndexStatus.ready.value or not repo.index_json:
         raise HTTPException(status_code=400, detail="Repository index is not ready")
 
-    names = _normalize_participant_names(body.participant_names)
+    raw_names = body.participant_names or list(team.participant_names or [])
+    if not raw_names:
+        raise HTTPException(
+            status_code=400,
+            detail="No group member names on this team — set them in Admin → Teams",
+        )
+    names = _normalize_participant_names(raw_names)
     slot_ids = [_slot_user_id(i) for i in range(len(names))]
 
     plan = generate_question_plan(

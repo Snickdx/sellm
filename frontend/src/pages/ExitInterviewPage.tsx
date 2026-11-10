@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
 import {
   consentExitSession,
   createExitSession,
@@ -19,29 +19,19 @@ import { CourseShell } from '../components/CourseShell'
 import { VoiceRoomPanel } from '../components/VoiceRoomPanel'
 import { useAuth } from '../auth'
 
-function parseNames(raw: string): string[] {
-  return raw
-    .split(/[\n,]+/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-}
-
 export function ExitInterviewPage() {
   const { teamId } = useParams()
   const { user, loading } = useAuth()
   const [session, setSession] = useState<ExitSession | null>(null)
   const [sessions, setSessions] = useState<Array<{ id: string; status: string }>>([])
-  const [repoReady, setRepoReady] = useState(false)
-  const [repoHint, setRepoHint] = useState('Checking group repository…')
-  const [participantNames, setParticipantNames] = useState('')
+  const [ready, setReady] = useState(false)
+  const [setupHint, setSetupHint] = useState('Checking team…')
   const [answer, setAnswer] = useState('')
   const [probePrompt, setProbePrompt] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [report, setReport] = useState<unknown>(null)
   const [policy, setPolicy] = useState<PolicyDoc | null>(null)
-
-  const names = useMemo(() => parseNames(participantNames), [participantNames])
 
   const currentQuestion = useMemo(() => {
     if (!session?.current_question_id) return null
@@ -69,18 +59,17 @@ export function ExitInterviewPage() {
         const exitSessions = await listTeamExitSessions(teamId)
         setSessions(exitSessions)
         if (exitSessions[0]) setSession(await fetchExitSession(exitSessions[0].id))
-        const r = await listTeamRepositories(teamId)
-        const ready = r.find((x) => x.index_status === 'ready')
-        const pending = r.find((x) => x.index_status === 'pending' || x.index_status === 'running')
-        if (ready) {
-          setRepoReady(true)
-          setRepoHint(`${ready.repo}@${ready.commit_sha.slice(0, 7)} ready`)
-        } else if (pending) {
-          setRepoReady(false)
-          setRepoHint(`${pending.repo} is still indexing…`)
+        const repos = await listTeamRepositories(teamId)
+        const repo = repos.find((x) => x.index_status === 'ready')
+        if (repo) {
+          setReady(true)
+          setSetupHint('Ready to start')
+        } else if (repos.some((x) => x.index_status === 'pending' || x.index_status === 'running')) {
+          setReady(false)
+          setSetupHint('Repository is still indexing — ask your instructor if this takes too long.')
         } else {
-          setRepoReady(false)
-          setRepoHint('Add group details (repo, group name, scenario) on Overview first.')
+          setReady(false)
+          setSetupHint('Team is not ready yet. Instructor must finish setup in Admin → Teams.')
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load')
@@ -92,16 +81,12 @@ export function ExitInterviewPage() {
   if (!user) return <Navigate to="/login" replace />
   if (!teamId) return <Navigate to="/" replace />
 
-  async function onCreate(event: FormEvent) {
-    event.preventDefault()
-    if (!teamId || names.length === 0) return
+  async function onCreate() {
+    if (!teamId) return
     setBusy(true)
     setError(null)
     try {
-      const created = await createExitSession(teamId, {
-        participant_names: names,
-        questions_per_student: 3,
-      })
+      const created = await createExitSession(teamId, { questions_per_student: 3 })
       setSession(created)
       await refreshList()
     } catch (err) {
@@ -184,78 +169,60 @@ export function ExitInterviewPage() {
     }
   }
 
-  const aside = (
-    <>
-      <h2 style={{ margin: '0 0 8px', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#475569' }}>
-        Sessions
-      </h2>
-      <ul className="session-list">
-        {sessions.map((s) => (
-          <li key={s.id}>
-            <button
-              type="button"
-              className={session?.id === s.id ? 'active ghost' : 'ghost'}
-              onClick={() => {
-                void fetchExitSession(s.id).then(setSession)
-                setReport(null)
-              }}
-            >
-              {s.id.slice(0, 8)}
-              <span>{s.status}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <p className="hint" style={{ marginTop: 12 }}>
-        <Link to="/">Group details</Link>
-      </p>
-    </>
-  )
-
-  const tabs = [
-    { to: '/', label: 'Overview', end: true },
-    { to: `/teams/${teamId}/exit`, label: 'Interview', end: true },
-    { to: '/policy', label: 'Policy', end: true },
-  ]
+  const aside =
+    sessions.length > 0 ? (
+      <>
+        <h2
+          style={{
+            margin: '0 0 8px',
+            fontSize: 13,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            color: '#475569',
+          }}
+        >
+          Sessions
+        </h2>
+        <ul className="session-list">
+          {sessions.map((s) => (
+            <li key={s.id}>
+              <button
+                type="button"
+                className={session?.id === s.id ? 'active ghost' : 'ghost'}
+                onClick={() => {
+                  void fetchExitSession(s.id).then(setSession)
+                  setReport(null)
+                }}
+              >
+                {s.id.slice(0, 8)}
+                <span>{s.status}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </>
+    ) : null
 
   return (
     <CourseShell
-      title="Technical examiner"
-      subtitle={`Shared login${session ? ` · ${session.status}` : ''}`}
+      title="Exit interview"
+      subtitle={session ? session.status : setupHint}
       aside={aside}
-      tabs={tabs}
     >
       <div className="stack">
         {error && <p className="error">{error}</p>}
 
-        <section className="surface">
-          <h2>Start interview</h2>
-          <p className="hint" style={{ marginBottom: 12 }}>
-            Group repo and scenario come from Overview. Enter each group member’s real name (one per
-            line).
-          </p>
-          <p className="muted-row" style={{ marginBottom: 12 }}>
-            <span>{repoHint}</span>
-          </p>
-          <form className="auth-form" onSubmit={onCreate}>
-            <label>
-              Group member name{names.length === 1 ? '' : 's'}
-              <textarea
-                value={participantNames}
-                onChange={(e) => setParticipantNames(e.target.value)}
-                rows={3}
-                placeholder={'Alex Rivera\nJordan Lee'}
-                required
-              />
-            </label>
-            <button type="submit" disabled={busy || !repoReady || names.length === 0}>
-              Create exit interview
-            </button>
-          </form>
-        </section>
-
         {!session ? (
-          <p className="hint">Select or create a session to continue.</p>
+          <section className="surface">
+            <h2>Start</h2>
+            <p className="hint" style={{ marginBottom: 12 }}>
+              Member names and repository come from Admin. Consent, then answer questions for each
+              teammate in turn.
+            </p>
+            <button type="button" disabled={busy || !ready} onClick={() => void onCreate()}>
+              {busy ? 'Starting…' : 'Start exit interview'}
+            </button>
+          </section>
         ) : (
           <section className="surface">
             <h2>Live session</h2>
@@ -268,10 +235,10 @@ export function ExitInterviewPage() {
 
             <div className="export-row" style={{ marginBottom: 12 }}>
               <button type="button" className="ghost" disabled={busy} onClick={() => void onConsent()}>
-                Give consent (all)
+                Give consent
               </button>
               <button type="button" className="ghost" disabled={busy} onClick={() => void onStart()}>
-                Start
+                Begin questions
               </button>
               <button type="button" className="ghost" disabled={busy} onClick={() => void onNext()}>
                 Next question
@@ -334,18 +301,6 @@ export function ExitInterviewPage() {
                 consentGranted={session.consent_status === 'granted'}
               />
             </div>
-
-            <h3 style={{ marginTop: 16 }}>Participants</h3>
-            <ul className="team-list">
-              {session.participants.map((p) => (
-                <li key={p.user_id}>
-                  <strong>{p.display_name ?? `Participant ${p.turn_order + 1}`}</strong>
-                  <span>
-                    consent {p.consent_status} · turn {p.turn_order}
-                  </span>
-                </li>
-              ))}
-            </ul>
 
             {report != null && (
               <>

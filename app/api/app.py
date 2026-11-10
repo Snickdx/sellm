@@ -168,6 +168,11 @@ async def _app_lifespan(_app: FastAPI):
             )
     except Exception:
         pass
+    try:
+        with conversation_store.engine.begin() as conn:
+            conn.exec_driver_sql("ALTER TABLE se_teams ADD COLUMN participant_names JSON")
+    except Exception:
+        pass
     Path(os.getenv("STORAGE_RECORDINGS_DIR", "./storage/recordings")).mkdir(parents=True, exist_ok=True)
     seed_info = seed_scenarios(engine=conversation_store.engine)
     print(
