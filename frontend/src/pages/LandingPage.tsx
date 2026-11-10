@@ -261,7 +261,7 @@ export function LandingPage() {
             </button>
           </form>
           <p className="hint" style={{ marginTop: 14 }}>
-            <a href="/">Back to requirements chat</a>
+            <a href="/req">Requirements chat</a>
           </p>
         </section>
       </div>

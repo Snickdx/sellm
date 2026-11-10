@@ -55,7 +55,7 @@ export function CourseShell({
           </div>
 
           <nav className="app-nav" aria-label="Primary" onClick={closeNav}>
-            <a href="/">Req Interviews</a>
+            <a href="/req">Req Interviews</a>
             <span className="active" aria-current="page">
               Exit interviews
             </span>

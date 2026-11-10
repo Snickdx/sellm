@@ -1145,7 +1145,7 @@
       <div class="actions" style="margin-top:12px;">
         <button type="button" class="btn btn-primary" id="saveTeamDetailsBtn">Save group details</button>
         <button type="button" class="btn btn-secondary" id="deleteTeamBtn">Delete team</button>
-        <a class="btn btn-secondary" href="/course/teams/${encodeURIComponent(team.id)}/exit/">Open interview</a>
+        <a class="btn btn-secondary" href="/teams/${encodeURIComponent(team.id)}/exit">Open interview</a>
       </div>
       <div id="teamMemberStatus" class="status"></div>
     `;
