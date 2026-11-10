@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.course.examiner.scorer import score_session
+from app.examiner.scorer import score_session
 from tests.fixtures.exit_transcripts.bands_loader import (
     REQUIRED_COMPETENCIES,
     build_band_bundle,

@@ -277,15 +277,16 @@ async def list_user_conversations(user_id: int, request: Request):
     user = store.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    convos = store.list_conversations_for_user(user_id)
+    counts = store.conversation_message_counts([c.id for c in convos])
     out: List[AdminConversationSummary] = []
-    for convo in store.list_conversations_for_user(user_id):
-        messages = store.get_messages(convo.id)
+    for convo in convos:
         out.append(
             AdminConversationSummary(
                 id=convo.id,
                 title=convo.title,
                 scenario_slug=getattr(convo, "scenario_slug", None),
-                message_count=len(messages),
+                message_count=int(counts.get(convo.id, 0)),
                 created_at=convo.created_at.isoformat(),
                 updated_at=convo.updated_at.isoformat(),
             )
@@ -477,7 +478,7 @@ async def set_app_keys(body: AdminAppKeysSetRequest, request: Request):
 async def reindex_scenarios(request: Request):
     """Reload YAML scenario packages and refresh vector + graph indexes (and in-memory yaml/direct packs)."""
     _require_admin(request)
-    from app.course.indexing import reload_and_index_scenarios
+    from app.indexing import reload_and_index_scenarios
 
     store = _store(request)
     rag_systems = getattr(request.app.state, "rag_systems", None) or {}

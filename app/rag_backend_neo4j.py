@@ -17,10 +17,12 @@ warnings.filterwarnings(
     module=r"huggingface_hub\.file_download",
 )
 
+import hashlib
 import pandas as pd
-from sentence_transformers import SentenceTransformer
-from typing import List, Dict
+from typing import List, Dict, Optional
 import numpy as np
+
+from app.embeddings import get_embedding_model
 
 try:
     from neo4j import GraphDatabase
@@ -54,10 +56,12 @@ class RequirementsRAGNeo4j:
             raise ImportError("neo4j package required. Install with: pip install neo4j")
         
         self.excel_file = excel_file
+        self._scenario_graph_hash: Optional[str] = None
+        self._vector_index_ready = False
         
-        # Initialize embedding model
+        # Shared embedding singleton (avoid dual SentenceTransformer loads)
         print("Loading embedding model...")
-        self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.embedding_model = get_embedding_model()
         
         # Initialize Neo4j
         print("Connecting to Neo4j...")
@@ -72,6 +76,8 @@ class RequirementsRAGNeo4j:
         except Exception as e:
             print(f"⚠ Neo4j connection failed: {e}")
             raise
+
+        self._ensure_vector_index()
         
         # Load data if database is empty
         node_count = self._count_nodes()
@@ -219,7 +225,30 @@ class RequirementsRAGNeo4j:
             print(f"Error loading requirements: {e}")
             raise
     
-    def upsert_scenario_graph(self, packages) -> int:
+    def _ensure_vector_index(self) -> None:
+        """Create a Neo4j vector index for Excel embeddings when the server supports it."""
+        try:
+            with self.driver.session() as session:
+                session.run(
+                    """
+                    CREATE VECTOR INDEX excel_embeddings IF NOT EXISTS
+                    FOR (n:Requirement)
+                    ON n.embedding
+                    OPTIONS {
+                      indexConfig: {
+                        `vector.dimensions`: 384,
+                        `vector.similarity_function`: 'cosine'
+                      }
+                    }
+                    """
+                )
+            self._vector_index_ready = True
+            print("✓ Neo4j vector index excel_embeddings ready")
+        except Exception as exc:  # noqa: BLE001 — older Neo4j / missing labels
+            self._vector_index_ready = False
+            print(f"⚠ Neo4j vector index unavailable (will use capped fallback): {exc}")
+
+    def upsert_scenario_graph(self, packages, *, content_hash: Optional[str] = None) -> int:
         """Load the generalized YAML scenario graph into Neo4j.
 
         Node types: YamlScenario, YamlPersona, YamlFact, YamlSystemRole,
@@ -230,7 +259,17 @@ class RequirementsRAGNeo4j:
 
         Returns total relationship count created for YAML scenarios.
         """
-        from app.course.scenarios.filter import facts_for_persona
+        from app.scenarios.filter import facts_for_persona
+
+        digest = content_hash or hashlib.sha256(
+            "|".join(
+                f"{p.meta.slug}:{p.meta.version}:{len(p.personas)}:{len(p.facts)}"
+                for p in packages
+            ).encode("utf-8")
+        ).hexdigest()
+        if self._scenario_graph_hash == digest:
+            print("✓ Scenario graph unchanged — skipping Neo4j reindex")
+            return 0
 
         edges = 0
         with self.driver.session() as session:
@@ -503,6 +542,7 @@ class RequirementsRAGNeo4j:
                         )
                         edges += 1
 
+        self._scenario_graph_hash = digest
         print(f"✓ Indexed {edges} YAML scenario graph relationships into Neo4j")
         return edges
 
@@ -600,56 +640,95 @@ class RequirementsRAGNeo4j:
             return results
 
     def _vector_search(self, query_embedding: List[float], detected_sheets: List[str], n_results: int) -> List[Dict]:
-        """Vector search using cosine similarity on stored Excel embeddings (excludes Yaml*)."""
+        """Vector search via Neo4j index when available; otherwise capped Python cosine."""
         with self.driver.session() as session:
+            if self._vector_index_ready:
+                try:
+                    result = session.run(
+                        """
+                        CALL db.index.vector.queryNodes('excel_embeddings', $k, $embedding)
+                        YIELD node, score
+                        WHERE NOT node:YamlFact AND NOT node:YamlPersona AND NOT node:YamlScenario
+                          AND NOT node:YamlSystemRole AND NOT node:YamlCapability
+                          AND NOT node:YamlDecision AND NOT node:YamlSourceCue
+                        RETURN node AS n, score
+                        LIMIT $k
+                        """,
+                        k=max(n_results * 3, n_results),
+                        embedding=query_embedding,
+                    )
+                    results = []
+                    for record in result:
+                        node = record["n"]
+                        score = float(record["score"])
+                        sheet = node.get("sheet", "")
+                        if detected_sheets:
+                            labels = {self._get_sheet_type(s) for s in detected_sheets}
+                            if labels and self._get_sheet_type(sheet) not in labels:
+                                continue
+                        results.append(
+                            {
+                                "document": node.get("text", ""),
+                                "metadata": {
+                                    "node_id": node.get("node_id"),
+                                    "sheet": sheet,
+                                    "sheet_type": self._get_sheet_type(sheet),
+                                    "properties": dict(node),
+                                },
+                                "distance": 1 - score,
+                            }
+                        )
+                        if len(results) >= n_results:
+                            break
+                    if results:
+                        return results
+                except Exception as exc:  # noqa: BLE001
+                    print(f"⚠ Neo4j vector query failed, using capped fallback: {exc}")
+                    self._vector_index_ready = False
+
             yaml_exclude = (
                 "NOT n:YamlFact AND NOT n:YamlPersona AND NOT n:YamlScenario "
                 "AND NOT n:YamlSystemRole AND NOT n:YamlCapability "
                 "AND NOT n:YamlDecision AND NOT n:YamlSourceCue"
             )
-            label_filter = f"WHERE {yaml_exclude}"
+            label_filter = f"WHERE {yaml_exclude} AND n.embedding IS NOT NULL"
             if detected_sheets:
                 labels = [self._get_sheet_type(sheet) for sheet in detected_sheets]
-                # Prefer labeled Excel nodes when intent is detected
                 or_labels = " OR ".join(f"n:{label}" for label in labels)
-                label_filter = f"WHERE ({or_labels}) AND {yaml_exclude}"
+                label_filter = f"WHERE ({or_labels}) AND {yaml_exclude} AND n.embedding IS NOT NULL"
 
             query = f"""
             MATCH (n)
             {label_filter}
             RETURN n
-            LIMIT 1000
+            LIMIT 200
             """
-
             result = session.run(query)
-
             similarities = []
             for record in result:
                 node = record["n"]
-                if "embedding" not in node:
+                node_embedding = node.get("embedding")
+                if not node_embedding:
                     continue
-
-                node_embedding = node["embedding"]
                 similarity = np.dot(query_embedding, node_embedding) / (
                     np.linalg.norm(query_embedding) * np.linalg.norm(node_embedding) + 1e-9
                 )
                 similarities.append((similarity, node))
-
             similarities.sort(key=lambda x: x[0], reverse=True)
-
             results = []
             for similarity, node in similarities[:n_results]:
-                results.append({
-                    "document": node.get("text", ""),
-                    "metadata": {
-                        "node_id": node.get("node_id"),
-                        "sheet": node.get("sheet", ""),
-                        "sheet_type": self._get_sheet_type(node.get("sheet", "")),
-                        "properties": dict(node)
-                    },
-                    "distance": 1 - similarity
-                })
-
+                results.append(
+                    {
+                        "document": node.get("text", ""),
+                        "metadata": {
+                            "node_id": node.get("node_id"),
+                            "sheet": node.get("sheet", ""),
+                            "sheet_type": self._get_sheet_type(node.get("sheet", "")),
+                            "properties": dict(node),
+                        },
+                        "distance": 1 - similarity,
+                    }
+                )
             return results
 
     def _get_related_nodes(self, node_id: str, limit: int = 2) -> List[Dict]:

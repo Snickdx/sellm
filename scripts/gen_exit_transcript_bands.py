@@ -565,7 +565,7 @@ def write_fixtures() -> None:
 
 def validate() -> int:
     sys.path.insert(0, str(ROOT))
-    from app.course.examiner.scorer import score_session
+    from app.examiner.scorer import score_session
     from tests.fixtures.exit_transcripts.bands_loader import build_band_bundle, list_scenario_slugs
 
     failed = 0

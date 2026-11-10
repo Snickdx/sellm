@@ -11,7 +11,7 @@ sellm-hosted COMP 3613 pilot ops. Prefer `docs/EXIT_INTERVIEWS.md` for the exit-
 - [ ] Configure LLM: Ollama and/or platform OpenAI keys in Admin → Keys; set student default model.
 - [ ] Optional: `GITHUB_TOKEN` for private student repos.
 - [ ] Optional voice: LiveKit env vars (see `docs/EXIT_INTERVIEWS.md`).
-- [ ] Confirm private gold is present: `instructor/private/<slug>/` and `app/course/examiner/knowledge/<slug>.yaml`.
+- [ ] Confirm private gold is present: `instructor/private/<slug>/` and `app/examiner/knowledge/<slug>.yaml`.
 
 ## Daily pilot ops
 
@@ -32,6 +32,6 @@ sellm-hosted COMP 3613 pilot ops. Prefer `docs/EXIT_INTERVIEWS.md` for the exit-
 | --- | --- |
 | `instructor/private/<slug>/defect-manifest.yaml` | Authoring SoT (defects + intended pattern) |
 | `instructor/private/<slug>/tests/` | Hidden regression vs sibling `templates/<slug>/` |
-| `app/course/examiner/knowledge/<slug>.yaml` | Runtime judge packs |
+| `app/examiner/knowledge/<slug>.yaml` | Runtime judge packs |
 
 After editing a manifest, update the matching knowledge YAML so provisional scoring stays accurate.

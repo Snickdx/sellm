@@ -1,4 +1,9 @@
-"""Scenario pack and stakeholder simulation prompts."""
+"""Legacy Excel scenario pack path.
+
+Prefer YAML packages under ``app.scenarios`` for new work. This module remains
+as a compatibility layer for Excel-backed RAG / direct modes until the importer
+fully replaces ``data.xlsx``.
+"""
 
 from app.scenario.scenario_pack import ScenarioPack, load_scenario_pack
 from app.scenario.stakeholder_prompt import (

@@ -115,19 +115,25 @@ class HybridKnowledgeService:
                 routing=routing,
             )
 
-        # Blend — primary by score, enrich from secondary
+        # Blend — query both backends concurrently, then merge
+        from concurrent.futures import ThreadPoolExecutor
+
         if decision.neo4j_score >= decision.chroma_score:
-            primary = _search_backend(self.neo4j_rag, query, k, **search_kw)
-            _tag_backend(primary, "neo4j")
-            secondary = _search_backend(self.chroma_rag, query, max(1, k // 2), **search_kw)
-            _tag_backend(secondary, "chroma")
             primary_name, secondary_name = "neo4j", "chroma"
+            primary_rag, secondary_rag = self.neo4j_rag, self.chroma_rag
+            primary_k, secondary_k = k, max(1, k // 2)
         else:
-            primary = _search_backend(self.chroma_rag, query, k, **search_kw)
-            _tag_backend(primary, "chroma")
-            secondary = _search_backend(self.neo4j_rag, query, max(1, k // 2), **search_kw)
-            _tag_backend(secondary, "neo4j")
             primary_name, secondary_name = "chroma", "neo4j"
+            primary_rag, secondary_rag = self.chroma_rag, self.neo4j_rag
+            primary_k, secondary_k = k, max(1, k // 2)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            fut_primary = pool.submit(_search_backend, primary_rag, query, primary_k, **search_kw)
+            fut_secondary = pool.submit(_search_backend, secondary_rag, query, secondary_k, **search_kw)
+            primary = fut_primary.result()
+            secondary = fut_secondary.result()
+        _tag_backend(primary, primary_name)
+        _tag_backend(secondary, secondary_name)
 
         merged = _merge_results(primary, secondary, max_items=k)
         routing = route_to_dict(decision)

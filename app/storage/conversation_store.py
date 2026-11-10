@@ -4,13 +4,14 @@ Conversation storage using SQLModel — SQLite locally or PostgreSQL in producti
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
-import hashlib
 import os
-from sqlmodel import Field, Session, SQLModel, create_engine, select
+from sqlmodel import Field, Session, SQLModel, create_engine, select, col, func
+
+from app.security.passwords import hash_password, needs_rehash, verify_password
 
 
 def _utc_now() -> datetime:
@@ -91,6 +92,7 @@ class AuthSession(SQLModel, table=True):
     token: str = Field(unique=True, index=True)
     user_id: int = Field(index=True)
     created_at: datetime = Field(default_factory=_utc_now, index=True)
+    expires_at: Optional[datetime] = Field(default=None, index=True)
 
 class UserApiKey(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -137,8 +139,15 @@ class UserApiKeyProvider(SQLModel, table=False):
     has_key: bool = False
 
 
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
+def _env_flag(name: str, default: str = "") -> bool:
+    return (os.getenv(name, default) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def session_ttl_hours() -> int:
+    try:
+        return max(1, int(os.getenv("SESSION_TTL_HOURS", "12")))
+    except ValueError:
+        return 12
 
 
 class ConversationStore:
@@ -168,7 +177,14 @@ class ConversationStore:
         self._ensure_user_token_columns()
         self._ensure_user_admin_columns()
         self._ensure_conversation_scenario_column()
+        self._ensure_auth_session_expiry_column()
         self._ensure_app_settings_row()
+        try:
+            from app.models.schema_version import ensure_schema_version
+
+            ensure_schema_version(self.engine)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[warn] Could not ensure schema version: {exc}")
 
     def _ensure_user_token_columns(self) -> None:
         """Add token_limit / tokens_used on existing DBs created before quotas existed."""
@@ -223,32 +239,32 @@ class ConversationStore:
             print(f"[warn] Could not ensure user admin columns: {exc}")
 
     def _backfill_user_roles(self) -> None:
-        """Assign roles for seeded accounts and cohort usernames on existing DBs."""
+        """Fill missing roles for cohort usernames. Never re-promote seeded admins on boot."""
         with Session(self.engine) as session:
             changed = False
             for user in session.exec(select(User)).all():
-                desired = self.default_role_for_username(
-                    user.username,
-                    is_admin=bool(getattr(user, "is_admin", False)),
-                    existing_role=getattr(user, "role", None),
-                )
-                current = normalize_role(getattr(user, "role", None), is_admin=bool(user.is_admin))
-                # Only force known seeded/cohort accounts; leave custom roles alone if already valid
+                current_raw = (getattr(user, "role", None) or "").strip()
+                current = normalize_role(current_raw, is_admin=bool(user.is_admin))
                 uname = (user.username or "").strip().lower()
-                force = (
-                    uname in self.DEFAULT_ADMIN_USERNAMES
-                    or uname in self.DEFAULT_TESTER_USERNAMES
-                    or uname.startswith("trainee")
-                    or not (getattr(user, "role", None) or "").strip()
-                )
-                if force and current != desired:
-                    user.role = desired
-                    user.is_admin = desired == ROLE_ADMIN
+                # Only fill empty roles for trainees / unset rows — do not overwrite demotions.
+                if current_raw:
+                    if bool(user.is_admin) != (current == ROLE_ADMIN):
+                        user.is_admin = current == ROLE_ADMIN
+                        user.role = current
+                        session.add(user)
+                        changed = True
+                    continue
+                if uname.startswith("trainee"):
+                    user.role = ROLE_STUDENT
+                    user.is_admin = False
                     session.add(user)
                     changed = True
-                elif bool(user.is_admin) != (current == ROLE_ADMIN):
-                    user.is_admin = current == ROLE_ADMIN
-                    user.role = current
+                elif bool(user.is_admin):
+                    user.role = ROLE_ADMIN
+                    session.add(user)
+                    changed = True
+                else:
+                    user.role = ROLE_STUDENT
                     session.add(user)
                     changed = True
             if changed:
@@ -326,6 +342,20 @@ class ConversationStore:
                 if dirty:
                     session.add(row)
                     session.commit()
+
+    def _ensure_auth_session_expiry_column(self) -> None:
+        from sqlalchemy import inspect, text
+
+        try:
+            insp = inspect(self.engine)
+            if "authsession" not in insp.get_table_names():
+                return
+            cols = {c["name"] for c in insp.get_columns("authsession")}
+            if "expires_at" not in cols:
+                with self.engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE authsession ADD COLUMN expires_at TIMESTAMP"))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[warn] Could not ensure authsession.expires_at: {exc}")
 
     def _ensure_conversation_scenario_column(self) -> None:
         """Add scenario_slug on existing DBs created before scenario-locked chats."""
@@ -408,8 +438,24 @@ class ConversationStore:
             session.refresh(msg)
             return msg
 
-    def get_messages(self, conversation_id: str) -> List[ConversationMessage]:
+    def get_messages(
+        self,
+        conversation_id: str,
+        *,
+        limit: Optional[int] = None,
+    ) -> List[ConversationMessage]:
         with Session(self.engine) as session:
+            if limit is not None and limit > 0:
+                # Fetch newest `limit` rows, then return chronological order.
+                stmt = (
+                    select(ConversationMessage)
+                    .where(ConversationMessage.conversation_id == conversation_id)
+                    .order_by(ConversationMessage.created_at.desc())
+                    .limit(limit)
+                )
+                rows = list(session.exec(stmt).all())
+                rows.reverse()
+                return rows
             stmt = (
                 select(ConversationMessage)
                 .where(ConversationMessage.conversation_id == conversation_id)
@@ -702,11 +748,39 @@ class ConversationStore:
         with Session(self.engine) as session:
             return list(session.exec(select(User).order_by(User.username)).all())
 
+    def find_users_with_default_passwords(self) -> List[str]:
+        """Return usernames still using a known default plaintext password (legacy SHA-256 only)."""
+        import hashlib
+
+        legacy = {
+            hashlib.sha256(password.encode()).hexdigest(): username
+            for username, password in self.DEFAULT_USERS
+        }
+        found: List[str] = []
+        with Session(self.engine) as session:
+            for user in session.exec(select(User)).all():
+                ph = (user.password_hash or "").strip()
+                if ph in legacy:
+                    found.append(user.username)
+                    continue
+                # Also check if username is a default seed and password still verifies as default
+                for username, password in self.DEFAULT_USERS:
+                    if user.username == username and verify_password(password, ph):
+                        found.append(user.username)
+                        break
+        return sorted(set(found))
+
     def seed_users(self, extra: Optional[List[tuple[str, str]]] = None) -> List[str]:
-        """Seed default users and sync nick/wayne/claudine/snick roles. Returns usernames created."""
-        users = list(self.DEFAULT_USERS)
+        """Seed default users only when ALLOW_DEFAULT_SEED_USERS=1. Never re-promote roles."""
+        allow_seed = _env_flag("ALLOW_DEFAULT_SEED_USERS")
+        users: List[tuple[str, str]] = []
+        if allow_seed:
+            users.extend(self.DEFAULT_USERS)
         if extra:
             users.extend(extra)
+        if not users:
+            self._backfill_user_roles()
+            return []
         created: List[str] = []
         with Session(self.engine) as session:
             for username, password in users:
@@ -728,10 +802,7 @@ class ConversationStore:
                         )
                     )
                     created.append(uname)
-                else:
-                    existing.role = role
-                    existing.is_admin = role == ROLE_ADMIN
-                    session.add(existing)
+                # Existing users: leave role/password alone (no boot-time re-promotion).
             session.commit()
         self._backfill_user_roles()
         return created
@@ -841,10 +912,21 @@ class ConversationStore:
 
     def count_conversations_for_user(self, user_id: int) -> int:
         with Session(self.engine) as session:
+            count = session.exec(
+                select(func.count()).select_from(Conversation).where(Conversation.user_id == user_id)
+            ).one()
+            return int(count or 0)
+
+    def conversation_message_counts(self, conversation_ids: List[str]) -> Dict[str, int]:
+        if not conversation_ids:
+            return {}
+        with Session(self.engine) as session:
             rows = session.exec(
-                select(Conversation).where(Conversation.user_id == user_id)
+                select(ConversationMessage.conversation_id, func.count())
+                .where(col(ConversationMessage.conversation_id).in_(conversation_ids))
+                .group_by(ConversationMessage.conversation_id)
             ).all()
-            return len(list(rows))
+            return {str(cid): int(n or 0) for cid, n in rows}
 
     def list_conversations_for_user(self, user_id: int, limit: int = 200) -> List[Conversation]:
         with Session(self.engine) as session:
@@ -1023,9 +1105,14 @@ class ConversationStore:
             user = session.exec(
                 select(User).where(User.username == username)
             ).first()
-            if user and user.password_hash == hash_password(password):
-                return user
-            return None
+            if not user or not verify_password(password, user.password_hash):
+                return None
+            if needs_rehash(user.password_hash):
+                user.password_hash = hash_password(password)
+                session.add(user)
+                session.commit()
+                session.refresh(user)
+            return user
 
     def get_user_by_id(self, user_id: int) -> Optional[User]:
         with Session(self.engine) as session:
@@ -1033,17 +1120,29 @@ class ConversationStore:
 
     def create_session(self, user_id: int) -> str:
         token = str(uuid4())
+        now = _utc_now()
+        expires = now + timedelta(hours=session_ttl_hours())
         with Session(self.engine) as session:
-            sess = AuthSession(token=token, user_id=user_id)
+            sess = AuthSession(token=token, user_id=user_id, created_at=now, expires_at=expires)
             session.add(sess)
             session.commit()
         return token
 
     def get_session(self, token: str) -> Optional[AuthSession]:
         with Session(self.engine) as session:
-            return session.exec(
+            sess = session.exec(
                 select(AuthSession).where(AuthSession.token == token)
             ).first()
+            if sess is None:
+                return None
+            expires = getattr(sess, "expires_at", None)
+            if expires is not None:
+                exp = expires if expires.tzinfo else expires.replace(tzinfo=timezone.utc)
+                if exp < _utc_now():
+                    session.delete(sess)
+                    session.commit()
+                    return None
+            return sess
 
     def delete_session(self, token: str) -> None:
         with Session(self.engine) as session:

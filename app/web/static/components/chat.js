@@ -1,22 +1,49 @@
 (() => {
-  // ── Lightweight markdown renderer ───────────────────────────
+  // LEGACY UI — quarantined for security fixes only.
+  // Prefer the React /course/ SPA for new features; this file remains for
+  // stakeholder chat until the dual-UI debt is retired (hardening roadmap M4).
+  // ── Lightweight markdown renderer (treat LLM/user HTML as untrusted) ──
+  function escapeHtml(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+  function safeHref(url) {
+    const raw = String(url || "").trim();
+    if (!/^https?:\/\//i.test(raw)) return "#";
+    // Block attribute breakout / javascript: after decoding common tricks
+    if (/["'<>`]/.test(raw)) return "#";
+    return raw;
+  }
   function renderMarkdown(text) {
-    const escapeHtml = (s) => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     const codeBlockRe = /```(\w*)\n([\s\S]*?)```/g;
     const inlineCodeRe = /`([^`]+)`/g;
     const boldRe = /\*\*([^*]+)\*\*/g;
     const italicRe = /\*([^*]+)\*/g;
     const linkRe = /\[([^\]]+)\]\(([^)]+)\)/g;
     const headingRe = /^(#{1,6})\s+(.*)$/gm;
-    const ulRe = /^[\s]*[-*]\s+(.*)$/gm;
-    const olRe = /^\s*\d+\.\s+(.*)$/gm;
 
-    let html = escapeHtml(text);
+    // Extract links from raw text first so href policy sees undecoded input.
+    const linkPlaceholders = [];
+    let withLinks = String(text || "").replace(linkRe, (_m, label, href) => {
+      const token = `\u0000LINK${linkPlaceholders.length}\u0000`;
+      linkPlaceholders.push(
+        `<a href="${escapeHtml(safeHref(href))}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`
+      );
+      return token;
+    });
+
+    let html = escapeHtml(withLinks);
     html = html.replace(codeBlockRe, '<pre><code>$2</code></pre>');
     html = html.replace(inlineCodeRe, '<code>$1</code>');
     html = html.replace(boldRe, '<strong>$1</strong>');
     html = html.replace(italicRe, '<em>$1</em>');
-    html = html.replace(linkRe, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    linkPlaceholders.forEach((anchor, i) => {
+      html = html.replace(escapeHtml(`\u0000LINK${i}\u0000`), anchor);
+    });
     html = html.replace(headingRe, (_m, hashes, content) => {
       const level = hashes.length;
       return `<h${level}>${content}</h${level}>`;
@@ -896,7 +923,14 @@
       const row = document.createElement("div");
       row.className = "reflection-chat-msg";
       const role = m.role === "assistant" ? "Assistant" : "You";
-      row.innerHTML = `<strong>${role}:</strong> ${String(m.content || "").replace(/\n/g, "<br>")}`;
+      const strong = document.createElement("strong");
+      strong.textContent = `${role}:`;
+      row.appendChild(strong);
+      row.appendChild(document.createTextNode(" "));
+      const body = document.createElement("span");
+      body.textContent = String(m.content || "");
+      body.style.whiteSpace = "pre-wrap";
+      row.appendChild(body);
       reflectionChatMessages.appendChild(row);
     });
     reflectionChatMessages.scrollTop = reflectionChatMessages.scrollHeight;

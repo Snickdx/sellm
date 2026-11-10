@@ -9,7 +9,7 @@ description: >-
 compatibility: >-
   Requires sellm repository ingestion APIs and a RepositorySubmission at a
   pinned SHA. Does not execute untrusted repo code. Course rubrics and planner
-  live in sellm (app/course/examiner).
+  live in sellm (app/examiner).
 metadata:
   role: instructor-authoring
   owns: sellm
@@ -17,7 +17,7 @@ metadata:
 
 # interview-designer
 
-Help an instructor turn a **frozen repository snapshot** into a balanced, evidence-grounded interview plan. Runtime indexing and retrieval live in **sellm** (`app/course/repo/`, exit-interview APIs); this skill orchestrates planning only.
+Help an instructor turn a **frozen repository snapshot** into a balanced, evidence-grounded interview plan. Runtime indexing and retrieval live in **sellm** (`app/repo/`, exit-interview APIs); this skill orchestrates planning only.
 
 ## Absolute rules
 
@@ -38,7 +38,7 @@ Help an instructor turn a **frozen repository snapshot** into a balanced, eviden
 | `testing` | 15% |
 | `verification` | 10% |
 
-Prefer citing files from the scenario `focus_paths` in `app/course/examiner/knowledge/<slug>.yaml`.
+Prefer citing files from the scenario `focus_paths` in `app/examiner/knowledge/<slug>.yaml`.
 
 ## Workflow
 

@@ -551,7 +551,12 @@ Popular alternatives:
 │   ├── security/
 │   │   └── secret_store.py   # Fernet-encrypted API key storage
 │   ├── scenario/            # Excel scenario_pack, stakeholder_prompt, direct_model
-│   ├── course/              # YAML scenarios, persona chat, exit examiner APIs
+│   ├── scenarios/           # YAML scenario packages (loader, registry, validator)
+│   ├── chat/                # YAML persona chat / draft review
+│   ├── examiner/            # Exit-interview planner, scorer, judge knowledge
+│   ├── repo/                # Student repo ingest + retrieval
+│   ├── voice/               # LiveKit tokens / egress
+│   ├── models/              # Shared SQLModel tables + se_→flat migrate
 │   ├── llm_wrapper.py       # Stakeholder LLM generation (no template fallback)
 │   ├── llm_registry.py      # Model discovery, dropdown, Ollama name resolution
 │   ├── stakeholder_tone.py  # Plain-language post-processing for stakeholders
@@ -561,8 +566,15 @@ Popular alternatives:
 │   │   ├── hybrid.py
 │   │   └── router.py
 │   ├── api/
-│   │   ├── app.py           # FastAPI app and routes
-│   │   └── schemas.py       # API request/response models
+│   │   ├── app.py           # FastAPI app and route mounting
+│   │   ├── admin.py         # Admin routes
+│   │   ├── schemas.py       # Chat/auth API schemas
+│   │   ├── scenarios.py     # YAML scenario routes
+│   │   ├── teams.py         # Team / group-setup routes
+│   │   ├── repositories.py  # Repo freeze / analyze routes
+│   │   ├── exit_interviews.py
+│   │   ├── voice.py
+│   │   └── policy.py
 │   ├── storage/
 │   │   └── conversation_store.py # SQLModel + SQLite persistence
 │   ├── tweaks/

@@ -1,7 +1,7 @@
 """Unit tests for COMP 3613 exit-interview question planner."""
 
-from app.course.examiner.planner import generate_question_plan
-from app.course.examiner.scenario_focus import SCENARIO_SPECIAL_FEATURES, resolve_scenario_focus
+from app.examiner.planner import generate_question_plan
+from app.examiner.scenario_focus import SCENARIO_SPECIAL_FEATURES, resolve_scenario_focus
 
 
 def _tiny_index() -> dict:
@@ -86,7 +86,7 @@ def test_full_tree_has_five_competencies():
 def test_spawn_skip_alternate_promotes_follow_up():
     from sqlmodel import Session, SQLModel, create_engine
 
-    from app.course.examiner.state import spawn_skip_alternate
+    from app.examiner.state import spawn_skip_alternate
     from app.models.exit import InterviewQuestion
 
     engine = create_engine("sqlite://")

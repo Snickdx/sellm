@@ -27,12 +27,12 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("REPO_FIXTURE_ROOT", str(FIXTURE_ROOT))
     monkeypatch.setenv("STORAGE_RECORDINGS_DIR", str(recordings))
 
-    from app.course.settings import get_settings
+    from app.settings import get_settings
 
     get_settings.cache_clear()
 
     from app.storage.conversation_store import ConversationStore
-    from app.course.db import configure_engine
+    from app.db import configure_engine
     import app.models  # noqa: F401 — register SQLModel tables
     from sqlmodel import SQLModel
     from fastapi.testclient import TestClient
@@ -46,11 +46,17 @@ def client(tmp_path, monkeypatch):
     store.create_user("studenta", "password123", role="student")
     store.create_user("studentb", "password123", role="student")
 
-    # Import app after env is set; patch the module-level store
+    # Import app after env is set; patch the module-level store + services
     import app.api.app as app_module
+    from app.services.auth_service import AuthService
+    from app.services.quota_service import QuotaService
 
     app_module.conversation_store = store
+    app_module.auth_service = AuthService(store)
+    app_module.quota_service = QuotaService(store)
     app_module.app.state.conversation_store = store
+    app_module.app.state.auth_service = app_module.auth_service
+    app_module.app.state.quota_service = app_module.quota_service
     app_module.app.state.get_current_user = app_module._get_current_user
     configure_engine(store.engine)
 

@@ -17,24 +17,27 @@ warnings.filterwarnings(
     module=r"huggingface_hub\.file_download",
 )
 
+import hashlib
 import pandas as pd
 import chromadb
 from chromadb.config import Settings
-from sentence_transformers import SentenceTransformer
 import os
-from typing import List, Dict
+from typing import List, Dict, Optional
 import json
 import random
 import re
+
+from app.embeddings import get_embedding_model
 
 class RequirementsRAG:
     def __init__(self, excel_file: str, persist_directory: str = "./chroma_db_v2"):
         self.excel_file = excel_file
         self.persist_directory = persist_directory
         
-        # Initialize embedding model
+        # Shared embedding singleton (avoid dual SentenceTransformer loads)
         print("Loading embedding model...")
-        self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.embedding_model = get_embedding_model()
+        self._scenario_index_hash: Optional[str] = None
         
         # Initialize ChromaDB
         print("Initializing vector database...")
@@ -188,9 +191,17 @@ class RequirementsRAG:
         documents: List[str],
         metadatas: List[Dict],
         ids: List[str],
+        *,
+        content_hash: Optional[str] = None,
     ) -> None:
         """Replace/add persona-scoped YAML facts in the scenario_facts collection."""
         if not documents:
+            return
+        digest = content_hash or hashlib.sha256(
+            ("\n".join(ids) + "\n" + "\n".join(documents)).encode("utf-8")
+        ).hexdigest()
+        if self._scenario_index_hash == digest:
+            print("✓ Scenario vector index unchanged — skipping reindex")
             return
         # Clear previous YAML index so retired facts disappear
         try:
@@ -202,7 +213,7 @@ class RequirementsRAG:
             print(f"⚠ Could not clear scenario_facts collection: {e}")
 
         print(f"Indexing {len(documents)} YAML scenario persona facts into Chroma...")
-        embeddings = self.embedding_model.encode(documents, show_progress_bar=True)
+        embeddings = self.embedding_model.encode(documents, show_progress_bar=True, batch_size=64)
         batch_size = 100
         for i in range(0, len(documents), batch_size):
             end_idx = min(i + batch_size, len(documents))
@@ -212,6 +223,7 @@ class RequirementsRAG:
                 metadatas=metadatas[i:end_idx],
                 ids=ids[i:end_idx],
             )
+        self._scenario_index_hash = digest
         print(f"✓ Scenario fact collection now has {self.scenario_collection.count()} documents")
 
     def search_scenario(

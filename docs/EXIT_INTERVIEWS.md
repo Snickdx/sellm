@@ -61,7 +61,7 @@ Provisional scores use **answer text only**. Accent, appearance, and vocal confi
 Scenario gold (intended patterns, seeded defects, focus paths) lives in:
 
 - `instructor/private/<slug>/defect-manifest.yaml` — authoring SoT
-- `app/course/examiner/knowledge/<slug>.yaml` — runtime judge packs
+- `app/examiner/knowledge/<slug>.yaml` — runtime judge packs
 
 Do not put defect IDs or intended pattern names into student-facing prompts. See `docs/examiner-calibration.md` and `docs/known-limitations.md`.
 

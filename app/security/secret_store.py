@@ -13,14 +13,37 @@ from cryptography.fernet import Fernet, InvalidToken
 API_KEY_UNCHANGED = "__UNCHANGED__"
 
 
+def _env_flag(name: str) -> bool:
+    return (os.getenv(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_production() -> bool:
+    env = (os.getenv("ENVIRONMENT") or os.getenv("APP_ENV") or os.getenv("SELLM_ENV") or "").strip().lower()
+    if env in {"prod", "production"}:
+        return True
+    if env in {"dev", "development", "local", "test"}:
+        return False
+    return False
+
+
+def secrets_encryption_required() -> bool:
+    # Fail closed in production, or when explicitly required.
+    return _is_production() or _env_flag("REQUIRE_SECRETS_ENCRYPTION_KEY")
+
+
 def _fernet() -> Fernet:
     raw = (os.getenv("SECRETS_ENCRYPTION_KEY") or "").strip()
     if raw:
         try:
             return Fernet(raw.encode() if isinstance(raw, str) else raw)
-        except Exception:
-            pass
-    # Dev fallback — set SECRETS_ENCRYPTION_KEY in production.
+        except Exception as exc:
+            raise RuntimeError("Invalid SECRETS_ENCRYPTION_KEY") from exc
+    if secrets_encryption_required():
+        raise RuntimeError(
+            "SECRETS_ENCRYPTION_KEY is required in production. "
+            "Generate with: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
+    # Local/dev fallback only when explicitly allowed or not production-like.
     seed = (os.getenv("CONVERSATION_DB_URL") or "sellm-local-secrets").encode()
     key = base64.urlsafe_b64encode(hashlib.sha256(seed).digest())
     return Fernet(key)
@@ -33,14 +56,18 @@ def encrypt_secret(plain: str) -> str:
     return _fernet().encrypt(text.encode()).decode()
 
 
-def decrypt_secret(stored: str) -> str:
+def decrypt_secret(stored: str, *, allow_plaintext_legacy: bool = False) -> str:
     text = (stored or "").strip()
     if not text:
         return ""
     try:
         return _fernet().decrypt(text.encode()).decode()
     except (InvalidToken, ValueError):
-        # Legacy plaintext rows written before encryption was enabled.
+        # One-shot migration path for rows written before encryption.
+        if allow_plaintext_legacy or _env_flag("ALLOW_PLAINTEXT_API_KEYS"):
+            return text
+        if secrets_encryption_required():
+            raise RuntimeError("Stored API key is not decryptable with SECRETS_ENCRYPTION_KEY")
         return text
 
 
@@ -49,9 +76,10 @@ def mask_secret(value: str) -> str:
     text = (value or "").strip()
     if not text:
         return ""
-    if len(text) <= 8:
-        return "•" * 12
-    return f"{text[:4]}{'•' * min(len(text) - 7, 16)}{text[-3:]}"
+    if len(text) <= 4:
+        return "••••"
+    # Reveal only last 4 characters — never the live key prefix.
+    return f"{'•' * min(12, max(4, len(text) - 4))}{text[-4:]}"
 
 
 def is_unchanged_api_key(value: Optional[str]) -> bool:

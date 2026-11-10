@@ -2,7 +2,7 @@
 
 Authoritative defect manifests and hidden regression tests for COMP 3613 flawed starters.
 
-This tree is the **canonical SoT inside sellm** — sellm does not read `seproject/instructor/` at runtime or authoring time. Runtime judge packs derived from these manifests live in `app/course/examiner/knowledge/`.
+This tree is the **canonical SoT inside sellm** — sellm does not read `seproject/instructor/` at runtime or authoring time. Runtime judge packs derived from these manifests live in `app/examiner/knowledge/`.
 
 **Never** copy these into `templates/<slug>/`, student remotes, or student-facing prompts.
 
@@ -10,7 +10,7 @@ This tree is the **canonical SoT inside sellm** — sellm does not read `seproje
 | --- | --- |
 | `private/<slug>/defect-manifest.yaml` | Seeded defects, severity, evidence, intended design-pattern fix |
 | `private/<slug>/tests/test_seeded_defects.py` | Hidden checks against sibling `templates/<slug>/` |
-| `../app/course/examiner/knowledge/<slug>.yaml` | Runtime judge gold derived from these manifests |
+| `../app/examiner/knowledge/<slug>.yaml` | Runtime judge gold derived from these manifests |
 
 ## Run hidden defect tests
 
@@ -24,6 +24,6 @@ python -m pytest ..\..\sellm\instructor\private\job-board\tests -q
 
 ## Sync into examiner knowledge packs
 
-After editing a manifest, update `app/course/examiner/knowledge/<slug>.yaml`
+After editing a manifest, update `app/examiner/knowledge/<slug>.yaml`
 (`intended_pattern`, `architecture_defect`, `defects`, `focus_paths`, `judge_concepts`).
 The exit-interview scorer loads those packs — not the raw manifests — at finish time.

@@ -74,21 +74,21 @@ from app.storage.conversation_store import (
 )
 from app.tweaks.behavior_tweaks import BehaviorTweaksStore
 from app.llm_wrapper import LLMWrapper
-from app.course.seed import seed_scenarios
-from app.course.scenarios.registry import scenario_registry
-from app.course.chat.persona_service import generate_validated_reply, get_persona
-from app.course.api.scenarios import router as scenarios_router
-from app.course.api.teams import router as teams_router
-from app.course.api.repositories import router as repositories_router
-from app.course.api.exit_interviews import router as exit_interviews_router
-from app.course.api.voice import router as voice_router
-from app.course.api.policy import router as policy_router
-from app.course.indexing import index_all_scenarios
-from app.course.scenario_pack_adapter import pack_from_persona
+from app.seed import seed_scenarios
+from app.scenarios.registry import scenario_registry
+from app.chat.persona_service import generate_validated_reply, get_persona
+from app.api.scenarios import router as scenarios_router
+from app.api.teams import router as teams_router
+from app.api.repositories import router as repositories_router
+from app.api.exit_interviews import router as exit_interviews_router
+from app.api.voice import router as voice_router
+from app.api.policy import router as policy_router
+from app.indexing import index_all_scenarios
+from app.scenario_pack_adapter import pack_from_persona
 import app.models  # noqa: F401 — register course SQLModel tables
-from app.course.db import configure_engine as configure_course_engine
+from app.db import configure_engine
 from app.models.migrate import ensure_course_columns, migrate_se_prefix
-from sqlmodel import SQLModel as _CourseSQLModel
+from sqlmodel import SQLModel
 from app.llm_registry import (
     choice_label,
     default_choice_id,
@@ -107,6 +107,11 @@ from app.security.secret_store import (
     is_unchanged_api_key,
     mask_secret,
 )
+from app.security.rate_limit import rate_limiter
+from app.settings import get_settings
+from app.ops.request_context import RequestIdMiddleware
+from app.services.auth_service import AuthService
+from app.services.quota_service import QuotaService
 from app.rag_backend import RequirementsRAG
 from app.rag_backend_neo4j import RequirementsRAGNeo4j
 from app.mcp.hybrid import HybridKnowledgeService
@@ -128,19 +133,10 @@ hybrid_service: Optional[HybridKnowledgeService] = None
 # ── Auth helpers ──────────────────────────────────────────────
 
 def _get_token_from_header(request: Request) -> Optional[str]:
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
-        return auth[7:]
-    return None
+    return AuthService.token_from_request(request)
 
 def _get_current_user(request: Request) -> Optional[User]:
-    token = _get_token_from_header(request)
-    if not token:
-        return None
-    session = conversation_store.get_session(token)
-    if not session:
-        return None
-    return conversation_store.get_user_by_id(session.user_id)
+    return auth_service.user_from_request(request)
 
 
 @asynccontextmanager
@@ -154,15 +150,23 @@ async def _app_lifespan(_app: FastAPI):
     )
     created = conversation_store.seed_users()
     if created:
-        print(f"✓ Seeded users: {', '.join(created)}")
-    roles = {u.username: getattr(u, "role", None) for u in conversation_store.list_users() if u.username in ("nick", "wayne", "claudine", "snick")}
-    print(f"✓ Roles ready: {roles}")
+        print(f"✓ Seeded users (ALLOW_DEFAULT_SEED_USERS): {', '.join(created)}")
+    defaulted = conversation_store.find_users_with_default_passwords()
+    settings = get_settings()
+    if defaulted:
+        msg = (
+            f"Users still using default passwords: {', '.join(defaulted)}. "
+            "Rotate them immediately (see docs/OPS_LOCKDOWN.md)."
+        )
+        if settings.refuse_default_passwords:
+            raise RuntimeError(msg)
+        print(f"⚠ {msg}")
     # Ensure YAML scenario + exit-interview tables exist on the shared conversation DB engine
-    configure_course_engine(conversation_store.engine)
+    configure_engine(conversation_store.engine)
     rename_actions = migrate_se_prefix(conversation_store.engine)
     if rename_actions:
         print(f"✓ Schema migrate: {', '.join(rename_actions)}")
-    _CourseSQLModel.metadata.create_all(conversation_store.engine)
+    SQLModel.metadata.create_all(conversation_store.engine)
     ensure_course_columns(conversation_store.engine)
     Path(os.getenv("STORAGE_RECORDINGS_DIR", "./storage/recordings")).mkdir(parents=True, exist_ok=True)
     seed_info = seed_scenarios(engine=conversation_store.engine)
@@ -216,17 +220,26 @@ conversation_store = ConversationStore(
     or "sqlite:///./storage/conversations.db"
 )
 conversation_store.init()
+auth_service = AuthService(conversation_store)
+quota_service = QuotaService(conversation_store)
 app.state.conversation_store = conversation_store
+app.state.auth_service = auth_service
+app.state.quota_service = quota_service
 app.state.get_current_user = _get_current_user
 app.state.rag_systems = {}
 
+_cors_origins = get_settings().cors_allow_origins
+if not _cors_origins:
+    # Local/dev default — production must set CORS_ALLOW_ORIGINS explicitly.
+    _cors_origins = ["http://localhost:8000", "http://127.0.0.1:8000", "http://localhost:5173"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestIdMiddleware)
 app.include_router(scenarios_router)
 app.include_router(admin_router)
 app.include_router(teams_router, prefix="/api")
@@ -780,7 +793,16 @@ def _to_chat_message(m: Any) -> ChatMessage:
 
 
 @app.post("/api/auth/login", response_model=LoginResponse)
-async def login(request: LoginRequest):
+def login(request: LoginRequest, req: Request):
+    client_host = (req.client.host if req.client else "unknown")
+    settings = get_settings()
+    if not rate_limiter.allow(
+        "login",
+        f"{client_host}:{request.username}",
+        limit=settings.rate_limit_login_per_minute,
+        window_seconds=60,
+    ):
+        raise HTTPException(status_code=429, detail="Too many login attempts; try again shortly")
     user = conversation_store.get_user_by_credentials(request.username, request.password)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid username or password")
@@ -807,14 +829,14 @@ async def login(request: LoginRequest):
     )
 
 @app.post("/api/auth/logout")
-async def logout(request: Request):
+def logout(request: Request):
     token = _get_token_from_header(request)
     if token:
         conversation_store.delete_session(token)
     return {"status": "ok"}
 
 @app.get("/api/auth/me")
-async def me(request: Request):
+def me(request: Request):
     user = _get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -917,10 +939,19 @@ async def admin_page(request: Request):
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest, req: Request):
+def chat(request: ChatRequest, req: Request):
+    """Sync route so blocking LLM/DB/embed work runs in the threadpool."""
     user = _get_current_user(req)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
+    settings = get_settings()
+    if not rate_limiter.allow(
+        "chat",
+        str(user.id),
+        limit=settings.rate_limit_chat_per_minute,
+        window_seconds=60,
+    ):
+        raise HTTPException(status_code=429, detail="Chat rate limit exceeded; try again shortly")
     try:
         started = time.perf_counter()
 
@@ -961,7 +992,8 @@ async def chat(request: ChatRequest, req: Request):
             conversation_id = convo.id
 
         conversation_store.add_message(conversation_id=conversation_id, role="user", content=request.message, mode_used=None)
-        stored_messages = conversation_store.get_messages(conversation_id)
+        hist_limit = max(4, int(get_settings().chat_history_limit) * 2 + 2)
+        stored_messages = conversation_store.get_messages(conversation_id, limit=hist_limit)
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
         mode = (request.response_mode or forced_mode or "vector").lower()
         user_provider = _user_llm_provider(user, request.llm_choice)
@@ -992,39 +1024,55 @@ async def chat(request: ChatRequest, req: Request):
         scope_kw = {"scenario_slug": scope_slug, "persona_key": scope_persona}
 
         if mode == "compare":
+            if not _can_select_mode_model(user):
+                raise HTTPException(status_code=403, detail="Compare mode is limited to testers and admins")
             _require_stakeholder_llm(user)
             sections: List[tuple[str, str]] = []
             compare_debug: Dict[str, Any] = {}
             resolved_choice = llm_choice
 
-            for key, title in (
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            def _run_compare(key: str, title: str):
+                if key == "vector":
+                    return key, title, _generate_rag_response(
+                        "vector", request.message, history, user=user, llm_choice=llm_choice, **scope_kw
+                    )
+                if key == "neo4j":
+                    return key, title, _generate_rag_response(
+                        "neo4j", request.message, history, user=user, llm_choice=llm_choice, **scope_kw
+                    )
+                if key == "hybrid":
+                    return key, title, _generate_hybrid_response(
+                        request.message, history, user=user, llm_choice=llm_choice, **scope_kw
+                    )
+                return key, title, _generate_direct_response(
+                    request.message, history, user=user, llm_choice=llm_choice, **scope_kw
+                )
+
+            jobs = (
                 ("vector", "Vector RAG"),
                 ("neo4j", "Neo4j RAG"),
                 ("hybrid", "Hybrid RAG"),
                 ("direct", "Direct Model"),
-            ):
-                try:
-                    if key == "vector":
-                        resp, _, resolved_choice, dbg = _generate_rag_response(
-                            "vector", request.message, history, user=user, llm_choice=llm_choice, **scope_kw
-                        )
-                    elif key == "neo4j":
-                        resp, _, resolved_choice, dbg = _generate_rag_response(
-                            "neo4j", request.message, history, user=user, llm_choice=llm_choice, **scope_kw
-                        )
-                    elif key == "hybrid":
-                        resp, _, resolved_choice, _, dbg = _generate_hybrid_response(
-                            request.message, history, user=user, llm_choice=llm_choice, **scope_kw
-                        )
-                    else:
-                        resp, _, resolved_choice, dbg = _generate_direct_response(
-                            request.message, history, user=user, llm_choice=llm_choice, **scope_kw
-                        )
-                    compare_debug[key] = dbg
-                    sections.append((title, resp))
-                except Exception as exc:
-                    sections.append((title, f"[{title} unavailable: {exc}]"))
+            )
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                futures = [pool.submit(_run_compare, key, title) for key, title in jobs]
+                for fut in as_completed(futures):
+                    try:
+                        key, title, payload = fut.result()
+                        if key == "hybrid":
+                            resp, _, resolved_choice, _, dbg = payload
+                        else:
+                            resp, _, resolved_choice, dbg = payload
+                        compare_debug[key] = dbg
+                        sections.append((title, resp))
+                    except Exception as exc:
+                        sections.append(("Compare", f"[unavailable: {exc}]"))
 
+            # Stable section order for the combined transcript
+            order = {"Vector RAG": 0, "Neo4j RAG": 1, "Hybrid RAG": 2, "Direct Model": 3}
+            sections.sort(key=lambda item: order.get(item[0], 99))
             combined = "\n\n".join(
                 f"**{title}**\n{body}" for title, body in sections
             )
@@ -1094,11 +1142,15 @@ async def chat(request: ChatRequest, req: Request):
         if mode in ("yaml", "scenario"):
             if not scope_slug or not scope_persona or scope_package is None:
                 raise ValueError("YAML mode requires a YAML scenario and persona (not Excel)")
-            reply = await generate_validated_reply(
-                package=scope_package,
-                persona_key=scope_persona,
-                history=history,
-                student_message=request.message,
+            import asyncio
+
+            reply = asyncio.run(
+                generate_validated_reply(
+                    package=scope_package,
+                    persona_key=scope_persona,
+                    history=history,
+                    student_message=request.message,
+                )
             )
             mode_label = f"yaml:{scope_slug}:{scope_persona}"
             conversation_store.add_message(
@@ -1216,7 +1268,7 @@ async def modes():
         "engine_status": engine_status,
         "hybrid_routing": "neo4j | chroma | blend per query",
         "direct_mode": "full scenario pack in prompt (no retrieval)",
-        "yaml_mode": "persona chat grounded in seproject YAML scenario packages",
+        "yaml_mode": "persona chat grounded in YAML scenario packages",
         "yaml_scenarios": scenario_registry.count,
     }
 
@@ -1305,7 +1357,10 @@ async def get_conversation(conversation_id: str, request: Request):
 
 
 @app.get("/api/config")
-async def config(request: Request = None):
+def config(request: Request):
+    user = _get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     active_wrappers = {mode: wrapper for mode, wrapper in llm_by_mode.items() if wrapper is not None}
     llm_runtime = {
         mode: {
@@ -1317,8 +1372,7 @@ async def config(request: Request = None):
         }
         for mode, wrapper in active_wrappers.items()
     }
-    user = _get_current_user(request) if request else None
-    user_providers = _user_api_overrides(user).get("user_providers", {}) if user else {}
+    user_providers = _user_api_overrides(user).get("user_providers", {})
     app_providers = _app_api_overrides().get("app_providers", {})
     merged_providers = _merged_providers_for_user(user)
     provider_names = set(merged_providers.keys())
@@ -1359,18 +1413,13 @@ async def config(request: Request = None):
         or ollama_ok
         or len([c for c in choices if c["provider"] != "template"]) > 0
     )
-    defaults = _effective_defaults(user) if user else {
-        "default_response_mode": conversation_store.get_app_settings().default_response_mode or "vector",
-        "default_llm_choice": conversation_store.get_app_settings().default_llm_choice or default_choice_id(),
-        "app_default_response_mode": conversation_store.get_app_settings().default_response_mode or "vector",
-        "app_default_llm_choice": conversation_store.get_app_settings().default_llm_choice,
-        "role": ROLE_STUDENT,
-        "can_select_mode_model": False,
-    }
-    can_select = bool(defaults.get("can_select_mode_model")) if user else False
+    defaults = _effective_defaults(user)
+    can_select = bool(defaults.get("can_select_mode_model"))
+    # Non-sensitive flags only — never return DB URLs, Neo4j credentials, or .env paths.
     return {
-        "excel_file": excel_file,
-        "neo4j_uri": neo4j_uri,
+        "excel_configured": bool(excel_file),
+        "has_neo4j": engine_status.get("neo4j") == "ready",
+        "has_vector": engine_status.get("vector") == "ready",
         "engines": engine_status,
         "llm_backend_env": llm_backend,
         "llm_model_env": llm_model,
@@ -1396,39 +1445,35 @@ async def config(request: Request = None):
         "hybrid_top_k": hybrid_top_k,
         "hybrid_route_margin": hybrid_route_margin,
         "tweak_mode_enabled": bool(
-            tweak_mode_enabled and (not user or _can_use_reflection(user))
+            tweak_mode_enabled and _can_use_reflection(user)
         ),
         "reflection_enabled": bool(
-            tweak_mode_enabled and user and _can_use_reflection(user)
+            tweak_mode_enabled and _can_use_reflection(user)
         ),
         "tweak_mode_env_set": bool(_tweak_raw.strip()),
-        "env_app_dir": str(APP_DIR),
-        "env_file_app": str(APP_DIR / ".env"),
-        "env_file_app_exists": (APP_DIR / ".env").is_file(),
-        "env_file_project_root": str(_PROJECT_ROOT / ".env"),
-        "env_file_project_root_exists": (_PROJECT_ROOT / ".env").is_file(),
-        "behavior_tweaks_file": behavior_tweaks_file,
         "behavior_tweaks_last_updated": (behavior_tweaks.load().get("last_updated") if behavior_tweaks else None),
         "behavior_system_suffix_chars": (
             len(behavior_tweaks.system_suffix_for_llm()) if behavior_tweaks else 0
         ),
-        "conversation_db_url": (
-            os.getenv("CONVERSATION_DB_URL")
-            or os.getenv("DATABASE_URL")
-            or "sqlite:///./storage/conversations.db"
-        ),
-        "chroma_persist_directory": chroma_persist_directory,
+        "has_conversation_db": True,
         "llm_runtime_by_mode": llm_runtime,
-        "is_admin": (_user_role(user) == ROLE_ADMIN) if user else False,
+        "is_admin": (_user_role(user) == ROLE_ADMIN),
     }
 
-def _reflection_messages(req: ReflectionAnalyzeRequest) -> List[Dict]:
+def _ensure_reflection_conversation_access(user: User, conversation_id: str):
+    convo = conversation_store.get_conversation(conversation_id)
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if convo.user_id != user.id and _user_role(user) != ROLE_ADMIN:
+        raise HTTPException(status_code=403, detail="Not your conversation")
+    return convo
+
+
+def _reflection_messages(req: ReflectionAnalyzeRequest, user: User) -> List[Dict]:
     if req.messages is not None and len(req.messages) > 0:
         return [{"role": m.role, "content": m.content} for m in req.messages]
     if req.conversation_id:
-        convo = conversation_store.get_conversation(req.conversation_id)
-        if not convo:
-            raise HTTPException(status_code=404, detail="Conversation not found")
+        _ensure_reflection_conversation_access(user, req.conversation_id)
         stored = conversation_store.get_messages(req.conversation_id)
         return [{"role": m.role, "content": m.content} for m in stored]
     raise HTTPException(status_code=400, detail="Provide non-empty messages or a conversation_id")
@@ -1461,9 +1506,9 @@ def _split_reflection_reply(
 
 
 @app.post("/api/reflection/analyze")
-async def reflection_analyze(request: ReflectionAnalyzeRequest, req: Request):
-    _require_reflection_access(req)
-    msgs = _reflection_messages(request)
+def reflection_analyze(request: ReflectionAnalyzeRequest, req: Request):
+    user = _require_reflection_access(req)
+    msgs = _reflection_messages(request, user)
     if len(msgs) < 2:
         raise HTTPException(status_code=400, detail="Need at least two messages to run reflection")
 
@@ -1491,11 +1536,9 @@ async def reflection_analyze(request: ReflectionAnalyzeRequest, req: Request):
 
 
 @app.get("/api/conversations/{conversation_id}/reflections", response_model=List[ReflectionThreadSummary])
-async def list_reflection_threads(conversation_id: str, request: Request):
-    _require_reflection_access(request)
-    convo = conversation_store.get_conversation(conversation_id)
-    if not convo:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+def list_reflection_threads(conversation_id: str, request: Request):
+    user = _require_reflection_access(request)
+    _ensure_reflection_conversation_access(user, conversation_id)
     threads = conversation_store.list_reflection_threads(conversation_id, limit=100)
     return [
         ReflectionThreadSummary(
@@ -1510,11 +1553,9 @@ async def list_reflection_threads(conversation_id: str, request: Request):
 
 
 @app.post("/api/conversations/{conversation_id}/reflections/start", response_model=ReflectionThreadStartResponse)
-async def start_reflection_thread(conversation_id: str, request: Request):
-    _require_reflection_access(request)
-    convo = conversation_store.get_conversation(conversation_id)
-    if not convo:
-        raise HTTPException(status_code=404, detail="Conversation not found")
+def start_reflection_thread(conversation_id: str, request: Request):
+    user = _require_reflection_access(request)
+    convo = _ensure_reflection_conversation_access(user, conversation_id)
 
     base_messages = conversation_store.get_messages(conversation_id)
     msgs = [{"role": m.role, "content": m.content} for m in base_messages]
@@ -1545,19 +1586,24 @@ async def start_reflection_thread(conversation_id: str, request: Request):
 
 
 @app.get("/api/reflections/{thread_id}", response_model=ReflectionThreadDetail)
-async def get_reflection_thread(thread_id: str, request: Request):
-    _require_reflection_access(request)
+def get_reflection_thread(thread_id: str, request: Request):
+    user = _require_reflection_access(request)
+    thread = conversation_store.get_reflection_thread(thread_id)
+    if not thread:
+        raise HTTPException(status_code=404, detail="Reflection thread not found")
+    _ensure_reflection_conversation_access(user, thread.conversation_id)
     return _thread_to_detail(thread_id)
 
 
 @app.post("/api/reflections/{thread_id}/chat")
-async def chat_reflection_thread(thread_id: str, request: ReflectionThreadChatRequest, req: Request):
-    _require_reflection_access(req)
+def chat_reflection_thread(thread_id: str, request: ReflectionThreadChatRequest, req: Request):
+    user = _require_reflection_access(req)
     if not request.message.strip():
         raise HTTPException(status_code=400, detail="Message is required")
     thread = conversation_store.get_reflection_thread(thread_id)
     if not thread:
         raise HTTPException(status_code=404, detail="Reflection thread not found")
+    _ensure_reflection_conversation_access(user, thread.conversation_id)
     convo_messages = conversation_store.get_messages(thread.conversation_id)
     transcript = compact_transcript([{"role": m.role, "content": m.content} for m in convo_messages])
     snap = compact_tweak_snapshot(behavior_tweaks.load())
@@ -1588,11 +1634,12 @@ async def chat_reflection_thread(thread_id: str, request: ReflectionThreadChatRe
 
 
 @app.post("/api/reflections/{thread_id}/apply")
-async def apply_reflection_thread(thread_id: str, request: ReflectionApplyRequest, req: Request):
-    _require_reflection_access(req)
+def apply_reflection_thread(thread_id: str, request: ReflectionApplyRequest, req: Request):
+    user = _require_reflection_access(req)
     thread = conversation_store.get_reflection_thread(thread_id)
     if not thread:
         raise HTTPException(status_code=404, detail="Reflection thread not found")
+    _ensure_reflection_conversation_access(user, thread.conversation_id)
     normalized = normalize_reflection_payload(dict(request.reflection))
     result = behavior_tweaks.apply_reflection_patch(normalized)
     draft_json = json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
@@ -1612,7 +1659,7 @@ async def apply_reflection_thread(thread_id: str, request: ReflectionApplyReques
 
 
 @app.post("/api/reflection/apply")
-async def reflection_apply(request: ReflectionApplyRequest, req: Request):
+def reflection_apply(request: ReflectionApplyRequest, req: Request):
     _require_reflection_access(req)
     normalized = normalize_reflection_payload(dict(request.reflection))
     if not isinstance(normalized.get("patch"), dict):
@@ -1628,7 +1675,7 @@ async def reflection_apply(request: ReflectionApplyRequest, req: Request):
 
 
 @app.post("/api/feedback")
-async def feedback(request: FeedbackRequest, req: Request):
+def feedback(request: FeedbackRequest, req: Request):
     _require_reflection_access(req)
     result = behavior_tweaks.update_from_feedback(
         query=request.prompt,

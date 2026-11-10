@@ -7,8 +7,8 @@ from typing import Any
 
 import yaml
 
-from app.course.examiner.planner import generate_question_plan
-from app.course.examiner.state import SessionBundle
+from app.examiner.planner import generate_question_plan
+from app.examiner.state import SessionBundle
 from app.models.exit import (
     ExitInterviewSession,
     InterviewAnswer,

@@ -1,14 +1,14 @@
 """Examiner knowledge packs: template flaws / patterns / features for judging."""
 
-from app.course.examiner.knowledge import (
+from app.examiner.knowledge import (
     focus_paths_for,
     judge_concepts_for,
     list_knowledge_slugs,
     resolve_judge_knowledge,
 )
-from app.course.examiner.planner import generate_question_plan
-from app.course.examiner.scenario_focus import SCENARIO_SPECIAL_FEATURES
-from app.course.examiner.scorer import _score_answer
+from app.examiner.planner import generate_question_plan
+from app.examiner.scenario_focus import SCENARIO_SPECIAL_FEATURES
+from app.examiner.scorer import _score_answer
 
 
 def test_every_scenario_has_a_knowledge_pack():
