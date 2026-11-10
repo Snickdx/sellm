@@ -146,6 +146,7 @@
             flex-direction: column;
             gap: 8px;
             flex-shrink: 0;
+            margin-top: auto;
         }
         .nav-user {
             font-size: 12px;
@@ -538,6 +539,31 @@
         }
         .badge.override { background: #dbeafe; color: #1e40af; }
         .badge.inherit { background: #f1f5f9; color: #64748b; }
+        .cell-with-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+            max-width: 100%;
+        }
+        .cell-with-badge select,
+        .cell-with-badge input[type="number"] {
+            flex: 1 1 auto;
+            min-width: 0;
+            width: auto;
+            max-width: 100%;
+        }
+        .cell-with-badge .badge {
+            margin-left: 0;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .cell-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: flex-start;
+        }
         .user-editor {
             margin-top: 16px;
             border: 1px solid #e2e8f0;
@@ -545,6 +571,59 @@
             background: #fff;
             padding: 14px;
         }
+        .admin-modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            z-index: 2000;
+            align-items: stretch;
+            justify-content: stretch;
+            padding: 0;
+        }
+        .admin-modal-backdrop.open { display: flex; }
+        .admin-modal {
+            background: #fff;
+            border-radius: 0;
+            width: 100%;
+            height: 100%;
+            max-width: none;
+            max-height: none;
+            overflow: auto;
+            box-shadow: none;
+            padding: 20px 24px 28px;
+            display: flex;
+            flex-direction: column;
+        }
+        .admin-modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-shrink: 0;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .admin-modal-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #0f172a;
+        }
+        .admin-modal-close {
+            border: none;
+            background: #f1f5f9;
+            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            font-size: 22px;
+            line-height: 1;
+            cursor: pointer;
+            color: #64748b;
+            flex-shrink: 0;
+        }
+        .admin-modal-close:hover { background: #e2e8f0; color: #334155; }
+        #userDetailModalBody { flex: 1; min-height: 0; }
         @media (max-width: 980px) {
             .shell.with-list .admin-work { grid-template-columns: 1fr; }
             .list-pane { border-right: none; border-bottom: 1px solid #e2e8f0; max-height: 40vh; }
@@ -566,7 +645,6 @@
             }
             .shell.nav-open .nav-pane { transform: translateX(0); }
             .nav-close, .nav-toggle { display: inline-flex; align-items: center; justify-content: center; }
-            .nav-links { display: none; }
         }
     </style>
 </head>
@@ -608,14 +686,6 @@
                     <a href="/">Chats</a>
                     <a href="/course/">Exit interviews</a>
                     <span class="active" aria-current="page">Admin</span>
-                </nav>
-                <div class="nav-section-label">Admin</div>
-                <nav class="nav-links" aria-label="Admin sections">
-                    <button type="button" data-view="users" class="active">Users</button>
-                    <button type="button" data-view="teams">Teams</button>
-                    <button type="button" data-view="tokens">Token monitor</button>
-                    <button type="button" data-view="appkeys">App-wide keys</button>
-                    <button type="button" data-view="defaults">Role defaults</button>
                 </nav>
                 <div class="nav-footer">
                     <span id="adminWho" class="nav-user"></span>
@@ -659,6 +729,16 @@
         </div>
     </div>
 
-    <script src="/static/components/admin.js?v=10"></script>
+    <div id="userDetailModal" class="admin-modal-backdrop" aria-hidden="true">
+        <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="userDetailModalTitle">
+            <div class="admin-modal-header">
+                <h3 id="userDetailModalTitle">User details</h3>
+                <button type="button" id="userDetailModalClose" class="admin-modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div id="userDetailModalBody"></div>
+        </div>
+    </div>
+
+    <script src="/static/components/admin.js?v=12"></script>
 </body>
 </html>

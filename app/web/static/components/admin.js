@@ -431,22 +431,30 @@
               <select class="u-role" data-id="${u.id}">${roleOptions(role)}</select>
             </td>
             <td>
-              <select class="u-mode" data-id="${u.id}">
-                <option value="">Role (${escapeHtml(modeLabel(u.role_default_response_mode))})</option>
-                ${modeOptions(modeVal)}
-              </select>
-              <div>${u.mode_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}</div>
+              <div class="cell-with-badge">
+                <select class="u-mode" data-id="${u.id}">
+                  <option value="">Role (${escapeHtml(modeLabel(u.role_default_response_mode))})</option>
+                  ${modeOptions(modeVal)}
+                </select>
+                ${u.mode_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}
+              </div>
             </td>
             <td>
-              <select class="u-llm" data-id="${u.id}">
-                ${llmOptions(llmVal, true, `Role (${llmLabel(u.role_default_llm_choice)})`)}
-              </select>
-              <div>${u.llm_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}</div>
+              <div class="cell-with-badge">
+                <select class="u-llm" data-id="${u.id}">
+                  ${llmOptions(llmVal, true, `Role (${llmLabel(u.role_default_llm_choice)})`)}
+                </select>
+                ${u.llm_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}
+              </div>
             </td>
             <td>
-              <input class="u-budget" data-id="${u.id}" type="number" min="0" value="${u.token_limit}" style="width:100px;" />
-              <div class="meta" style="font-size:11px;color:#64748b;">used ${fmtTokens(u.tokens_used)} · role ${fmtTokens(u.role_token_limit)}</div>
-              <div>${u.budget_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}</div>
+              <div class="cell-stack">
+                <div class="cell-with-badge">
+                  <input class="u-budget" data-id="${u.id}" type="number" min="0" value="${u.token_limit}" style="width:100px;" />
+                  ${u.budget_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}
+                </div>
+                <div class="meta" style="font-size:11px;color:#64748b;">used ${fmtTokens(u.tokens_used)} · role ${fmtTokens(u.role_token_limit)}</div>
+              </div>
             </td>
             <td>
               <div class="cell-actions">
@@ -522,9 +530,31 @@
         selectedUserId = Number(btn.dataset.id);
         selectedConversationId = null;
         paintUsersTable();
-        await renderSelectedUserEditor(selectedUserId);
+        await openUserDetailModal(selectedUserId);
       });
     });
+  }
+
+  function closeUserDetailModal() {
+    const modal = document.getElementById("userDetailModal");
+    const body = document.getElementById("userDetailModalBody");
+    if (modal) {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+    if (body) body.innerHTML = "";
+    selectedConversationId = null;
+  }
+
+  async function openUserDetailModal(userId) {
+    const modal = document.getElementById("userDetailModal");
+    if (!modal) {
+      await renderSelectedUserEditor(userId);
+      return;
+    }
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    await renderSelectedUserEditor(userId);
   }
 
   async function renderUsersGrid() {
@@ -567,7 +597,6 @@
             <tbody id="usersGridBody"></tbody>
           </table>
         </div>
-        <div id="userEditor"></div>
       `;
       bindRoleDefaultsPanel();
       document.getElementById("userFilter")?.addEventListener("input", paintUsersTable);
@@ -575,46 +604,45 @@
       document.getElementById("roleFilter")?.addEventListener("change", paintUsersTable);
       document.getElementById("addUserBtn")?.addEventListener("click", () => renderCreateUser());
       paintUsersTable();
-      if (selectedUserId) await renderSelectedUserEditor(selectedUserId);
     } catch (e) {
       detailBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
     }
   }
 
   async function renderSelectedUserEditor(userId) {
-    const host = document.getElementById("userEditor");
+    const modalBody = document.getElementById("userDetailModalBody");
+    const modalTitle = document.getElementById("userDetailModalTitle");
+    const host = modalBody || document.getElementById("userEditor");
     if (!host) return;
-    host.innerHTML = `<div class="user-editor"><p class="status">Loading…</p></div>`;
+    host.innerHTML = `<p class="status">Loading…</p>`;
     try {
       const user = await api(`/api/admin/users/${userId}`);
       const convos = await api(`/api/admin/users/${userId}/conversations`);
+      if (modalTitle) modalTitle.textContent = `${user.username} · notes & transcripts`;
       host.innerHTML = `
-        <div class="user-editor">
-          <h3 style="font-size:14px;margin-bottom:10px;">${escapeHtml(user.username)} · notes &amp; transcripts</h3>
-          <div class="grid-2">
-            <div class="field"><label>Group</label><input id="uGroup" value="${escapeAttr(user.group_name || "")}" placeholder="e.g. morning, cohort-a" /></div>
-            <div class="field"><label>Tokens used</label><input id="uUsed" type="number" min="0" value="${user.tokens_used}" /></div>
-            <div class="field"><label>New password (optional)</label><input id="uPassword" type="password" placeholder="Leave blank to keep" /></div>
-            <div class="field"><label>Effective</label>
-              <div style="font-size:12px;color:#64748b;padding-top:8px;">
-                ${escapeHtml(modeLabel(user.effective_response_mode))} · ${escapeHtml(llmLabel(user.effective_llm_choice))} · ${fmtTokens(user.token_limit)} tokens
-                ${user.budget_is_override || user.mode_is_override || user.llm_is_override ? " (has overrides)" : " (from role)"}
-              </div>
+        <div class="grid-2">
+          <div class="field"><label>Group</label><input id="uGroup" value="${escapeAttr(user.group_name || "")}" placeholder="e.g. morning, cohort-a" /></div>
+          <div class="field"><label>Tokens used</label><input id="uUsed" type="number" min="0" value="${user.tokens_used}" /></div>
+          <div class="field"><label>New password (optional)</label><input id="uPassword" type="password" placeholder="Leave blank to keep" /></div>
+          <div class="field"><label>Effective</label>
+            <div style="font-size:12px;color:#64748b;padding-top:8px;">
+              ${escapeHtml(modeLabel(user.effective_response_mode))} · ${escapeHtml(llmLabel(user.effective_llm_choice))} · ${fmtTokens(user.token_limit)} tokens
+              ${user.budget_is_override || user.mode_is_override || user.llm_is_override ? " (has overrides)" : " (from role)"}
             </div>
           </div>
-          <div class="field"><label>Admin notes</label><textarea id="uNotes" rows="3" placeholder="Instructor notes…">${escapeHtml(user.admin_notes || "")}</textarea></div>
-          <div class="actions">
-            <button type="button" class="btn btn-primary" id="saveUserBtn">Save details</button>
-            <button type="button" class="btn btn-secondary" id="resetTokensBtn">Reset tokens used</button>
-            <button type="button" class="btn btn-secondary" id="resetDefaultsBtn">Reset mode/LLM/budget to role</button>
-            <button type="button" class="btn btn-secondary" id="clearGroupBtn">Clear group</button>
-            <button type="button" class="btn btn-secondary" id="closeEditorBtn">Close</button>
-          </div>
-          <div id="userStatus" class="status"></div>
-          <h3 style="margin:18px 0 8px;font-size:14px;">Transcripts (${convos.length})</h3>
-          <div id="convoList"></div>
-          <div id="transcriptPanel" style="margin-top:12px;"></div>
         </div>
+        <div class="field"><label>Admin notes</label><textarea id="uNotes" rows="3" placeholder="Instructor notes…">${escapeHtml(user.admin_notes || "")}</textarea></div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="saveUserBtn">Save details</button>
+          <button type="button" class="btn btn-secondary" id="resetTokensBtn">Reset tokens used</button>
+          <button type="button" class="btn btn-secondary" id="resetDefaultsBtn">Reset mode/LLM/budget to role</button>
+          <button type="button" class="btn btn-secondary" id="clearGroupBtn">Clear group</button>
+          <button type="button" class="btn btn-secondary" id="closeEditorBtn">Close</button>
+        </div>
+        <div id="userStatus" class="status"></div>
+        <h3 style="margin:18px 0 8px;font-size:14px;">Transcripts (${convos.length})</h3>
+        <div id="convoList"></div>
+        <div id="transcriptPanel" style="margin-top:12px;"></div>
       `;
       const status = document.getElementById("userStatus");
       document.getElementById("saveUserBtn").addEventListener("click", async () => {
@@ -672,8 +700,7 @@
       });
       document.getElementById("closeEditorBtn").addEventListener("click", () => {
         selectedUserId = null;
-        selectedConversationId = null;
-        host.innerHTML = "";
+        closeUserDetailModal();
         paintUsersTable();
       });
 
@@ -689,17 +716,16 @@
             <div class="name">${escapeHtml(c.title || "Untitled")}</div>
             <div class="meta">${escapeHtml(c.scenario_slug || "no scenario")} · ${c.message_count} msgs · ${escapeHtml(c.updated_at)}</div>
           `;
-          btn.addEventListener("click", () => {
+          btn.addEventListener("click", async () => {
             selectedConversationId = c.id;
-            renderTranscript(userId, c.id);
-            renderSelectedUserEditor(userId);
+            await renderSelectedUserEditor(userId);
           });
           convoList.appendChild(btn);
         });
       }
       if (selectedConversationId) await renderTranscript(userId, selectedConversationId);
     } catch (e) {
-      host.innerHTML = `<div class="user-editor"><p class="status err">${escapeHtml(e.message)}</p></div>`;
+      host.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
     }
   }
 
@@ -1203,6 +1229,27 @@
   });
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
   document.getElementById("denyLogout")?.addEventListener("click", logout);
+  document.getElementById("userDetailModalClose")?.addEventListener("click", () => {
+    selectedUserId = null;
+    closeUserDetailModal();
+    paintUsersTable();
+  });
+  document.getElementById("userDetailModal")?.addEventListener("click", (e) => {
+    if (e.target === e.currentTarget) {
+      selectedUserId = null;
+      closeUserDetailModal();
+      paintUsersTable();
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const modal = document.getElementById("userDetailModal");
+    if (modal?.classList.contains("open")) {
+      selectedUserId = null;
+      closeUserDetailModal();
+      paintUsersTable();
+    }
+  });
   bindNav();
   boot();
 })();
