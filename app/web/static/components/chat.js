@@ -264,6 +264,9 @@
 
   // ── Init ────────────────────────────────────────────────────
   async function init() {
+    // Overlay starts hidden so authed navigations from /exit don't flash login.
+    // If there is no token, show login immediately (before the /api/auth/me round-trip).
+    if (!authToken) showLogin();
     const authed = await checkAuth();
     if (authed) {
       showApp();
@@ -374,11 +377,17 @@
 
   // ── Login / Logout ──────────────────────────────────────────
   function showLogin() {
-    if (loginOverlay) loginOverlay.classList.remove("hidden");
+    if (loginOverlay) {
+      loginOverlay.classList.remove("hidden");
+      loginOverlay.setAttribute("aria-hidden", "false");
+    }
   }
 
   function showApp() {
-    if (loginOverlay) loginOverlay.classList.add("hidden");
+    if (loginOverlay) {
+      loginOverlay.classList.add("hidden");
+      loginOverlay.setAttribute("aria-hidden", "true");
+    }
     updateAdminLink();
   }
 
