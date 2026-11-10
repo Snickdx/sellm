@@ -8,75 +8,78 @@ def _login(client, username, password):
     return {"Authorization": f"Bearer {token}"}
 
 
-def _user_id(client, headers):
-    me = client.get("/api/auth/me", headers=headers)
-    assert me.status_code == 200
-    return me.json()["user_id"]
+def test_exit_interview_shared_login_names(client):
+    """One cohort account owns the team; participants are typed names."""
+    headers = _login(client, "studenta", "password123")
 
-
-def test_exit_interview_student_self_service_flow(client):
-    student_a = _login(client, "studenta", "password123")
-    student_b = _login(client, "studentb", "password123")
-    id_a = _user_id(client, student_a)
-    id_b = _user_id(client, student_b)
-
-    # Student creates team and adds teammate
     team = client.post(
         "/api/teams",
-        headers=student_a,
-        json={
-            "name": "Exit Team",
-            "scenario_slug": "library",
-            "member_usernames": ["studentb"],
-        },
+        headers=headers,
+        json={"name": "Exit Team", "scenario_slug": "library"},
     )
     assert team.status_code == 201, team.text
     team_id = team.json()["id"]
-    assert any(m["user_id"] == id_a for m in team.json()["members"])
-    assert any(m["user_id"] == id_b for m in team.json()["members"])
+    assert "invite_code" not in team.json()
+    assert len(team.json()["members"]) == 1
 
-    # Student freezes repo
     repo = client.post(
         f"/api/teams/{team_id}/repository",
-        headers=student_a,
+        headers=headers,
         json={"github_url": "fixture://demo", "commit_sha": SHA, "analyze_now": True},
     )
     assert repo.status_code == 201, repo.text
     assert repo.json()["index_status"] == "ready", repo.json()
     repo_id = repo.json()["id"]
 
-    # Student creates exit session
     created = client.post(
         f"/api/teams/{team_id}/exit-session",
-        headers=student_a,
+        headers=headers,
         json={
             "repository_submission_id": repo_id,
-            "participant_user_ids": [id_a, id_b],
+            "participant_names": ["Alex Rivera", "Jordan Lee"],
             "questions_per_student": 2,
             "target_duration_minutes": 25,
         },
     )
     assert created.status_code == 201, created.text
-    session_id = created.json()["id"]
-    assert len(created.json()["questions"]) == 4
+    body = created.json()
+    session_id = body["id"]
+    assert len(body["questions"]) == 4
+    assert [p["display_name"] for p in body["participants"]] == ["Alex Rivera", "Jordan Lee"]
+    assert all(p["user_id"] < 0 for p in body["participants"])
 
-    for headers in (student_a, student_b):
-        cons = client.post(
-            f"/api/exit-sessions/{session_id}/consent",
+    # Join / invite endpoints are gone (405 if "{team_id}" catches "join")
+    assert client.post("/api/teams/join", headers=headers, json={"invite_code": "ABCD"}).status_code in {
+        404,
+        405,
+    }
+    assert (
+        client.post(
+            f"/api/teams/{team_id}/members",
             headers=headers,
-            json={"granted": True},
-        )
-        assert cons.status_code == 200, cons.text
+            json={"usernames": ["studentb"]},
+        ).status_code
+        in {404, 405}
+    )
 
-    started = client.post(f"/api/exit-sessions/{session_id}/start", headers=student_a)
+    cons = client.post(
+        f"/api/exit-sessions/{session_id}/consent",
+        headers=headers,
+        json={"granted": True},
+    )
+    assert cons.status_code == 200, cons.text
+    assert cons.json()["consent_status"] == "granted"
+    assert all(p["consent_status"] == "granted" for p in cons.json()["participants"])
+
+    started = client.post(f"/api/exit-sessions/{session_id}/start", headers=headers)
     assert started.status_code == 200, started.text
     assert started.json()["status"] == "question"
-    assert started.json()["current_participant_user_id"] == id_a
+    assert started.json()["current_participant_name"] == "Alex Rivera"
 
     for _ in range(2):
         ans = client.post(
             f"/api/exit-sessions/{session_id}/answers",
-            headers=student_a,
+            headers=headers,
             json={
                 "text": (
                     "This unit owns booking validation and capacity boundaries. "
@@ -87,13 +90,13 @@ def test_exit_interview_student_self_service_flow(client):
         )
         assert ans.status_code == 200, ans.text
 
-    mid = client.get(f"/api/exit-sessions/{session_id}", headers=student_b).json()
-    assert mid["current_participant_user_id"] == id_b
+    mid = client.get(f"/api/exit-sessions/{session_id}", headers=headers).json()
+    assert mid["current_participant_name"] == "Jordan Lee"
 
     for _ in range(2):
         ans = client.post(
             f"/api/exit-sessions/{session_id}/answers",
-            headers=student_b,
+            headers=headers,
             json={
                 "text": (
                     "The service checks headcount against capacity and rejects overbooking. "
@@ -103,27 +106,20 @@ def test_exit_interview_student_self_service_flow(client):
         )
         assert ans.status_code == 200, ans.text
 
-    finished = client.post(f"/api/exit-sessions/{session_id}/finish", headers=student_b)
+    finished = client.post(f"/api/exit-sessions/{session_id}/finish", headers=headers)
     assert finished.status_code == 200, finished.text
     assert finished.json()["session"]["status"] == "lecturer_review"
-    assert len(finished.json()["reports"]) == 2
+    reports = finished.json()["reports"]
+    assert len(reports) == 2
+    assert {r["display_name"] for r in reports} == {"Alex Rivera", "Jordan Lee"}
 
-    report = client.get(f"/api/exit-sessions/{session_id}/report", headers=student_a)
+    report = client.get(f"/api/exit-sessions/{session_id}/report", headers=headers)
     assert report.status_code == 200
     assert len(report.json()["assessments"]) == 2
-
-
-def test_join_by_invite(client):
-    student_a = _login(client, "studenta", "password123")
-    student_b = _login(client, "studentb", "password123")
-    created = client.post("/api/teams", headers=student_a, json={"name": "Invite Team"})
-    assert created.status_code == 201
-    code = created.json()["invite_code"]
-    joined = client.post("/api/teams/join", headers=student_b, json={"invite_code": code})
-    assert joined.status_code == 200, joined.text
-    ids = {m["user_id"] for m in joined.json()["members"]}
-    assert _user_id(client, student_a) in ids
-    assert _user_id(client, student_b) in ids
+    assert {a["display_name"] for a in report.json()["assessments"]} == {
+        "Alex Rivera",
+        "Jordan Lee",
+    }
 
 
 def test_policy_public(client):

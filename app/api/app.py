@@ -160,6 +160,14 @@ async def _app_lifespan(_app: FastAPI):
     # Ensure YAML scenario + exit-interview tables exist on the shared conversation DB engine
     configure_seproject_engine(conversation_store.engine)
     _SESQLModel.metadata.create_all(conversation_store.engine)
+    # Best-effort additive columns for existing SQLite/Postgres installs.
+    try:
+        with conversation_store.engine.begin() as conn:
+            conn.exec_driver_sql(
+                "ALTER TABLE se_interview_participants ADD COLUMN display_name VARCHAR DEFAULT ''"
+            )
+    except Exception:
+        pass
     Path(os.getenv("STORAGE_RECORDINGS_DIR", "./storage/recordings")).mkdir(parents=True, exist_ok=True)
     seed_info = seed_scenarios(engine=conversation_store.engine)
     print(

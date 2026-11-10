@@ -136,9 +136,17 @@ def score_session(bundle: SessionBundle, repository_sha: str) -> list[dict[str, 
                 }
             )
 
+        display_name = next(
+            (p.display_name for p in bundle.participants if p.user_id == user_id and p.display_name),
+            None,
+        )
+        if not display_name:
+            user = bundle.users_by_id.get(user_id)
+            display_name = user.username if user is not None else str(user_id)
         reports.append(
             {
                 "student_id": str(user_id),
+                "display_name": display_name,
                 "repository_sha": repository_sha,
                 "provisional": True,
                 "competencies": competencies_out,

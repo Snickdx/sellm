@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { login } from '../api/client'
 import { useAuth } from '../auth'
 
@@ -31,14 +31,18 @@ export function LoginPage() {
   return (
     <main className="auth-shell">
       <section className="auth-panel">
-        <p className="eyebrow">Course</p>
-        <h1>Exit interview platform</h1>
-        <p className="lede">Sign in with your cohort username and password.</p>
+        <p className="eyebrow">sellm · course</p>
+        <h1>Exit interviews</h1>
+        <p className="lede">
+          Sign in with the shared cohort login from requirements chat. Teammates use the same
+          account and type their names in the interview.
+        </p>
 
         <form onSubmit={onSubmit} className="auth-form">
           <label>
             Username
             <input
+              className="login-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -48,6 +52,7 @@ export function LoginPage() {
           <label>
             Password
             <input
+              className="login-input"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -57,12 +62,12 @@ export function LoginPage() {
           </label>
           {error && <p className="error">{error}</p>}
           <button type="submit" disabled={submitting}>
-            {submitting ? 'Working…' : 'Log in'}
+            {submitting ? 'Signing in…' : 'Log in'}
           </button>
         </form>
 
-        <p className="hint">
-          <Link to="/">Back home</Link>
+        <p className="hint" style={{ marginTop: 14 }}>
+          <a href="/">Back to requirements chat</a>
         </p>
       </section>
     </main>

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { fetchPolicy, type PolicyDoc } from '../api/client'
+import { CourseShell } from '../components/CourseShell'
+import { useAuth } from '../auth'
+import { Navigate } from 'react-router-dom'
 
 export function PolicyPage() {
+  const { user, loading } = useAuth()
   const [policy, setPolicy] = useState<PolicyDoc | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -12,22 +15,17 @@ export function PolicyPage() {
       .catch((err: unknown) => setError(err instanceof Error ? err.message : 'Failed to load policy'))
   }, [])
 
-  return (
-    <main className="page">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Course</p>
-          <h1>Consent, retention &amp; access</h1>
-        </div>
-        <Link to="/">Home</Link>
-      </header>
+  if (loading) return <main className="page-fallback">Loading…</main>
+  // Policy is readable without auth, but keep shell consistent when signed in.
+  if (!user && !loading && !policy && !error) return <Navigate to="/login" replace />
 
+  const body = (
+    <div className="stack">
       {error && <p className="error">{error}</p>}
-      {!policy && !error && <p>Loading…</p>}
-
+      {!policy && !error && <p className="hint">Loading…</p>}
       {policy && (
         <>
-          <section className="panel">
+          <section className="surface">
             <h2>{policy.consent.title}</h2>
             <p className="lede">{policy.consent.summary}</p>
             <ul>
@@ -36,8 +34,7 @@ export function PolicyPage() {
               ))}
             </ul>
           </section>
-
-          <section className="panel">
+          <section className="surface">
             <h2>Retention</h2>
             <p>{policy.retention.summary}</p>
             <p className="hint">{policy.retention.deletion}</p>
@@ -46,8 +43,7 @@ export function PolicyPage() {
               {policy.retention.recording_days} days
             </p>
           </section>
-
-          <section className="panel">
+          <section className="surface">
             <h2>Accessibility &amp; low bandwidth</h2>
             <p>{policy.accessibility.low_bandwidth}</p>
             <ul>
@@ -56,8 +52,7 @@ export function PolicyPage() {
               ))}
             </ul>
           </section>
-
-          <section className="panel">
+          <section className="surface">
             <h2>Team quotas (pilot)</h2>
             <ul>
               <li>Chat messages / day: {policy.quotas.team_chat_messages_per_day}</li>
@@ -68,6 +63,16 @@ export function PolicyPage() {
           </section>
         </>
       )}
-    </main>
+    </div>
+  )
+
+  if (!user) {
+    return <main className="auth-shell"><div className="auth-panel" style={{ maxWidth: 640 }}>{body}</div></main>
+  }
+
+  return (
+    <CourseShell title="Consent & retention" subtitle="Policy for exit interviews and recordings">
+      {body}
+    </CourseShell>
   )
 }

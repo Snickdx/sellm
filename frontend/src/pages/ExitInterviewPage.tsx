@@ -5,7 +5,6 @@ import {
   createExitSession,
   fetchExitSession,
   fetchPolicy,
-  fetchTeamDetail,
   finishExitSession,
   listTeamExitSessions,
   listTeamRepositories,
@@ -17,11 +16,15 @@ import {
   type PolicyDoc,
   type RepositorySubmission,
 } from '../api/client'
+import { CourseShell } from '../components/CourseShell'
 import { VoiceRoomPanel } from '../components/VoiceRoomPanel'
 import { useAuth } from '../auth'
 
-function formatUserId(id: number): string {
-  return String(id)
+function parseNames(raw: string): string[] {
+  return raw
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
 }
 
 export function ExitInterviewPage() {
@@ -30,9 +33,8 @@ export function ExitInterviewPage() {
   const [session, setSession] = useState<ExitSession | null>(null)
   const [sessions, setSessions] = useState<Array<{ id: string; status: string }>>([])
   const [repos, setRepos] = useState<RepositorySubmission[]>([])
-  const [members, setMembers] = useState<Array<{ id: number; display_name: string }>>([])
   const [selectedRepoId, setSelectedRepoId] = useState('')
-  const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([])
+  const [participantNames, setParticipantNames] = useState('')
   const [answer, setAnswer] = useState('')
   const [probePrompt, setProbePrompt] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -40,21 +42,21 @@ export function ExitInterviewPage() {
   const [report, setReport] = useState<unknown>(null)
   const [policy, setPolicy] = useState<PolicyDoc | null>(null)
 
+  const names = useMemo(() => parseNames(participantNames), [participantNames])
+
   const currentQuestion = useMemo(() => {
     if (!session?.current_question_id) return null
     return session.questions.find((q) => q.id === session.current_question_id) ?? null
   }, [session])
 
-  const isMyTurn =
-    !!user &&
+  const canAnswer =
     !!session &&
-    session.current_participant_user_id === user.id &&
-    (session.status === 'question' || session.status === 'optional_probe')
+    (session.status === 'question' || session.status === 'optional_probe') &&
+    !!session.current_question_id
 
   async function refreshList() {
     if (!teamId) return
-    const rows = await listTeamExitSessions(teamId)
-    setSessions(rows)
+    setSessions(await listTeamExitSessions(teamId))
   }
 
   useEffect(() => {
@@ -65,21 +67,9 @@ export function ExitInterviewPage() {
     if (!user || !teamId) return
     void (async () => {
       try {
-        const [team, exitSessions] = await Promise.all([
-          fetchTeamDetail(teamId),
-          listTeamExitSessions(teamId),
-        ])
-        setMembers(
-          team.members.map((m) => ({
-            id: m.user_id,
-            display_name: m.display_name || m.username || String(m.user_id),
-          })),
-        )
-        setSelectedMemberIds(team.members.map((m) => m.user_id))
+        const exitSessions = await listTeamExitSessions(teamId)
         setSessions(exitSessions)
-        if (exitSessions[0]) {
-          setSession(await fetchExitSession(exitSessions[0].id))
-        }
+        if (exitSessions[0]) setSession(await fetchExitSession(exitSessions[0].id))
         const r = await listTeamRepositories(teamId)
         setRepos(r.filter((x) => x.index_status === 'ready'))
         if (r[0]) setSelectedRepoId(r[0].id)
@@ -89,19 +79,19 @@ export function ExitInterviewPage() {
     })()
   }, [user, teamId])
 
-  if (loading) return <main className="page"><p>Loading…</p></main>
+  if (loading) return <main className="page-fallback">Loading…</main>
   if (!user) return <Navigate to="/login" replace />
   if (!teamId) return <Navigate to="/" replace />
 
   async function onCreate(event: FormEvent) {
     event.preventDefault()
-    if (!teamId || !selectedRepoId || selectedMemberIds.length === 0) return
+    if (!teamId || !selectedRepoId || names.length === 0) return
     setBusy(true)
     setError(null)
     try {
       const created = await createExitSession(teamId, {
         repository_submission_id: selectedRepoId,
-        participant_user_ids: selectedMemberIds,
+        participant_names: names,
         questions_per_student: 3,
       })
       setSession(created)
@@ -186,198 +176,185 @@ export function ExitInterviewPage() {
     }
   }
 
-  function toggleMember(id: number) {
-    setSelectedMemberIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    )
-  }
+  const aside = (
+    <>
+      <h2 style={{ margin: '0 0 8px', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#475569' }}>
+        Sessions
+      </h2>
+      <ul className="session-list">
+        {sessions.map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              className={session?.id === s.id ? 'active ghost' : 'ghost'}
+              onClick={() => {
+                void fetchExitSession(s.id).then(setSession)
+                setReport(null)
+              }}
+            >
+              {s.id.slice(0, 8)}
+              <span>{s.status}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="hint" style={{ marginTop: 12 }}>
+        <Link to={`/admin/teams/${teamId}/repository`}>Repository</Link>
+      </p>
+    </>
+  )
 
   return (
-    <main className="page interview-page">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Exit interview</p>
-          <h1>Technical examiner</h1>
-          <p className="lede">
-            Team <code>{teamId}</code>
-            {session ? ` · ${session.status}` : ''}
+    <CourseShell
+      title="Technical examiner"
+      subtitle={`Team ${teamId.slice(0, 8)} · shared login${session ? ` · ${session.status}` : ''}`}
+      aside={aside}
+    >
+      <div className="stack">
+        {error && <p className="error">{error}</p>}
+
+        <section className="surface">
+          <h2>Create session</h2>
+          <p className="hint" style={{ marginBottom: 12 }}>
+            Freeze a repo first, then type each teammate’s real name (one per line). Same cohort
+            login for everyone.
           </p>
-        </div>
-        <Link to="/">Back</Link>
-      </header>
-
-      {error && <p className="error">{error}</p>}
-
-      <section className="panel">
-        <h2>Create session</h2>
-        <p className="hint">
-          Freeze a repo first on the{' '}
-          <Link to={`/admin/teams/${teamId}/repository`}>repository page</Link>, then start here.
-        </p>
-        <form className="auth-form" onSubmit={onCreate}>
-          <label>
-            Frozen repository
-            <select
-              value={selectedRepoId}
-              onChange={(e) => setSelectedRepoId(e.target.value)}
-              required
-            >
-              <option value="">Select…</option>
-              {repos.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.repo}@{r.commit_sha.slice(0, 7)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <fieldset>
-            <legend>Participants</legend>
-            {members.map((m) => (
-              <label key={m.id} className="check-row">
-                <input
-                  type="checkbox"
-                  checked={selectedMemberIds.includes(m.id)}
-                  onChange={() => toggleMember(m.id)}
-                />{' '}
-                {m.display_name}
-              </label>
-            ))}
-          </fieldset>
-          <button type="submit" disabled={busy || !selectedRepoId || selectedMemberIds.length === 0}>
-            Create exit interview
-          </button>
-        </form>
-      </section>
-
-      <div className="interview-layout">
-        <aside className="panel session-rail">
-          <h2>Sessions</h2>
-          <ul className="session-list">
-            {sessions.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  className={session?.id === s.id ? 'active ghost' : 'ghost'}
-                  onClick={() => {
-                    void fetchExitSession(s.id).then(setSession)
-                    setReport(null)
-                  }}
+          <form className="auth-form" onSubmit={onCreate}>
+            <div className="form-grid two">
+              <label>
+                Frozen repository
+                <select
+                  value={selectedRepoId}
+                  onChange={(e) => setSelectedRepoId(e.target.value)}
+                  required
                 >
-                  {s.id.slice(0, 8)}
-                  <span>{s.status}</span>
+                  <option value="">Select…</option>
+                  {repos.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.repo}@{r.commit_sha.slice(0, 7)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Participant names
+                <textarea
+                  value={participantNames}
+                  onChange={(e) => setParticipantNames(e.target.value)}
+                  rows={3}
+                  placeholder={'Alex Rivera\nJordan Lee'}
+                  required
+                />
+              </label>
+            </div>
+            <button type="submit" disabled={busy || !selectedRepoId || names.length === 0}>
+              Create exit interview
+            </button>
+          </form>
+        </section>
+
+        {!session ? (
+          <p className="hint">Select or create a session to continue.</p>
+        ) : (
+          <section className="surface">
+            <h2>Live session</h2>
+            {policy && (
+              <aside className="consent-box hint" style={{ marginBottom: 12 }}>
+                <strong>{policy.consent.title}</strong>
+                <p style={{ margin: '4px 0 0' }}>{policy.consent.summary}</p>
+              </aside>
+            )}
+
+            <div className="export-row" style={{ marginBottom: 12 }}>
+              <button type="button" className="ghost" disabled={busy} onClick={() => void onConsent()}>
+                Give consent (all)
+              </button>
+              <button type="button" className="ghost" disabled={busy} onClick={() => void onStart()}>
+                Start
+              </button>
+              <button type="button" className="ghost" disabled={busy} onClick={() => void onNext()}>
+                Next question
+              </button>
+              <button type="button" disabled={busy} onClick={() => void onFinish()}>
+                Finish &amp; score
+              </button>
+            </div>
+
+            <p className="muted-row">
+              <span>Consent: {session.consent_status}</span>
+              <span>Current: {session.current_participant_name ?? '—'}</span>
+            </p>
+
+            {currentQuestion && (
+              <article className="bubble persona" style={{ marginTop: 12 }}>
+                <header>
+                  {currentQuestion.competency} · {currentQuestion.difficulty}
+                  {currentQuestion.hypothetical ? ' · hypothetical' : ''}
+                </header>
+                <p>{currentQuestion.prompt}</p>
+                {currentQuestion.code_refs?.path ? (
+                  <footer>
+                    {String(currentQuestion.code_refs.path)}
+                    {Array.isArray(currentQuestion.code_refs.line_range)
+                      ? `:${String(currentQuestion.code_refs.line_range[0])}-${String(currentQuestion.code_refs.line_range[1])}`
+                      : ''}{' '}
+                    @ {String(currentQuestion.code_refs.sha || '').slice(0, 7)}
+                  </footer>
+                ) : null}
+              </article>
+            )}
+
+            {probePrompt && <p className="hint">Probe: {probePrompt}</p>}
+
+            {canAnswer && (
+              <form className="chat-compose" onSubmit={onAnswer} style={{ marginTop: 12 }}>
+                <textarea
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  rows={4}
+                  placeholder={
+                    session.current_participant_name
+                      ? `Answer as ${session.current_participant_name}…`
+                      : 'Type your answer…'
+                  }
+                  required
+                  disabled={busy}
+                />
+                <button type="submit" disabled={busy || !answer.trim()}>
+                  {session.status === 'optional_probe' ? 'Submit probe' : 'Submit answer'}
                 </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
+              </form>
+            )}
 
-        <section className="panel chat-panel">
-          {!session ? (
-            <p className="hint">No exit session selected.</p>
-          ) : (
-            <>
-              <h2>Session controls</h2>
-              {policy && (
-                <aside className="hint consent-box">
-                  <strong>{policy.consent.title}</strong>
-                  <p>{policy.consent.summary}</p>
-                  <p>
-                    Retention: transcripts ≈ {policy.retention.transcript_days} days; recordings ≈{' '}
-                    {policy.retention.recording_days} days. <Link to="/policy">Full policy</Link>
-                  </p>
-                </aside>
-              )}
-              <div className="export-row">
-                <button type="button" className="ghost" disabled={busy} onClick={() => void onConsent()}>
-                  Give consent
-                </button>
-                <button type="button" className="ghost" disabled={busy} onClick={() => void onStart()}>
-                  Start
-                </button>
-                <button type="button" className="ghost" disabled={busy} onClick={() => void onNext()}>
-                  Next question
-                </button>
-                <button type="button" disabled={busy} onClick={() => void onFinish()}>
-                  Finish &amp; score
-                </button>
-              </div>
-
-              <p className="hint">
-                Consent: {session.consent_status} · Current student:{' '}
-                {session.current_participant_user_id != null
-                  ? formatUserId(session.current_participant_user_id)
-                  : '—'}
-              </p>
-
-              {currentQuestion && (
-                <article className="bubble persona">
-                  <header>
-                    {currentQuestion.competency} · {currentQuestion.difficulty}
-                    {currentQuestion.hypothetical ? ' · hypothetical' : ''}
-                  </header>
-                  <p>{currentQuestion.prompt}</p>
-                  {currentQuestion.code_refs?.path ? (
-                    <footer>
-                      {String(currentQuestion.code_refs.path)}
-                      {Array.isArray(currentQuestion.code_refs.line_range)
-                        ? `:${String(currentQuestion.code_refs.line_range[0])}-${String(currentQuestion.code_refs.line_range[1])}`
-                        : ''}{' '}
-                      @ {String(currentQuestion.code_refs.sha || '').slice(0, 7)}
-                    </footer>
-                  ) : null}
-                </article>
-              )}
-
-              {probePrompt && <p className="hint">Probe: {probePrompt}</p>}
-
-              {isMyTurn && (
-                <form className="chat-compose" onSubmit={onAnswer}>
-                  <textarea
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    rows={4}
-                    placeholder="Type your answer…"
-                    required
-                    disabled={busy}
-                  />
-                  <button type="submit" disabled={busy || !answer.trim()}>
-                    {session.status === 'optional_probe' ? 'Submit probe' : 'Submit answer'}
-                  </button>
-                </form>
-              )}
-
+            <div style={{ marginTop: 16 }}>
               <VoiceRoomPanel
                 sessionId={session.id}
                 canRecord
                 consentGranted={session.consent_status === 'granted'}
               />
+            </div>
 
-              {!isMyTurn && session.status === 'question' && (
-                <p className="hint">Waiting for the assigned student to answer.</p>
-              )}
+            <h3 style={{ marginTop: 16 }}>Participants</h3>
+            <ul className="team-list">
+              {session.participants.map((p) => (
+                <li key={p.user_id}>
+                  <strong>{p.display_name ?? `Participant ${p.turn_order + 1}`}</strong>
+                  <span>
+                    consent {p.consent_status} · turn {p.turn_order}
+                  </span>
+                </li>
+              ))}
+            </ul>
 
-              <h3>Plan coverage</h3>
-              <ul className="team-list">
-                {session.participants.map((p) => (
-                  <li key={p.user_id}>
-                    <strong>{p.display_name ?? formatUserId(p.user_id)}</strong>
-                    <span>
-                      consent {p.consent_status} · turn {p.turn_order}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              {report != null && (
-                <>
-                  <h3>Provisional reports</h3>
-                  <pre className="code-excerpt">{JSON.stringify(report, null, 2)}</pre>
-                </>
-              )}
-            </>
-          )}
-        </section>
+            {report != null && (
+              <>
+                <h3 style={{ marginTop: 16 }}>Provisional reports</h3>
+                <pre className="code-excerpt">{JSON.stringify(report, null, 2)}</pre>
+              </>
+            )}
+          </section>
+        )}
       </div>
-    </main>
+    </CourseShell>
   )
 }

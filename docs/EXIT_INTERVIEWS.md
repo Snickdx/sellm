@@ -2,20 +2,18 @@
 
 Exit interviews are hosted inside **sellm** at `/course/`. Stakeholder chat stays at `/`.
 
-The flow is **student self-service**. Instructors are only needed later to finalize provisional scores if desired.
+The flow is **student self-service**. Teammates **share one cohort login** (same account used for requirements chat) and type each person’s **real name** when creating the exit session — there is no invite / join workflow.
 
 ## Dry-run checklist (students)
 
-1. Sign in at `/course/login` with a cohort username.
-2. Open **Create / join team** (`/course/admin/teams`):
-   - create a team (you are auto-added), share the invite code, **or**
-   - join with a teammate’s invite code / add usernames.
+1. Sign in at `/course/login` with the shared cohort username.
+2. Open **Create team** (`/course/admin/teams`) and create a team (creator owns it).
 3. Open the team’s **repository** page: submit `fixture://demo` with SHA from `tests/fixtures/repos/demo/.fixture-sha` (or a real GitHub URL + commit). Wait until index status is `ready`.
-4. Open **Exit interview**: create a session (select repo + participants).
-5. Each participant **gives consent**, then anyone can **Start**.
-6. Answer by **text**, or join LiveKit and use **browser STT** / paste, then **Commit answer**.
-7. Any participant can **Start/Stop recording** (requires LiveKit). Playback: `/api/exit-sessions/<id>/recording`.
-8. Anyone on the team can **Finish & score** → provisional reports. Admins may later finalize via `POST /api/admin/assessments/<id>/review`.
+4. Open **Exit interview**: pick the frozen repo and enter participant names (one per line).
+5. **Give consent (all)**, then **Start**.
+6. When a name is shown as the current student, that person answers by **text**, or join LiveKit and use **browser STT** / paste, then **Commit answer**.
+7. Anyone on the shared login can **Start/Stop recording** (requires LiveKit). Playback: `/api/exit-sessions/<id>/recording`.
+8. **Finish & score** → provisional reports keyed by the typed names. Admins may later finalize via `POST /api/admin/assessments/<id>/review`.
 
 ## Environment
 

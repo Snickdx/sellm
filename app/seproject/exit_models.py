@@ -147,7 +147,10 @@ class InterviewParticipant(SQLModel, table=True):
 
     id: str = Field(default_factory=_uuid, primary_key=True)
     session_id: str = Field(foreign_key="se_exit_interview_sessions.id", index=True)
+    # Slot key for examiner turns/scoring. Shared-login sessions use negative
+    # synthetic ids (-1, -2, …); display_name is the human label students type in.
     user_id: int = Field(index=True)
+    display_name: str = Field(default="")
     joined_at: Optional[datetime] = None
     consent_status: str = Field(default=ConsentStatus.pending.value)
     turn_order: int = Field(default=0)

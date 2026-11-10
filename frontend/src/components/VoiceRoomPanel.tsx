@@ -228,8 +228,8 @@ export function VoiceRoomPanel({ sessionId, canRecord = true, consentGranted }: 
   const speechAvailable = typeof getSpeechRecognitionCtor() !== 'undefined'
 
   return (
-    <section className="draft-review" aria-label="Voice interview">
-      <h3>Voice / video room</h3>
+    <section className="surface" aria-label="Voice interview">
+      <h2>Voice / video room</h2>
       <p className="hint">
         Text answers remain the default. Voice is optional. Scoring never uses accent,
         appearance, or vocal confidence — only attributed transcript text.

@@ -27,7 +27,6 @@ export interface Team {
   name: string
   scenario_slug: string | null
   scenario_version: string | null
-  invite_code: string
   created_at: string
 }
 
@@ -96,20 +95,6 @@ export async function createTeam(name: string, scenario_slug?: string): Promise<
   return request<Team>('/api/teams', {
     method: 'POST',
     body: JSON.stringify({ name, scenario_slug: scenario_slug || null }),
-  })
-}
-
-export async function joinTeam(invite_code: string): Promise<Team> {
-  return request<Team>('/api/teams/join', {
-    method: 'POST',
-    body: JSON.stringify({ invite_code }),
-  })
-}
-
-export async function addTeamMembers(teamId: string, usernames: string[]): Promise<void> {
-  await request(`/api/teams/${teamId}/members`, {
-    method: 'POST',
-    body: JSON.stringify({ usernames }),
   })
 }
 
@@ -206,6 +191,7 @@ export interface ExitSession {
   consent_status: string
   target_duration_minutes: number
   current_participant_user_id: number | null
+  current_participant_name: string | null
   current_question_id: string | null
   plan: Record<string, unknown> | null
   participants: Array<{
@@ -233,12 +219,12 @@ export async function createExitSession(
   teamId: string,
   body: {
     repository_submission_id: string
-    participant_user_ids: number[]
+    participant_names: string[]
     target_duration_minutes?: number
     questions_per_student?: number
   },
 ): Promise<ExitSession> {
-  return request(`/api/admin/teams/${teamId}/exit-session`, {
+  return request(`/api/teams/${teamId}/exit-session`, {
     method: 'POST',
     body: JSON.stringify(body),
   })

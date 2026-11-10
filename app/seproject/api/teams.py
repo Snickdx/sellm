@@ -1,10 +1,10 @@
-"""Team create / join / membership — student self-service."""
+"""Team create / list — shared cohort login owns the team (no invites)."""
 
 from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -20,15 +20,6 @@ class TeamCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     scenario_slug: str | None = None
     scenario_version: str | None = None
-    member_usernames: list[str] = Field(default_factory=list)
-
-
-class TeamJoinRequest(BaseModel):
-    invite_code: str = Field(min_length=4, max_length=32)
-
-
-class TeamMemberAddRequest(BaseModel):
-    usernames: list[str] = Field(min_length=1)
 
 
 class TeamMemberOut(BaseModel):
@@ -43,7 +34,6 @@ class TeamOut(BaseModel):
     name: str
     scenario_slug: str | None
     scenario_version: str | None
-    invite_code: str
     created_at: str | None
 
 
@@ -57,7 +47,6 @@ def _team_out(team: Team) -> TeamOut:
         name=team.name,
         scenario_slug=team.scenario_slug,
         scenario_version=team.scenario_version,
-        invite_code=team.invite_code,
         created_at=team.created_at.isoformat() if team.created_at else None,
     )
 
@@ -82,20 +71,8 @@ def _team_detail(db: Session, team: Team) -> TeamDetailOut:
     return TeamDetailOut(**base.model_dump(), members=members)
 
 
-def _resolve_usernames(db: Session, usernames: list[str]) -> list[User]:
-    users: list[User] = []
-    for name in usernames:
-        uname = name.strip()
-        if not uname:
-            continue
-        user = db.exec(select(User).where(User.username == uname)).first()
-        if user is None:
-            raise HTTPException(status_code=400, detail=f"Unknown username: {uname}")
-        users.append(user)
-    return users
-
-
 def _unique_invite(db: Session) -> str:
+    """Internal uniqueness token only — not used for joining."""
     invite_code = secrets.token_hex(4).upper()
     while db.exec(select(Team).where(Team.invite_code == invite_code)).first() is not None:
         invite_code = secrets.token_hex(4).upper()
@@ -114,18 +91,8 @@ def _create_team_impl(
     db.add(team)
     db.flush()
 
-    member_ids: set[int] = set()
     if auto_add_creator:
         db.add(TeamMember(team_id=team.id, user_id=actor.id))
-        member_ids.add(actor.id)
-
-    for user in _resolve_usernames(db, body.member_usernames):
-        assert user.id is not None
-        uid = int(user.id)
-        if uid in member_ids:
-            continue
-        db.add(TeamMember(team_id=team.id, user_id=uid))
-        member_ids.add(uid)
 
     db.add(
         AuditEvent(
@@ -146,7 +113,7 @@ def create_team_self_service(
     user: AuthUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> TeamDetailOut:
-    """Any signed-in student/tester/admin can create a team (creator is auto-added)."""
+    """Signed-in cohort account creates a team (creator is the sole owner)."""
     return _create_team_impl(db, body, user, auto_add_creator=True)
 
 
@@ -156,66 +123,8 @@ def create_team_admin(
     instructor: AuthUser = Depends(require_instructor),
     db: Session = Depends(get_db),
 ) -> TeamDetailOut:
-    """Instructor create (does not force-add instructor unless listed)."""
+    """Instructor create (does not force-add instructor)."""
     return _create_team_impl(db, body, instructor, auto_add_creator=False)
-
-
-@router.post("/teams/join", response_model=TeamDetailOut)
-def join_team(
-    body: TeamJoinRequest,
-    user: AuthUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> TeamDetailOut:
-    code = body.invite_code.strip().upper()
-    team = db.exec(select(Team).where(Team.invite_code == code)).first()
-    if team is None:
-        raise HTTPException(status_code=404, detail="Invalid invite code")
-    existing = db.exec(
-        select(TeamMember).where(TeamMember.team_id == team.id, TeamMember.user_id == user.id)
-    ).first()
-    if existing is None:
-        db.add(TeamMember(team_id=team.id, user_id=user.id))
-        db.add(
-            AuditEvent(
-                actor_id=user.id,
-                action="team.join",
-                target_id=team.id,
-                metadata_json=None,
-            )
-        )
-        db.commit()
-    return _team_detail(db, team)
-
-
-@router.post("/admin/teams/{team_id}/members", response_model=TeamDetailOut)
-@router.post("/teams/{team_id}/members", response_model=TeamDetailOut)
-def add_team_members(
-    team_id: str,
-    body: TeamMemberAddRequest,
-    user: AuthUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> TeamDetailOut:
-    team = ensure_team_access(db, team_id, user)
-    existing = {
-        m.user_id for m in db.exec(select(TeamMember).where(TeamMember.team_id == team.id)).all()
-    }
-    for member in _resolve_usernames(db, body.usernames):
-        assert member.id is not None
-        uid = int(member.id)
-        if uid in existing:
-            continue
-        db.add(TeamMember(team_id=team.id, user_id=uid))
-        existing.add(uid)
-    db.add(
-        AuditEvent(
-            actor_id=user.id,
-            action="team.add_members",
-            target_id=team.id,
-            metadata_json=None,
-        )
-    )
-    db.commit()
-    return _team_detail(db, team)
 
 
 @router.get("/teams/{team_id}", response_model=TeamDetailOut)

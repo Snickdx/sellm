@@ -18,7 +18,6 @@ from app.seproject.exit_models import (
     AuditEvent,
     ConsentStatus,
     InterviewAnswer,
-    InterviewParticipant,
     InterviewQuestion,
     VoiceRecordingStatus,
     VoiceRoom,
@@ -86,19 +85,6 @@ def _get_or_create_room(db: Session, session_id: str) -> VoiceRoom:
     return room
 
 
-def _participant_or_403(db: Session, session_id: str, user: AuthUser) -> None:
-    if user.is_instructor:
-        return
-    row = db.exec(
-        select(InterviewParticipant).where(
-            InterviewParticipant.session_id == session_id,
-            InterviewParticipant.user_id == user.id,
-        )
-    ).first()
-    if row is None:
-        raise HTTPException(status_code=403, detail="Not a session participant")
-
-
 @router.get("/exit-sessions/{session_id}/voice", response_model=VoiceStatusOut)
 def voice_status(
     session_id: str,
@@ -130,7 +116,6 @@ def voice_token(
     settings: Settings = Depends(get_settings),
 ) -> VoiceTokenOut:
     bundle = _session_access(db, session_id, user)
-    _participant_or_403(db, bundle.session.id, user)
     if bundle.session.consent_status != ConsentStatus.granted.value:
         raise HTTPException(status_code=400, detail="All participants must consent before joining voice")
     if not settings.livekit_configured:
@@ -206,7 +191,6 @@ def start_recording(
     settings: Settings = Depends(get_settings),
 ):
     bundle = _session_access(db, session_id, user)
-    _participant_or_403(db, bundle.session.id, user)
     if bundle.session.consent_status != ConsentStatus.granted.value:
         raise HTTPException(status_code=400, detail="Consent required before recording")
     room = _get_or_create_room(db, bundle.session.id)
@@ -267,7 +251,6 @@ def stop_recording(
     settings: Settings = Depends(get_settings),
 ):
     bundle = _session_access(db, session_id, user)
-    _participant_or_403(db, bundle.session.id, user)
     room = _get_or_create_room(db, bundle.session.id)
     room.recording_indicator = False
     room.recording_status = VoiceRecordingStatus.processing.value
@@ -344,7 +327,6 @@ def post_utterance(
     db: Session = Depends(get_db),
 ):
     bundle = _session_access(db, session_id, user)
-    _participant_or_403(db, bundle.session.id, user)
     payload = body.model_dump()
     if FORBIDDEN_GRADING_KEYS & set(payload.keys()):
         raise HTTPException(status_code=400, detail="Audio grading cues are not accepted")
@@ -380,8 +362,6 @@ def correct_utterance(
     row = db.get(VoiceUtterance, utterance_id)
     if row is None or row.session_id != bundle.session.id:
         raise HTTPException(status_code=404, detail="Utterance not found")
-    if row.user_id != user.id and not user.is_instructor:
-        raise HTTPException(status_code=403, detail="Can only correct your own transcript")
     row.corrected_text = body.corrected_text.strip()
     db.commit()
     return {"id": str(row.id), "corrected_text": row.corrected_text}
@@ -398,10 +378,6 @@ def commit_utterance_as_answer(
     row = db.get(VoiceUtterance, utterance_id)
     if row is None or row.session_id != bundle.session.id:
         raise HTTPException(status_code=404, detail="Utterance not found")
-    if row.user_id != user.id:
-        raise HTTPException(status_code=403, detail="Can only commit your own utterance")
-    if bundle.session.current_participant_user_id != user.id:
-        raise HTTPException(status_code=400, detail="Not your turn")
     if bundle.session.current_question_id is None:
         raise HTTPException(status_code=400, detail="No active question")
 
@@ -412,7 +388,7 @@ def commit_utterance_as_answer(
     text = (row.corrected_text or row.text).strip()
     answer = InterviewAnswer(
         question_id=question.id,
-        user_id=user.id,
+        user_id=question.target_user_id,
         modality="voice_stt",
         text=text,
         is_probe=False,

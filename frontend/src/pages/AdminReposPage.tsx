@@ -9,6 +9,7 @@ import {
   type RepositorySubmission,
   type SearchHit,
 } from '../api/client'
+import { CourseShell } from '../components/CourseShell'
 import { useAuth } from '../auth'
 
 export function AdminReposPage() {
@@ -44,7 +45,7 @@ export function AdminReposPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, teamId])
 
-  if (loading) return <main className="page"><p>Loading…</p></main>
+  if (loading) return <main className="page-fallback">Loading…</main>
   if (!user) return <Navigate to="/login" replace />
   if (!teamId) return <Navigate to="/" replace />
 
@@ -103,105 +104,123 @@ export function AdminReposPage() {
     }
   }
 
-  return (
-    <main className="page">
-      <p className="eyebrow">Team</p>
-      <h1>Repository snapshot</h1>
-      <p className="lede">
-        Freeze a GitHub URL + immutable commit SHA for team <code>{teamId}</code>. Use{' '}
-        <code>fixture://demo</code> offline.
-      </p>
-      <Link to="/">Back</Link>
-      {error && <p className="error">{error}</p>}
-
-      <section className="panel">
-        <h2>Submit</h2>
-        <form className="auth-form" onSubmit={onSubmit}>
-          <label>
-            GitHub URL
-            <input value={url} onChange={(e) => setUrl(e.target.value)} required />
-          </label>
-          <label>
-            Commit SHA
-            <input value={sha} onChange={(e) => setSha(e.target.value)} required />
-          </label>
-          <label>
-            Branch (optional)
-            <input value={branch} onChange={(e) => setBranch(e.target.value)} />
-          </label>
-          <button type="submit" disabled={busy}>
-            {busy ? 'Working…' : 'Submit & analyze'}
+  const aside = (
+    <>
+      <h2 style={{ margin: '0 0 8px', fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#475569' }}>
+        Snapshots
+      </h2>
+      <ul className="session-list">
+        {rows.map((row) => (
+          <li key={row.id}>
+            <button
+              type="button"
+              className={active?.id === row.id ? 'active ghost' : 'ghost'}
+              onClick={() => setActive(row)}
+            >
+              {row.repo}@{row.commit_sha.slice(0, 7)}
+              <span>
+                {row.index_status}
+                {row.index_error ? ` · ${row.index_error}` : ''}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {active && (
+        <div className="export-row" style={{ marginTop: 10 }}>
+          <button type="button" className="ghost" disabled={busy} onClick={() => void onAnalyze()}>
+            Retry
           </button>
-        </form>
-      </section>
+          <button type="button" className="ghost" onClick={() => void onRefreshStatus()}>
+            Refresh
+          </button>
+        </div>
+      )}
+      <p className="hint" style={{ marginTop: 12 }}>
+        <Link to={`/teams/${teamId}/exit`}>Exit interview</Link>
+      </p>
+    </>
+  )
 
-      <div className="interview-layout">
-        <aside className="panel session-rail">
-          <h2>Snapshots</h2>
-          <ul className="session-list">
-            {rows.map((row) => (
-              <li key={row.id}>
-                <button
-                  type="button"
-                  className={active?.id === row.id ? 'active ghost' : 'ghost'}
-                  onClick={() => setActive(row)}
-                >
-                  {row.repo}@{row.commit_sha.slice(0, 7)}
-                  <span>
-                    {row.index_status}
-                    {row.index_error ? ` · ${row.index_error}` : ''}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-          {active && (
-            <div className="export-row">
-              <button type="button" className="ghost" disabled={busy} onClick={() => void onAnalyze()}>
-                Retry analyze
-              </button>
-              <button type="button" className="ghost" onClick={() => void onRefreshStatus()}>
-                Refresh
-              </button>
+  return (
+    <CourseShell
+      title="Repository snapshot"
+      subtitle={`Team ${teamId.slice(0, 8)} · freeze GitHub or fixture://demo`}
+      aside={aside}
+    >
+      <div className="stack">
+        {error && <p className="error">{error}</p>}
+
+        <section className="surface">
+          <h2>Submit</h2>
+          <form className="auth-form" onSubmit={onSubmit}>
+            <div className="form-grid two">
+              <label>
+                GitHub URL
+                <input value={url} onChange={(e) => setUrl(e.target.value)} required />
+              </label>
+              <label>
+                Commit SHA
+                <input value={sha} onChange={(e) => setSha(e.target.value)} required />
+              </label>
             </div>
-          )}
-        </aside>
+            <label>
+              Branch (optional)
+              <input value={branch} onChange={(e) => setBranch(e.target.value)} />
+            </label>
+            <button type="submit" disabled={busy}>
+              {busy ? 'Working…' : 'Submit & analyze'}
+            </button>
+          </form>
+        </section>
 
-        <section className="panel">
+        <section className="surface">
           <h2>Summary</h2>
           {!active ? (
             <p className="hint">Submit a repository to inspect citations.</p>
           ) : (
             <>
-              <p>
-                <code>{active.github_url}</code> · <code>{active.commit_sha}</code> ·{' '}
-                {active.index_status}
+              <p className="muted-row">
+                <code>{active.github_url}</code>
+                <code>{active.commit_sha.slice(0, 12)}</code>
+                <span>{active.index_status}</span>
               </p>
               {active.summary && (
-                <>
-                  <h3>Citations</h3>
-                  <ul>
-                    {(active.summary.citations as Array<Record<string, unknown>> | undefined)?.map(
-                      (c, i) => (
-                        <li key={i}>
-                          {String(c.kind)} · <code>{String(c.path)}</code> · sha{' '}
+                <ul className="team-list" style={{ marginTop: 12 }}>
+                  {(active.summary.citations as Array<Record<string, unknown>> | undefined)?.map(
+                    (c, i) => (
+                      <li key={i}>
+                        <strong>{String(c.kind)}</strong>
+                        <span>
+                          <code>{String(c.path)}</code> · sha{' '}
                           <code>{String(c.sha).slice(0, 7)}</code>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </>
+                        </span>
+                      </li>
+                    ),
+                  )}
+                </ul>
               )}
               {active.index_status === 'ready' && (
-                <form className="inline-form" onSubmit={onSearch}>
-                  <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="search code" />
+                <form
+                  className="form-grid two"
+                  onSubmit={onSearch}
+                  style={{ marginTop: 12, alignItems: 'end' }}
+                >
+                  <label>
+                    Search code
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="BookingService"
+                    />
+                  </label>
                   <button type="submit" disabled={busy}>
                     Search
                   </button>
                 </form>
               )}
               {hits.length > 0 && (
-                <ul className="team-list">
+                <ul className="team-list" style={{ marginTop: 12 }}>
                   {hits.map((hit, i) => (
                     <li key={`${hit.path}-${hit.line}-${i}`}>
                       <strong>
@@ -216,6 +235,6 @@ export function AdminReposPage() {
           )}
         </section>
       </div>
-    </main>
+    </CourseShell>
   )
 }

@@ -17,7 +17,6 @@ from app.seproject.examiner.state import (
     SessionBundle,
     advance_to_question,
     after_evidence,
-    all_participants_consented,
     begin_processing,
     finalize_session,
     load_session,
@@ -43,7 +42,6 @@ from app.seproject.exit_models import (
     RepositorySubmission,
     ReviewStatus,
     Team,
-    TeamMember,
 )
 
 router = APIRouter(tags=["exit-interviews"])
@@ -51,9 +49,44 @@ router = APIRouter(tags=["exit-interviews"])
 
 class CreateExitSessionRequest(BaseModel):
     repository_submission_id: str
-    participant_user_ids: list[int] = Field(min_length=1)
+    # Real names typed at the laptop — teammates share the cohort login.
+    participant_names: list[str] = Field(min_length=1)
     target_duration_minutes: int = Field(default=30, ge=10, le=120)
     questions_per_student: int = Field(default=5, ge=1, le=5)
+
+
+def _normalize_participant_names(names: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw in names:
+        name = " ".join(str(raw).split()).strip()
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(name)
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Provide at least one participant name")
+    return cleaned
+
+
+def _slot_user_id(order: int) -> int:
+    """Synthetic participant key (negative) so shared-login sessions need no user rows."""
+    return -(order + 1)
+
+
+def _participant_label(bundle: SessionBundle, slot_user_id: int) -> str:
+    for p in bundle.participants:
+        if p.user_id == slot_user_id:
+            if p.display_name:
+                return p.display_name
+            break
+    user = bundle.users_by_id.get(slot_user_id)
+    if user is not None:
+        return user.username
+    return str(slot_user_id)
 
 
 class ConsentRequest(BaseModel):
@@ -134,16 +167,17 @@ def _serialize_session(bundle: SessionBundle) -> dict:
         "participants": [
             {
                 "user_id": p.user_id,
-                "display_name": (
-                    bundle.users_by_id[p.user_id].username
-                    if p.user_id in bundle.users_by_id
-                    else str(p.user_id)
-                ),
+                "display_name": p.display_name or _participant_label(bundle, p.user_id),
                 "consent_status": p.consent_status,
                 "turn_order": p.turn_order,
             }
             for p in ordered_participants(bundle.participants)
         ],
+        "current_participant_name": (
+            _participant_label(bundle, session.current_participant_user_id)
+            if session.current_participant_user_id is not None
+            else None
+        ),
         "questions": [
             _serialize_question_with_answers(q, bundle.answers_for(q.id))
             for q in sorted(bundle.questions, key=lambda x: x.sequence)
@@ -167,15 +201,11 @@ def create_exit_session(
     if repo.index_status != RepoIndexStatus.ready.value or not repo.index_json:
         raise HTTPException(status_code=400, detail="Repository index is not ready")
 
-    member_ids = {
-        m.user_id for m in db.exec(select(TeamMember).where(TeamMember.team_id == team.id)).all()
-    }
-    for uid in body.participant_user_ids:
-        if uid not in member_ids:
-            raise HTTPException(status_code=400, detail=f"User {uid} is not on the team")
+    names = _normalize_participant_names(body.participant_names)
+    slot_ids = [_slot_user_id(i) for i in range(len(names))]
 
     plan = generate_question_plan(
-        participant_user_ids=body.participant_user_ids,
+        participant_user_ids=slot_ids,
         index=repo.index_json,
         questions_per_student=body.questions_per_student,
     )
@@ -192,11 +222,12 @@ def create_exit_session(
     db.add(session)
     db.flush()
 
-    for order, uid in enumerate(body.participant_user_ids):
+    for order, (slot_id, name) in enumerate(zip(slot_ids, names)):
         db.add(
             InterviewParticipant(
                 session_id=session.id,
-                user_id=uid,
+                user_id=slot_id,
+                display_name=name,
                 turn_order=order,
                 consent_status=ConsentStatus.pending.value,
             )
@@ -278,22 +309,19 @@ def consent(
 ) -> dict:
     bundle = _session_access(db, session_id, user)
     session = bundle.session
-    participant = next((p for p in bundle.participants if p.user_id == user.id), None)
-    if participant is None and not user.is_instructor:
-        raise HTTPException(status_code=403, detail="Not a session participant")
-    if participant is not None:
-        participant.consent_status = (
-            ConsentStatus.granted.value if body.granted else ConsentStatus.declined.value
-        )
-        participant.joined_at = datetime.now(timezone.utc)
-    if all_participants_consented(bundle.participants):
-        session.consent_status = ConsentStatus.granted.value
-        if session.status in {InterviewStatus.scheduled.value, InterviewStatus.consent.value}:
-            session.status = InterviewStatus.consent.value
-    elif any(p.consent_status == ConsentStatus.declined.value for p in bundle.participants):
-        session.consent_status = ConsentStatus.declined.value
-    else:
-        session.consent_status = ConsentStatus.pending.value
+    # Shared cohort login: one consent covers every named participant at the laptop.
+    now = datetime.now(timezone.utc)
+    status_value = ConsentStatus.granted.value if body.granted else ConsentStatus.declined.value
+    for participant in bundle.participants:
+        participant.consent_status = status_value
+        participant.joined_at = now
+    session.consent_status = status_value
+    if body.granted and session.status in {
+        InterviewStatus.scheduled.value,
+        InterviewStatus.consent.value,
+    }:
+        session.status = InterviewStatus.consent.value
+    elif not body.granted:
         session.status = InterviewStatus.consent.value
     db.commit()
     return _serialize_session(load_session(db, session_id))  # type: ignore[arg-type]
@@ -306,8 +334,6 @@ def start_exit_session(
     db: Session = Depends(get_db),
 ) -> dict:
     bundle = _session_access(db, session_id, user)
-    if not user.is_instructor and user.id not in {p.user_id for p in bundle.participants}:
-        raise HTTPException(status_code=403, detail="Not allowed to start")
     try:
         start_session(bundle)
     except ValueError as exc:
@@ -379,12 +405,15 @@ def submit_answer(
     question = db.get(InterviewQuestion, session.current_question_id)
     if question is None:
         raise HTTPException(status_code=404, detail="Question not found")
-    if question.target_user_id != user.id:
-        raise HTTPException(status_code=403, detail="Only the target student may answer")
+    if session.status not in {
+        InterviewStatus.question.value,
+        InterviewStatus.optional_probe.value,
+    }:
+        raise HTTPException(status_code=400, detail="No active question turn")
 
     answer = InterviewAnswer(
         question_id=question.id,
-        user_id=user.id,
+        user_id=question.target_user_id,
         modality="text",
         text=body.text.strip(),
         is_probe=False,
@@ -425,12 +454,12 @@ def submit_probe_answer(
     if session.status != InterviewStatus.optional_probe.value or session.current_question_id is None:
         raise HTTPException(status_code=400, detail="No active probe")
     question = db.get(InterviewQuestion, session.current_question_id)
-    if question is None or question.target_user_id != user.id:
-        raise HTTPException(status_code=403, detail="Not your probe")
+    if question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
     db.add(
         InterviewAnswer(
             question_id=question.id,
-            user_id=user.id,
+            user_id=question.target_user_id,
             modality="text",
             text=body.text.strip(),
             is_probe=True,
@@ -545,6 +574,14 @@ def get_report(
             {
                 "id": str(a.id),
                 "student_id": a.user_id,
+                "display_name": next(
+                    (
+                        p.display_name
+                        for p in bundle.participants
+                        if p.user_id == a.user_id and p.display_name
+                    ),
+                    str(a.user_id),
+                ),
                 "provisional": a.review_status != ReviewStatus.finalized.value,
                 "review_status": a.review_status,
                 "provisional_scores": a.provisional_scores,
