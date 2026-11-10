@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from sqlalchemy import inspect, text
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection, Engine
 
-# Order matters for FK-safe renames (children after parents is fine with RENAME).
+# Parents before children is fine for RENAME; dual-exist uses FK-off on SQLite.
 _TABLE_RENAMES: tuple[tuple[str, str], ...] = (
     ("se_scenarios", "scenarios"),
     ("se_scenario_personas", "scenario_personas"),
@@ -48,6 +48,32 @@ def _quote_ident(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
+def _row_count(conn: Connection, table: str) -> int:
+    return int(conn.execute(text(f"SELECT COUNT(*) FROM {_quote_ident(table)}")).scalar() or 0)
+
+
+def _resolve_both(
+    conn: Connection,
+    old: str,
+    new: str,
+    tables: set[str],
+    actions: list[str],
+) -> None:
+    """When both names exist, keep the richer table under the new name."""
+    old_n = _row_count(conn, old)
+    new_n = _row_count(conn, new)
+    if new_n == 0 or old_n >= new_n:
+        conn.execute(text(f"DROP TABLE {_quote_ident(new)}"))
+        conn.execute(text(f"ALTER TABLE {_quote_ident(old)} RENAME TO {_quote_ident(new)}"))
+        actions.append(f"replace empty/newer {new} with {old} ({old_n} rows)")
+        tables.discard(old)
+        tables.add(new)
+    else:
+        conn.execute(text(f"DROP TABLE {_quote_ident(old)}"))
+        actions.append(f"drop legacy {old} (kept {new} with {new_n} rows)")
+        tables.discard(old)
+
+
 def migrate_se_prefix(engine: Engine) -> list[str]:
     """Rename/drop legacy se_* tables. Returns human-readable actions taken."""
     actions: list[str] = []
@@ -55,6 +81,9 @@ def migrate_se_prefix(engine: Engine) -> list[str]:
     tables = _table_names(engine)
 
     with engine.begin() as conn:
+        if dialect == "sqlite":
+            conn.execute(text("PRAGMA foreign_keys=OFF"))
+
         for old, new in _TABLE_RENAMES:
             if old in tables and new not in tables:
                 conn.execute(text(f"ALTER TABLE {_quote_ident(old)} RENAME TO {_quote_ident(new)}"))
@@ -62,13 +91,16 @@ def migrate_se_prefix(engine: Engine) -> list[str]:
                 tables.discard(old)
                 tables.add(new)
             elif old in tables and new in tables:
-                actions.append(f"skip rename {old} (both {old} and {new} exist)")
+                _resolve_both(conn, old, new, tables, actions)
 
         for name in _DROP_TABLES:
             if name in tables:
                 conn.execute(text(f"DROP TABLE {_quote_ident(name)}"))
                 actions.append(f"drop {name}")
                 tables.discard(name)
+
+        if dialect == "sqlite":
+            conn.execute(text("PRAGMA foreign_keys=ON"))
 
         if dialect == "postgresql":
             for old_idx, new_idx in _INDEX_RENAMES:
