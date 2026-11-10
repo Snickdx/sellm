@@ -296,6 +296,28 @@
         }
         .user-item .name { font-weight: 650; font-size: 14px; color: #0f172a; }
         .user-item .meta, .convo-item .meta { font-size: 12px; color: #64748b; margin-top: 4px; }
+        #tokenUserList {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+        }
+        #tokenUserList .token-user {
+            width: auto;
+            border: 1px solid #e2e8f0;
+            border-bottom: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            background: #fff;
+        }
+        #tokenUserList .token-user:hover {
+            background: #f8fafc;
+            border-color: #c7d2fe;
+        }
+        #tokenUserList .token-user.active {
+            background: #eef2ff;
+            border-color: #6366f1;
+            border-left: 1px solid #6366f1;
+        }
         .badge {
             display: inline-block;
             font-size: 11px;
@@ -739,6 +761,6 @@
         </div>
     </div>
 
-    <script src="/static/components/admin.js?v=12"></script>
+    <script src="/static/components/admin.js?v=13"></script>
 </body>
 </html>

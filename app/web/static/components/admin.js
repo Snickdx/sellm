@@ -889,7 +889,7 @@
         <h3 style="font-size:14px;margin:16px 0 8px;">By group</h3>
         <div class="stats">${groups || "<p class='meta'>No groups assigned yet.</p>"}</div>
         <h3 style="font-size:14px;margin:16px 0 8px;">By user</h3>
-        <div id="tokenUserList">${ranked || "<p class='meta'>No users.</p>"}</div>
+        <div id="tokenUserList" class="token-user-grid">${ranked || "<p class='meta'>No users.</p>"}</div>
       `;
       detailBody.querySelectorAll(".token-user").forEach((btn) => {
         btn.addEventListener("click", () => {
