@@ -204,11 +204,19 @@ export function ExitInterviewPage() {
     </>
   )
 
+  const tabs = [
+    { to: '/', label: 'Overview', end: true },
+    { to: `/teams/${teamId}/exit`, label: 'Interview', end: true },
+    { to: `/admin/teams/${teamId}/repository`, label: 'Repository', end: true },
+    { to: '/policy', label: 'Policy', end: true },
+  ]
+
   return (
     <CourseShell
       title="Technical examiner"
       subtitle={`Team ${teamId.slice(0, 8)} · shared login${session ? ` · ${session.status}` : ''}`}
       aside={aside}
+      tabs={tabs}
     >
       <div className="stack">
         {error && <p className="error">{error}</p>}

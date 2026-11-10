@@ -91,10 +91,20 @@ export async function fetchMyTeams(): Promise<Team[]> {
   return request<Team[]>('/api/me/teams')
 }
 
-export async function createTeam(name: string, scenario_slug?: string): Promise<Team> {
-  return request<Team>('/api/teams', {
+export async function createTeamAdmin(body: {
+  name: string
+  owner_username: string
+  scenario_slug?: string
+  member_usernames?: string[]
+}): Promise<Team> {
+  return request<Team>('/api/admin/teams', {
     method: 'POST',
-    body: JSON.stringify({ name, scenario_slug: scenario_slug || null }),
+    body: JSON.stringify({
+      name: body.name,
+      owner_username: body.owner_username,
+      scenario_slug: body.scenario_slug || null,
+      member_usernames: body.member_usernames || [],
+    }),
   })
 }
 

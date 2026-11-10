@@ -923,11 +923,152 @@
     }
   }
 
+  async function renderTeams() {
+    listTitle.textContent = "Teams";
+    detailTitle.textContent = "Assign cohort login";
+    listToolbar.innerHTML = "";
+    listBody.innerHTML = `<p class="status">Loading…</p>`;
+    detailBody.innerHTML = `<p class="status">Loading…</p>`;
+    try {
+      const [teams, userRows] = await Promise.all([
+        api("/api/admin/teams"),
+        api("/api/admin/users"),
+      ]);
+      const students = (userRows || []).filter((u) => (u.role || "student") !== "admin");
+      const ownerOptions = students
+        .map(
+          (u) =>
+            `<option value="${escapeAttr(u.username)}">${escapeHtml(u.username)} · ${escapeHtml(u.role || "student")}</option>`
+        )
+        .join("");
+
+      listBody.innerHTML =
+        (teams || [])
+          .map((t) => {
+            const members = (t.members || []).map((m) => m.username).join(", ") || "—";
+            return `
+            <button type="button" class="user-item team-item" data-id="${escapeAttr(t.id)}">
+              <div class="name">${escapeHtml(t.name)}</div>
+              <div class="meta">${escapeHtml(t.scenario_slug || "no scenario")} · ${escapeHtml(members)}</div>
+            </button>`;
+          })
+          .join("") || `<p class="meta" style="padding:12px;">No teams yet. Create one on the right.</p>`;
+
+      detailBody.innerHTML = `
+        <p style="font-size:13px;color:#64748b;margin:0 0 12px;">
+          Create a team and attach a <strong>cohort credential</strong> (shared login). Students use that
+          account for chats and exit interviews; they type real names at the interview.
+        </p>
+        <div class="field"><label>Team name</label><input id="teamName" placeholder="Team Alpha" /></div>
+        <div class="field"><label>Scenario slug (optional)</label><input id="teamScenario" placeholder="uwi-connect" /></div>
+        <div class="field"><label>Owner cohort username</label>
+          <select id="teamOwner">${ownerOptions || "<option value=\"\">No student accounts</option>"}</select>
+        </div>
+        <div class="actions"><button type="button" class="btn btn-primary" id="createTeamBtn">Create team</button></div>
+        <div id="teamStatus" class="status"></div>
+        <div id="teamDetail" style="margin-top:16px;"></div>
+      `;
+
+      const status = document.getElementById("teamStatus");
+      document.getElementById("createTeamBtn")?.addEventListener("click", async () => {
+        try {
+          const name = document.getElementById("teamName")?.value.trim();
+          const owner = document.getElementById("teamOwner")?.value.trim();
+          const scenario = document.getElementById("teamScenario")?.value.trim();
+          if (!name || !owner) {
+            setStatus(status, "Team name and owner username are required.", "err");
+            return;
+          }
+          await api("/api/admin/teams", {
+            method: "POST",
+            body: JSON.stringify({
+              name,
+              owner_username: owner,
+              scenario_slug: scenario || null,
+            }),
+          });
+          setStatus(status, "Team created and tied to " + owner + ".", "ok");
+          await renderTeams();
+        } catch (e) {
+          setStatus(status, e.message, "err");
+        }
+      });
+
+      listBody.querySelectorAll(".team-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const team = (teams || []).find((t) => t.id === btn.dataset.id);
+          if (!team) return;
+          const members = (team.members || []).map((m) => m.username);
+          const memberChecks = students
+            .map((u) => {
+              const checked = members.includes(u.username) ? "checked" : "";
+              return `<label style="display:flex;gap:8px;align-items:center;font-size:13px;margin:4px 0;">
+                <input type="checkbox" class="team-member" value="${escapeAttr(u.username)}" ${checked} />
+                ${escapeHtml(u.username)}
+              </label>`;
+            })
+            .join("");
+          const panel = document.getElementById("teamDetail");
+          if (!panel) return;
+          panel.innerHTML = `
+            <h3 style="font-size:14px;margin:0 0 8px;">${escapeHtml(team.name)}</h3>
+            <p class="meta" style="margin:0 0 8px;">id <code>${escapeHtml(team.id)}</code></p>
+            <p style="font-size:13px;margin:0 0 8px;">Members (cohort logins that can open this team):</p>
+            <div style="max-height:220px;overflow:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px;">
+              ${memberChecks || "<p class='meta'>No student users.</p>"}
+            </div>
+            <div class="actions" style="margin-top:10px;">
+              <button type="button" class="btn btn-primary" id="saveMembersBtn">Save members</button>
+              <button type="button" class="btn btn-secondary" id="deleteTeamBtn">Delete team</button>
+              <a class="btn btn-secondary" href="/course/teams/${encodeURIComponent(team.id)}/exit/">Open exit interview</a>
+            </div>
+            <div id="teamMemberStatus" class="status"></div>
+          `;
+          document.getElementById("saveMembersBtn")?.addEventListener("click", async () => {
+            const ms = document.getElementById("teamMemberStatus");
+            try {
+              const usernames = [...panel.querySelectorAll(".team-member:checked")].map((el) => el.value);
+              if (!usernames.length) {
+                setStatus(ms, "Pick at least one cohort username.", "err");
+                return;
+              }
+              await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, {
+                method: "PUT",
+                body: JSON.stringify({ usernames }),
+              });
+              setStatus(ms, "Members updated.", "ok");
+              await renderTeams();
+            } catch (e) {
+              setStatus(ms, e.message, "err");
+            }
+          });
+          document.getElementById("deleteTeamBtn")?.addEventListener("click", async () => {
+            const ms = document.getElementById("teamMemberStatus");
+            if (!confirm("Delete this team?")) return;
+            try {
+              await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, { method: "DELETE" });
+              setStatus(ms, "Deleted.", "ok");
+              await renderTeams();
+            } catch (e) {
+              setStatus(ms, e.message, "err");
+            }
+          });
+        });
+      });
+    } catch (e) {
+      listBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
+      detailBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
+    }
+  }
+
   async function render() {
     if (view === "users") {
       setLayout("users");
       await loadUsers();
       await renderUsersGrid();
+    } else if (view === "teams") {
+      setLayout("list");
+      await renderTeams();
     } else if (view === "tokens") {
       setLayout("plain");
       await renderTokens();
@@ -970,6 +1111,14 @@
     hide(loginGate);
     hide(denyGate);
     show(adminShell);
+    const params = new URLSearchParams(window.location.search);
+    const initial = params.get("view");
+    if (initial && ["users", "teams", "tokens", "appkeys", "defaults"].includes(initial)) {
+      view = initial;
+      document.querySelectorAll(".nav button[data-view]").forEach((b) =>
+        b.classList.toggle("active", b.dataset.view === view)
+      );
+    }
     await loadConfigChoices();
     await render();
   }

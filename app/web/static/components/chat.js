@@ -130,7 +130,7 @@
     if (!link) return;
     if (isAdmin) {
       link.hidden = false;
-      link.style.display = "inline-flex";
+      link.style.display = "block";
     } else {
       link.hidden = true;
       link.style.display = "none";

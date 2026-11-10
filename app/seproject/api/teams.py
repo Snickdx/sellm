@@ -1,10 +1,10 @@
-"""Team create / list — shared cohort login owns the team (no invites)."""
+"""Teams — admin assigns a cohort credential as the shared login owner."""
 
 from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -20,6 +20,13 @@ class TeamCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     scenario_slug: str | None = None
     scenario_version: str | None = None
+    # Cohort username that owns/shares this team login (required for admin create).
+    owner_username: str | None = None
+    member_usernames: list[str] = Field(default_factory=list)
+
+
+class TeamMembersRequest(BaseModel):
+    usernames: list[str] = Field(min_length=1)
 
 
 class TeamMemberOut(BaseModel):
@@ -72,16 +79,44 @@ def _team_detail(db: Session, team: Team) -> TeamDetailOut:
 
 
 def _unique_invite(db: Session) -> str:
-    """Internal uniqueness token only — not used for joining."""
     invite_code = secrets.token_hex(4).upper()
     while db.exec(select(Team).where(Team.invite_code == invite_code)).first() is not None:
         invite_code = secrets.token_hex(4).upper()
     return invite_code
 
 
-def _create_team_impl(
-    db: Session, body: TeamCreateRequest, actor: AuthUser, *, auto_add_creator: bool
+def _resolve_username(db: Session, username: str) -> User:
+    uname = username.strip()
+    if not uname:
+        raise HTTPException(status_code=400, detail="Username required")
+    user = db.exec(select(User).where(User.username == uname)).first()
+    if user is None or user.id is None:
+        raise HTTPException(status_code=400, detail=f"Unknown username: {uname}")
+    return user
+
+
+def _add_member(db: Session, team_id: str, user_id: int, existing: set[int]) -> None:
+    if user_id in existing:
+        return
+    db.add(TeamMember(team_id=team_id, user_id=user_id))
+    existing.add(user_id)
+
+
+@router.post("/admin/teams", response_model=TeamDetailOut, status_code=status.HTTP_201_CREATED)
+def create_team_admin(
+    body: TeamCreateRequest,
+    instructor: AuthUser = Depends(require_instructor),
+    db: Session = Depends(get_db),
 ) -> TeamDetailOut:
+    """Admin creates a team and assigns it to a cohort credential (owner_username)."""
+    owner_name = (body.owner_username or "").strip()
+    if not owner_name:
+        raise HTTPException(
+            status_code=400,
+            detail="owner_username is required — pick the cohort login that shares this team",
+        )
+    owner = _resolve_username(db, owner_name)
+
     team = Team(
         name=body.name.strip(),
         scenario_slug=body.scenario_slug,
@@ -91,12 +126,15 @@ def _create_team_impl(
     db.add(team)
     db.flush()
 
-    if auto_add_creator:
-        db.add(TeamMember(team_id=team.id, user_id=actor.id))
+    existing: set[int] = set()
+    _add_member(db, team.id, int(owner.id), existing)
+    for raw in body.member_usernames:
+        member = _resolve_username(db, raw)
+        _add_member(db, team.id, int(member.id), existing)
 
     db.add(
         AuditEvent(
-            actor_id=actor.id,
+            actor_id=instructor.id,
             action="team.create",
             target_id=team.id,
             metadata_json=None,
@@ -107,24 +145,59 @@ def _create_team_impl(
     return _team_detail(db, team)
 
 
-@router.post("/teams", response_model=TeamDetailOut, status_code=status.HTTP_201_CREATED)
-def create_team_self_service(
-    body: TeamCreateRequest,
-    user: AuthUser = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> TeamDetailOut:
-    """Signed-in cohort account creates a team (creator is the sole owner)."""
-    return _create_team_impl(db, body, user, auto_add_creator=True)
-
-
-@router.post("/admin/teams", response_model=TeamDetailOut, status_code=status.HTTP_201_CREATED)
-def create_team_admin(
-    body: TeamCreateRequest,
+@router.put("/admin/teams/{team_id}/members", response_model=TeamDetailOut)
+def set_team_members(
+    team_id: str,
+    body: TeamMembersRequest,
     instructor: AuthUser = Depends(require_instructor),
     db: Session = Depends(get_db),
 ) -> TeamDetailOut:
-    """Instructor create (does not force-add instructor)."""
-    return _create_team_impl(db, body, instructor, auto_add_creator=False)
+    """Replace team membership with the given cohort usernames."""
+    team = db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    users = [_resolve_username(db, u) for u in body.usernames]
+    for old in db.exec(select(TeamMember).where(TeamMember.team_id == team.id)).all():
+        db.delete(old)
+    db.flush()
+    seen: set[int] = set()
+    for user in users:
+        _add_member(db, team.id, int(user.id), seen)
+
+    db.add(
+        AuditEvent(
+            actor_id=instructor.id,
+            action="team.set_members",
+            target_id=team.id,
+            metadata_json=None,
+        )
+    )
+    db.commit()
+    return _team_detail(db, team)
+
+
+@router.delete("/admin/teams/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_team(
+    team_id: str,
+    instructor: AuthUser = Depends(require_instructor),
+    db: Session = Depends(get_db),
+) -> None:
+    team = db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="Team not found")
+    for m in db.exec(select(TeamMember).where(TeamMember.team_id == team.id)).all():
+        db.delete(m)
+    db.add(
+        AuditEvent(
+            actor_id=instructor.id,
+            action="team.delete",
+            target_id=team.id,
+            metadata_json=None,
+        )
+    )
+    db.delete(team)
+    db.commit()
 
 
 @router.get("/teams/{team_id}", response_model=TeamDetailOut)

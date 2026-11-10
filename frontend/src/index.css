@@ -173,11 +173,56 @@ button:disabled {
   border-radius: 8px;
 }
 
+.app-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 8px 6px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.app-nav a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.app-nav a:hover {
+  background: #e2e8f0;
+  text-decoration: none;
+}
+
+.app-nav a.active,
+.app-nav span.active {
+  background: linear-gradient(135deg, var(--purple-1) 0%, var(--purple-2) 100%);
+  color: #fff;
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.nav-section-label {
+  padding: 10px 16px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
 .nav-links {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 10px 8px;
+  padding: 4px 8px 10px;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -185,10 +230,10 @@ button:disabled {
 
 .nav-links a {
   display: block;
-  padding: 10px 12px;
+  padding: 9px 12px;
   border-radius: 10px;
   color: #334155;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-decoration: none;
 }
@@ -200,6 +245,38 @@ button:disabled {
 .nav-links a.active {
   background: var(--accent-soft);
   color: var(--accent-ink);
+}
+
+.child-tab-bar {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  overflow-x: auto;
+}
+
+.child-tab-bar a {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+
+.child-tab-bar a:hover {
+  background: #e2e8f0;
+  text-decoration: none;
+}
+
+.child-tab-bar a.active {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: #c7d2fe;
 }
 
 .nav-footer {

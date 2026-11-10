@@ -2,18 +2,22 @@
 
 Exit interviews are hosted inside **sellm** at `/course/`. Stakeholder chat stays at `/`.
 
-The flow is **student self-service**. Teammates **share one cohort login** (same account used for requirements chat) and type each person’s **real name** when creating the exit session — there is no invite / join workflow.
+**Admin** creates teams and attaches them to a cohort credential (shared login). Students only see **Chats** and **Exit interviews** in the sidebar. Teammates share that login and type each person’s **real name** when creating the exit session.
 
-## Dry-run checklist (students)
+## Dry-run checklist
 
-1. Sign in at `/course/login` with the shared cohort username.
-2. Open **Create team** (`/course/admin/teams`) and create a team (creator owns it).
-3. Open the team’s **repository** page: submit `fixture://demo` with SHA from `tests/fixtures/repos/demo/.fixture-sha` (or a real GitHub URL + commit). Wait until index status is `ready`.
-4. Open **Exit interview**: pick the frozen repo and enter participant names (one per line).
-5. **Give consent (all)**, then **Start**.
-6. When a name is shown as the current student, that person answers by **text**, or join LiveKit and use **browser STT** / paste, then **Commit answer**.
-7. Anyone on the shared login can **Start/Stop recording** (requires LiveKit). Playback: `/api/exit-sessions/<id>/recording`.
-8. **Finish & score** → provisional reports keyed by the typed names. Admins may later finalize via `POST /api/admin/assessments/<id>/review`.
+### Admin
+1. Sign in as admin → **Admin → Teams**.
+2. Create a team, set **Owner cohort username** to e.g. `trainee01` (from cohort credentials).
+3. Optionally edit members to add more cohort usernames.
+
+### Students (shared cohort login)
+1. Sign in at `/` or `/course/login` with the assigned cohort username.
+2. Sidebar: **Chats** (requirements) or **Exit interviews**.
+3. On Exit interviews → open the assigned team → **Repository**: submit `fixture://demo` (SHA in `tests/fixtures/repos/demo/.fixture-sha`) or a real GitHub URL + commit. Wait until `ready`.
+4. **Exit interview**: pick the frozen repo and enter participant names (one per line).
+5. **Give consent (all)**, then **Start**. Answer by text or LiveKit STT.
+6. **Finish & score** → provisional reports keyed by typed names.
 
 ## Environment
 

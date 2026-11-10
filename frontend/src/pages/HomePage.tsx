@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { fetchMyTeams, type Team } from '../api/client'
+import { fetchMyTeams, isInstructor, type Team } from '../api/client'
 import { useAuth } from '../auth'
 import { CourseShell } from '../components/CourseShell'
 
@@ -19,27 +19,44 @@ export function HomePage() {
   if (loading) return <main className="page-fallback">Loading…</main>
   if (!user) return <Navigate to="/login" replace />
 
+  const admin = isInstructor(user)
+
   return (
-    <CourseShell title="Your teams" subtitle="One cohort login · names entered at exit interview">
+    <CourseShell subtitle="Assigned teams for this cohort login">
       <div className="stack">
         <div className="toolbar">
           <p className="lede">
-            Share this login with teammates. Create a team, freeze the repo, then start the exit
-            interview and type each person’s name.
+            {admin
+              ? 'Admins assign teams to cohort credentials in Admin → Teams. Students share that login and type names at the interview.'
+              : 'Your instructor assigns a team to this login. Share the account with teammates and enter real names when you start the exit interview.'}
           </p>
-          <Link className="btn-primary" to="/admin/teams" style={{ display: 'inline-block', padding: '0.55rem 0.85rem', borderRadius: 10, color: '#fff', textDecoration: 'none', fontWeight: 600 }}>
-            Create team
-          </Link>
+          {admin ? (
+            <a
+              className="btn-primary"
+              href="/admin"
+              style={{
+                display: 'inline-block',
+                padding: '0.55rem 0.85rem',
+                borderRadius: 10,
+                color: '#fff',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              Manage teams
+            </a>
+          ) : null}
         </div>
 
         {error && <p className="error">{error}</p>}
 
         {teams.length === 0 ? (
           <div className="surface">
-            <h2>Empty</h2>
-            <p className="hint">No teams yet for this account.</p>
-            <p style={{ marginTop: 10 }}>
-              <Link to="/admin/teams">Create your first team</Link>
+            <h2>No team yet</h2>
+            <p className="hint">
+              {admin
+                ? 'Open Admin → Teams to create a team and attach a cohort username (e.g. trainee01).'
+                : 'Ask your instructor to assign this cohort login to a team.'}
             </p>
           </div>
         ) : (

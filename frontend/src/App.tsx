@@ -5,7 +5,6 @@ import { LoginPage } from './pages/LoginPage'
 import { AdminReposPage } from './pages/AdminReposPage'
 import { ExitInterviewPage } from './pages/ExitInterviewPage'
 import { PolicyPage } from './pages/PolicyPage'
-import { AdminTeamsPage } from './pages/PlaceholderPage'
 
 export default function App() {
   return (
@@ -16,7 +15,7 @@ export default function App() {
         <Route path="/policy" element={<PolicyPage />} />
         <Route path="/teams/:teamId/exit" element={<ExitInterviewPage />} />
         <Route path="/admin/teams/:teamId/repository" element={<AdminReposPage />} />
-        <Route path="/admin/teams" element={<AdminTeamsPage />} />
+        <Route path="/admin/teams" element={<Navigate to="/" replace />} />
         <Route path="/teams/:teamId/interviews" element={<Navigate to="/" replace />} />
         <Route path="/admin/scenarios" element={<Navigate to="/" replace />} />
         <Route path="/admin/teams/:teamId/transcripts" element={<Navigate to="/" replace />} />

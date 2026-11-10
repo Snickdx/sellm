@@ -391,10 +391,10 @@
 </head>
 <body>
     <div class="topbar">
-        <h1>Admin · Requirements Chatbot</h1>
+        <h1>Admin · sellm</h1>
         <div style="display:flex;gap:8px;align-items:center;">
             <span id="adminWho" style="font-size:13px;opacity:0.9;"></span>
-            <a href="/">← Chat</a>
+            <a href="/">Chats</a>
             <a href="/course/">Exit interviews</a>
             <button type="button" id="logoutBtn" class="linkish">Sign out</button>
         </div>
@@ -425,6 +425,7 @@
     <div id="adminShell" class="shell hidden">
         <aside class="nav" aria-label="Admin sections">
             <button type="button" data-view="users" class="active">Users</button>
+            <button type="button" data-view="teams">Teams</button>
             <button type="button" data-view="tokens">Token monitor</button>
             <button type="button" data-view="appkeys">App-wide keys</button>
             <button type="button" data-view="defaults">Role defaults</button>
@@ -448,6 +449,6 @@
         </section>
     </div>
 
-    <script src="/static/components/admin.js?v=6"></script>
+    <script src="/static/components/admin.js?v=7"></script>
 </body>
 </html>
