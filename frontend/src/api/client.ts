@@ -22,6 +22,15 @@ export function isInstructor(user: User | null | undefined): boolean {
   return !!user && user.role === 'admin'
 }
 
+export function canDeleteExitSession(
+  user: User | null | undefined,
+  createdById: number | null | undefined,
+): boolean {
+  if (!user) return false
+  if (isInstructor(user)) return true
+  return createdById != null && createdById === user.id
+}
+
 export interface Team {
   id: string
   name: string
@@ -236,6 +245,7 @@ export interface ExitSession {
   current_participant_user_id: number | null
   current_participant_name: string | null
   current_question_id: string | null
+  created_by_id?: number | null
   plan: Record<string, unknown> | null
   participants: Array<{
     user_id: number
@@ -253,6 +263,7 @@ export interface ExitSessionSummary {
   status: string
   consent_status: string
   created_at?: string | null
+  created_by_id?: number | null
   participant_names?: string[]
   repository_submission_id?: string
 }

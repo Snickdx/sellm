@@ -166,6 +166,7 @@ def _serialize_session(bundle: SessionBundle) -> dict:
         "target_duration_minutes": session.target_duration_minutes,
         "current_participant_user_id": session.current_participant_user_id,
         "current_question_id": session.current_question_id,
+        "created_by_id": session.created_by_id,
         "plan": session.plan_json,
         "started_at": session.started_at.isoformat() if session.started_at else None,
         "ended_at": session.ended_at.isoformat() if session.ended_at else None,
@@ -313,15 +314,21 @@ def get_exit_session(
 @router.delete("/exit-sessions/{session_id}")
 def delete_exit_session(
     session_id: str,
-    user: AuthUser = Depends(require_instructor),
+    user: AuthUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     """Delete an exit interview and related answers, assessments, and recording file.
 
-    Instructor-only — teammates must not be able to erase completed interviews.
+    Creators may delete their own sessions; instructors may delete any.
+    Other teammates cannot erase interviews they did not start.
     """
     bundle = _session_access(db, session_id, user)
     session = bundle.session
+    if not user.is_instructor and session.created_by_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the interview creator or an instructor can delete this session",
+        )
 
     # Clear FK pointer before removing questions.
     session.current_question_id = None
@@ -417,6 +424,7 @@ def list_team_exit_sessions(
                 "consent_status": r.consent_status,
                 "repository_submission_id": str(r.repository_submission_id),
                 "created_at": r.created_at.isoformat() if r.created_at else None,
+                "created_by_id": r.created_by_id,
                 "participant_names": [p.display_name for p in participants if p.display_name],
             }
         )

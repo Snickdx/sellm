@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import {
+  canDeleteExitSession,
   consentExitSession,
   createExitSession,
   deleteExitSession,
@@ -734,6 +735,7 @@ export function ExitInterviewPage() {
   )
 
   const selectedSummary = sessions.find((s) => s.id === selectedPastId) ?? null
+  const canDeleteSelected = canDeleteExitSession(user, selectedSummary?.created_by_id)
 
   const hubScreen = (
     <>
@@ -834,14 +836,16 @@ export function ExitInterviewPage() {
                       ? 'View interview'
                       : 'Continue interview'}
                 </button>
-                <button
-                  type="button"
-                  className="ghost danger"
-                  disabled={busy || !selectedPastId}
-                  onClick={() => selectedPastId && void onDeleteInterview(selectedPastId)}
-                >
-                  Delete interview
-                </button>
+                {canDeleteSelected ? (
+                  <button
+                    type="button"
+                    className="ghost danger"
+                    disabled={busy || !selectedPastId}
+                    onClick={() => selectedPastId && void onDeleteInterview(selectedPastId)}
+                  >
+                    Delete interview
+                  </button>
+                ) : null}
               </div>
             </div>
           )}

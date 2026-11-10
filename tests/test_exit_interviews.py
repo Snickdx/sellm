@@ -167,6 +167,65 @@ def test_student_group_settings_and_named_interview(client):
     assert listed.json()[0]["participant_names"] == ["Alex Rivera"]
 
 
+def test_student_can_delete_own_exit_session(client):
+    """Creators may delete their own interview; instructors still can; others cannot."""
+    admin = _login(client, "instructor", "instructor-dev")
+    student = _login(client, "studenta", "password123")
+    other = _login(client, "studentb", "password123")
+
+    team = client.post(
+        "/api/admin/teams",
+        headers=admin,
+        json={
+            "name": "Delete Own",
+            "scenario_slug": "library",
+            "owner_username": "studenta",
+            "github_url": "fixture://demo",
+            "participant_names": ["Alex"],
+        },
+    )
+    assert team.status_code == 201, team.text
+    team_id = team.json()["id"]
+
+    # Add studentb as teammate so they can see the session but not delete it.
+    member = client.put(
+        f"/api/admin/teams/{team_id}/members",
+        headers=admin,
+        json={"usernames": ["studenta", "studentb"]},
+    )
+    assert member.status_code == 200, member.text
+
+    created = client.post(
+        f"/api/teams/{team_id}/exit-session",
+        headers=student,
+        json={"questions_per_student": 1},
+    )
+    assert created.status_code == 201, created.text
+    session_id = created.json()["id"]
+    assert created.json()["created_by_id"] is not None
+
+    denied = client.delete(f"/api/exit-sessions/{session_id}", headers=other)
+    assert denied.status_code == 403, denied.text
+
+    deleted = client.delete(f"/api/exit-sessions/{session_id}", headers=student)
+    assert deleted.status_code == 200, deleted.text
+    assert deleted.json()["ok"] is True
+
+    missing = client.get(f"/api/exit-sessions/{session_id}", headers=student)
+    assert missing.status_code == 404
+
+    # Instructor can delete another student's session.
+    again = client.post(
+        f"/api/teams/{team_id}/exit-session",
+        headers=student,
+        json={"questions_per_student": 1},
+    )
+    assert again.status_code == 201, again.text
+    sid2 = again.json()["id"]
+    by_admin = client.delete(f"/api/exit-sessions/{sid2}", headers=admin)
+    assert by_admin.status_code == 200, by_admin.text
+
+
 def test_policy_public(client):
     response = client.get("/api/policy")
     assert response.status_code == 200
