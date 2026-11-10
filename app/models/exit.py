@@ -94,6 +94,40 @@ class TeamMember(SQLModel, table=True):
     joined_at: datetime = Field(default_factory=_utc_now)
 
 
+class ClassStudent(SQLModel, table=True):
+    """Roster row from the course class list.
+
+    ``student_number`` is admin-only — never return it from student-facing APIs.
+    Public search/claim uses ``id`` (opaque UUID) only.
+    """
+
+    __tablename__ = "class_students"
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    student_number: str = Field(index=True, unique=True)
+    first_name: str = Field(default="")
+    last_name: str = Field(default="")
+    email: str = Field(default="", index=True)
+    status: str = Field(default="available", index=True)  # available | claimed
+    group_claim_id: Optional[str] = Field(default=None, index=True)
+    created_at: datetime = Field(default_factory=_utc_now, index=True)
+
+
+class GroupClaim(SQLModel, table=True):
+    """Student-formed group that claimed a shared cohort login."""
+
+    __tablename__ = "group_claims"
+
+    id: str = Field(default_factory=_uuid, primary_key=True)
+    name: str = Field(index=True)
+    team_id: str = Field(foreign_key="teams.id", index=True)
+    account_user_id: int = Field(index=True)
+    account_username: str = Field(index=True)
+    member_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    member_names: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=_utc_now, index=True)
+
+
 class AuditEvent(SQLModel, table=True):
     __tablename__ = "audit_events"
 

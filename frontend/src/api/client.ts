@@ -97,6 +97,37 @@ export async function fetchMe(): Promise<User> {
   return mapUser(raw)
 }
 
+export interface PublicStudent {
+  id: string
+  display_name: string
+  email: string
+  status: string
+}
+
+export interface ClaimResult {
+  group_name: string
+  username: string
+  password: string
+  team_id: string
+  members: string[]
+  message: string
+}
+
+export async function searchRoster(q: string): Promise<PublicStudent[]> {
+  const params = new URLSearchParams({ q, available_only: 'true' })
+  return request(`/api/roster/search?${params.toString()}`)
+}
+
+export async function claimGroup(body: {
+  group_name: string
+  member_ids: string[]
+}): Promise<ClaimResult> {
+  return request('/api/roster/claim', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
+
 export async function fetchMyTeams(): Promise<Team[]> {
   return request<Team[]>('/api/me/teams')
 }

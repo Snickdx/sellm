@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { login } from '../api/client'
 import { useAuth } from '../auth'
 
@@ -34,8 +34,8 @@ export function LoginPage() {
         <p className="eyebrow">sellm · course</p>
         <h1>Exit interviews</h1>
         <p className="lede">
-          Sign in with the shared cohort login from requirements chat. Teammates use the same
-          account and type their names in the interview.
+          Sign in with your group&apos;s shared login. Form a group first if you have not claimed
+          credentials yet.
         </p>
 
         <form onSubmit={onSubmit} className="auth-form">
@@ -67,6 +67,8 @@ export function LoginPage() {
         </form>
 
         <p className="hint" style={{ marginTop: 14 }}>
+          Need an account? <Link to="/claim">Form a group &amp; claim credentials</Link>
+          <br />
           <a href="/">Back to requirements chat</a>
         </p>
       </section>

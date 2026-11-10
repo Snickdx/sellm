@@ -1248,11 +1248,104 @@
     }
   }
 
+  async function renderRoster() {
+    listTitle.textContent = "Class roster";
+    detailTitle.textContent = "Student status";
+    listToolbar.innerHTML = `
+      <button type="button" class="btn" id="importRosterBtn">Import classlist.csv</button>
+      <button type="button" class="btn btn-secondary" id="uploadRosterBtn">Upload CSV</button>
+      <input type="file" id="rosterFile" accept=".csv,text/csv" hidden />
+    `;
+    listBody.innerHTML = `<p class="meta" style="padding:12px;">Loading…</p>`;
+    detailBody.innerHTML = `<p class="meta">Import the class list, then track who has claimed a group account.</p>`;
+    try {
+      const data = await api("/api/admin/roster");
+      const students = data.students || [];
+      listToolbar.insertAdjacentHTML(
+        "beforeend",
+        `<span class="meta" style="margin-left:8px;">${data.total || 0} students · ${data.claimed || 0} claimed · ${data.groups || 0} groups</span>`,
+      );
+      listBody.innerHTML =
+        students
+          .map((s) => {
+            const badge =
+              s.status === "claimed"
+                ? `<span class="badge">claimed</span>`
+                : `<span class="badge admin">available</span>`;
+            return `<button type="button" class="list-item" data-roster-id="${escapeAttr(s.id)}">
+              <strong>${escapeHtml(s.display_name)}</strong>
+              <span class="meta">${escapeHtml(s.student_number)} · ${escapeHtml(s.email || "—")}</span>
+              ${badge}
+            </button>`;
+          })
+          .join("") || `<p class="meta" style="padding:12px;">No roster yet. Import classlist.csv.</p>`;
+
+      const showStudent = (id) => {
+        const s = students.find((row) => row.id === id);
+        if (!s) return;
+        detailTitle.textContent = s.display_name;
+        detailBody.innerHTML = `
+          <div class="stack">
+            <p><strong>Student ID</strong><br/>${escapeHtml(s.student_number)}</p>
+            <p><strong>Email</strong><br/>${escapeHtml(s.email || "—")}</p>
+            <p><strong>Status</strong><br/>${escapeHtml(s.status)}</p>
+            <p><strong>Group</strong><br/>${escapeHtml(s.group_name || "—")}</p>
+            <p><strong>Claimed account</strong><br/>${escapeHtml(s.account_username || "—")}</p>
+            <p><strong>Team id</strong><br/><code>${escapeHtml(s.team_id || "—")}</code></p>
+            <p><strong>Claimed at</strong><br/>${escapeHtml(s.claimed_at || "—")}</p>
+          </div>`;
+      };
+
+      listBody.querySelectorAll("[data-roster-id]").forEach((btn) => {
+        btn.addEventListener("click", () => showStudent(btn.getAttribute("data-roster-id")));
+      });
+      if (students[0]) showStudent(students[0].id);
+
+      const fileInput = document.getElementById("rosterFile");
+      document.getElementById("importRosterBtn")?.addEventListener("click", async () => {
+        if (!confirm("Import/refresh from repo classlist.csv on the server?")) return;
+        try {
+          await api("/api/admin/roster/import", { method: "POST" });
+          await renderRoster();
+        } catch (e) {
+          detailBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
+        }
+      });
+      document.getElementById("uploadRosterBtn")?.addEventListener("click", () => fileInput?.click());
+      fileInput?.addEventListener("change", async () => {
+        const file = fileInput.files?.[0];
+        if (!file) return;
+        const body = new FormData();
+        body.append("file", file);
+        try {
+          const r = await fetch("/api/admin/roster/import-upload", {
+            method: "POST",
+            headers: authHeaders(false),
+            body,
+          });
+          const text = await r.text();
+          if (!r.ok) throw new Error(text || r.statusText);
+          await renderRoster();
+        } catch (e) {
+          detailBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
+        } finally {
+          fileInput.value = "";
+        }
+      });
+    } catch (e) {
+      listBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
+      detailBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
+    }
+  }
+
   async function render() {
     if (view === "users") {
       setLayout("users");
       await loadUsers();
       await renderUsersGrid();
+    } else if (view === "roster") {
+      setLayout("list");
+      await renderRoster();
     } else if (view === "teams") {
       setLayout("list");
       await renderTeams();
@@ -1300,7 +1393,7 @@
     show(adminShell);
     const params = new URLSearchParams(window.location.search);
     const initial = params.get("view");
-    if (initial && ["users", "teams", "tokens", "appkeys", "defaults"].includes(initial)) {
+    if (initial && ["users", "roster", "teams", "tokens", "appkeys", "defaults"].includes(initial)) {
       view = initial;
     }
     syncViewTabs();

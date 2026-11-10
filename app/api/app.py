@@ -81,6 +81,7 @@ from app.api.scenarios import router as scenarios_router
 from app.api.teams import router as teams_router
 from app.api.repositories import router as repositories_router
 from app.api.exit_interviews import router as exit_interviews_router
+from app.api.roster import router as roster_router
 from app.api.voice import router as voice_router
 from app.api.policy import router as policy_router
 from app.indexing import index_all_scenarios
@@ -245,6 +246,7 @@ app.include_router(admin_router)
 app.include_router(teams_router, prefix="/api")
 app.include_router(repositories_router, prefix="/api")
 app.include_router(exit_interviews_router, prefix="/api")
+app.include_router(roster_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(policy_router, prefix="/api")
 

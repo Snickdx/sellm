@@ -3,8 +3,10 @@
 from app.models.exit import (
     Assessment,
     AuditEvent,
+    ClassStudent,
     ConsentStatus,
     ExitInterviewSession,
+    GroupClaim,
     InterviewAnswer,
     InterviewParticipant,
     InterviewQuestion,
@@ -30,8 +32,10 @@ from app.models.scenarios import (
 __all__ = [
     "Assessment",
     "AuditEvent",
+    "ClassStudent",
     "ConsentStatus",
     "ExitInterviewSession",
+    "GroupClaim",
     "InterviewAnswer",
     "InterviewParticipant",
     "InterviewQuestion",

@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth'
+import { ClaimGroupPage } from './pages/ClaimGroupPage'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { ExitInterviewPage } from './pages/ExitInterviewPage'
@@ -11,6 +12,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/claim" element={<ClaimGroupPage />} />
         <Route path="/policy" element={<PolicyPage />} />
         <Route path="/teams/:teamId/exit" element={<ExitInterviewPage />} />
         <Route path="/admin/teams/:teamId/repository" element={<Navigate to="/" replace />} />
