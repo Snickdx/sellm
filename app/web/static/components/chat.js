@@ -126,15 +126,17 @@
   }
 
   function updateAdminLink() {
-    const link = document.getElementById("adminLink");
-    if (!link) return;
-    if (isAdmin) {
-      link.hidden = false;
-      link.style.display = "block";
-    } else {
-      link.hidden = true;
-      link.style.display = "none";
-    }
+    ["adminLink", "adminLinkMobile"].forEach((id) => {
+      const link = document.getElementById(id);
+      if (!link) return;
+      if (isAdmin) {
+        link.hidden = false;
+        link.style.display = id === "adminLinkMobile" ? "inline-flex" : "block";
+      } else {
+        link.hidden = true;
+        link.style.display = "none";
+      }
+    });
   }
 
   function updateModeModelVisibility() {

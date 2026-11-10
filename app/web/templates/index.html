@@ -31,12 +31,37 @@
         }
         .master-detail {
             display: grid;
-            grid-template-columns: minmax(200px, 0.95fr) minmax(0, 5fr);
+            grid-template-columns: 168px minmax(200px, 260px) minmax(0, 1fr);
             width: 100%;
             height: 100vh;
             background: white;
             overflow: hidden;
             position: relative;
+        }
+        .app-nav-pane {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            background: #f1f5f9;
+            border-right: 1px solid #e2e8f0;
+            z-index: 5;
+        }
+        .app-nav-pane-header {
+            padding: 12px 12px 8px;
+            flex-shrink: 0;
+        }
+        .app-nav-pane-header .kicker {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .app-nav-pane-header h2 {
+            margin: 2px 0 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
         }
         .conversations-pane {
             display: flex;
@@ -186,9 +211,9 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            padding: 10px 8px;
-            border-bottom: 1px solid #e2e8f0;
-            flex-shrink: 0;
+            padding: 8px;
+            flex: 1;
+            min-height: 0;
         }
         .app-nav a {
             display: block;
@@ -204,36 +229,10 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #fff;
         }
-        .nav-section-label {
-            padding: 10px 16px 4px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: #64748b;
+        .app-nav-footer {
+            padding: 8px;
+            border-top: 1px solid #e2e8f0;
             flex-shrink: 0;
-        }
-        .chat-child-tabs {
-            display: flex;
-            gap: 4px;
-            padding: 0 8px 10px;
-            flex-shrink: 0;
-        }
-        .chat-child-tabs button {
-            flex: 1;
-            border: 1px solid transparent;
-            background: transparent;
-            border-radius: 999px;
-            padding: 8px 10px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #475569;
-            cursor: pointer;
-        }
-        .chat-child-tabs button.active {
-            background: #eef2ff;
-            color: #3730a3;
-            border-color: #c7d2fe;
         }
         .new-chat-btn {
             width: 100%;
@@ -649,6 +648,9 @@
                 grid-template-columns: 1fr;
                 height: 100dvh;
             }
+            .app-nav-pane {
+                display: none;
+            }
             .chat-body {
                 grid-template-columns: 1fr;
             }
@@ -668,6 +670,22 @@
             }
             .conversations-pane.open {
                 transform: translateX(0);
+            }
+            .mobile-app-nav {
+                display: flex !important;
+                gap: 6px;
+                padding: 0 8px 10px;
+                flex-wrap: wrap;
+            }
+            .mobile-app-nav a {
+                font-size: 12px;
+                font-weight: 700;
+                color: #3730a3;
+                text-decoration: none;
+                padding: 6px 10px;
+                border-radius: 999px;
+                background: #eef2ff;
+                border: 1px solid #c7d2fe;
             }
             .controls-pane {
                 position: absolute;
@@ -766,29 +784,35 @@
     <div id="sideNavBackdrop" class="side-nav-backdrop" aria-hidden="true"></div>
     <div class="shell">
         <div class="master-detail chat-container">
-            <aside id="sideNav" class="conversations-pane" aria-label="Course navigation">
-                <div class="conversations-pane-header">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
-                        <div>
-                            <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">SWEN · sellm</div>
-                            <h2 style="margin:2px 0 0;">Course</h2>
-                        </div>
-                        <button type="button" id="sideNavClose" class="side-nav-close" aria-label="Close menu">&times;</button>
-                    </div>
+            <aside class="app-nav-pane" aria-label="Primary navigation">
+                <div class="app-nav-pane-header">
+                    <div class="kicker">SWEN · sellm</div>
+                    <h2>Course</h2>
                 </div>
                 <nav class="app-nav" aria-label="Primary">
                     <a href="/" class="active" aria-current="page">Chats</a>
                     <a href="/course/">Exit interviews</a>
                     <a id="adminLink" href="/admin" hidden style="display:none;">Admin</a>
                 </nav>
-                <div class="nav-section-label">Chats</div>
-                <div class="chat-child-tabs" role="tablist" aria-label="Chat tools">
-                    <button type="button" class="active" data-chat-tab="list" role="tab" aria-selected="true">History</button>
-                    <button type="button" id="settingsBtn" data-chat-tab="settings" role="tab" aria-selected="false">Settings</button>
+                <div class="app-nav-footer">
+                    <button type="button" id="logoutBtn" class="logout-btn" style="width:100%;border:none;border-radius:10px;padding:8px 12px;background:transparent;color:#64748b;font-size:12px;cursor:pointer;">Sign out</button>
                 </div>
-                <div style="padding:0 8px 8px;flex-shrink:0;">
-                    <button type="button" id="newConversationBtn" class="new-chat-btn">+ New chat</button>
-                    <button type="button" id="logoutBtn" class="logout-btn" style="margin-top:6px;width:100%;border:none;border-radius:10px;padding:6px 12px;background:transparent;color:#94a3b8;font-size:12px;cursor:pointer;">Sign out</button>
+            </aside>
+            <aside id="sideNav" class="conversations-pane" aria-label="Chat history">
+                <div class="conversations-pane-header">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <h2 style="margin:0;">Chats</h2>
+                        <div style="display:flex;align-items:center;gap:4px;">
+                            <button type="button" id="settingsBtn" class="settings-icon-btn" title="API Configuration" aria-label="API Configuration">⚙️</button>
+                            <button type="button" id="sideNavClose" class="side-nav-close" aria-label="Close chats">&times;</button>
+                        </div>
+                    </div>
+                    <nav class="mobile-app-nav" aria-label="Primary" style="display:none;margin-top:10px;">
+                        <a href="/" aria-current="page">Chats</a>
+                        <a href="/course/">Exit interviews</a>
+                        <a id="adminLinkMobile" href="/admin" hidden>Admin</a>
+                    </nav>
+                    <button type="button" id="newConversationBtn" class="new-chat-btn" style="margin-top:10px;">+ New chat</button>
                 </div>
                 <div id="conversationList" class="conversation-list" role="list"></div>
             </aside>
@@ -918,6 +942,6 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/chat.js?v=19"></script>
+    <script src="/static/components/chat.js?v=20"></script>
 </body>
 </html>
