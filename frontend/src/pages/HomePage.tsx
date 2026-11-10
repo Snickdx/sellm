@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { fetchMyTeams, setupMyGroup, type Team } from '../api/client'
 import { useAuth } from '../auth'
 import { CourseShell } from '../components/CourseShell'
+import { LandingPage } from './LandingPage'
 
 export function HomePage() {
   const { user, loading } = useAuth()
@@ -14,7 +15,10 @@ export function HomePage() {
   const [createdId, setCreatedId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!user) return
+    if (!user) {
+      setTeams([])
+      return
+    }
     void fetchMyTeams()
       .then(setTeams)
       .catch((err: unknown) => {
@@ -23,8 +27,9 @@ export function HomePage() {
       })
   }, [user])
 
-  if (loading || teams === null) return <main className="page-fallback">Loading…</main>
-  if (!user) return <Navigate to="/login" replace />
+  if (loading) return <main className="page-fallback">Loading…</main>
+  if (!user) return <LandingPage />
+  if (teams === null) return <main className="page-fallback">Loading…</main>
   if (createdId) return <Navigate to={`/teams/${createdId}/exit`} replace />
   if (teams.length > 0) return <Navigate to={`/teams/${teams[0].id}/exit`} replace />
 

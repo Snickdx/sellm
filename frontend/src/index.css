@@ -1302,6 +1302,40 @@ textarea:focus {
 
 /* ── Login (matches sellm overlay card) ── */
 
+.landing-shell {
+  align-items: stretch;
+  padding: 24px 16px;
+}
+
+.landing-grid {
+  width: min(960px, 100%);
+  margin: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.85fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.landing-panel {
+  max-width: none;
+}
+
+.landing-login {
+  position: sticky;
+  top: 16px;
+}
+
+@media (max-width: 820px) {
+  .landing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-login {
+    position: static;
+    order: -1;
+  }
+}
+
 .auth-shell {
   min-height: 100vh;
   min-height: 100dvh;

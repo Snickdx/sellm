@@ -1,77 +1,10 @@
-import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { login } from '../api/client'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { LandingPage } from './LandingPage'
 
+/** Login lives on the landing page with group claim. */
 export function LoginPage() {
-  const { user, loading, setToken } = useAuth()
-  const navigate = useNavigate()
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-
+  const { user, loading } = useAuth()
   if (!loading && user) return <Navigate to="/" replace />
-
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault()
-    setSubmitting(true)
-    setError(null)
-    try {
-      const token = await login(username.trim(), password)
-      setToken(token)
-      navigate('/')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <main className="auth-shell">
-      <section className="auth-panel">
-        <p className="eyebrow">sellm · course</p>
-        <h1>Exit interviews</h1>
-        <p className="lede">
-          Sign in with your group&apos;s shared login. Form a group first if you have not claimed
-          credentials yet.
-        </p>
-
-        <form onSubmit={onSubmit} className="auth-form">
-          <label>
-            Username
-            <input
-              className="login-input"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              autoComplete="username"
-            />
-          </label>
-          <label>
-            Password
-            <input
-              className="login-input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-            />
-          </label>
-          {error && <p className="error">{error}</p>}
-          <button type="submit" disabled={submitting}>
-            {submitting ? 'Signing in…' : 'Log in'}
-          </button>
-        </form>
-
-        <p className="hint" style={{ marginTop: 14 }}>
-          Need an account? <Link to="/claim">Form a group &amp; claim credentials</Link>
-          <br />
-          <a href="/">Back to requirements chat</a>
-        </p>
-      </section>
-    </main>
-  )
+  return <LandingPage />
 }
