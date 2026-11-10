@@ -487,6 +487,14 @@ button:disabled {
   flex-direction: column;
 }
 
+.repo-settings-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .interview-hub {
   flex: 1;
   min-height: 0;

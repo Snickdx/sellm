@@ -10,6 +10,7 @@ export interface MeResponse {
   username: string
   is_admin: boolean
   role: UserRole
+  group_name?: string | null
 }
 
 /** Normalized view for UI code (`id`, `display_name`). */

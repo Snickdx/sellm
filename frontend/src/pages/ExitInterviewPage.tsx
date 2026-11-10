@@ -32,7 +32,7 @@ import { CourseShell } from '../components/CourseShell'
 import { VoiceRoomPanel, type VoiceRoomHandle } from '../components/VoiceRoomPanel'
 import { useAuth } from '../auth'
 
-type ExitTab = 'group' | 'hub' | 'live'
+type ExitTab = 'hub' | 'live'
 
 /** Scored / moderated — full review UI. */
 const SCORED_STATUSES = new Set(['lecturer_review', 'finalized'])
@@ -407,25 +407,27 @@ export function ExitInterviewPage() {
   if (!user) return <Navigate to="/login" replace />
   if (!teamId) return <Navigate to="/" replace />
 
-  async function onSaveSettings(event: FormEvent) {
+  async function onSaveRepo(event: FormEvent) {
     event.preventDefault()
-    if (!teamId || !groupName.trim() || !githubUrl.trim()) return
+    if (!teamId || !githubUrl.trim()) return
+    const name = (groupName.trim() || team?.name || user?.display_name || 'Group').trim()
     setBusy(true)
     setError(null)
     setSettingsHint(null)
     try {
       const result = await setupMyGroup({
         team_id: teamId,
-        name: groupName.trim(),
+        name,
         github_url: githubUrl.trim(),
         scenario_slug: team?.scenario_slug || undefined,
       })
       setTeam(result.team)
+      setGroupName(result.team.name || name)
       setRepo(result.repository)
       setSettingsHint(
         result.repository.index_status === 'ready'
-          ? 'Group settings saved. Repository is ready.'
-          : 'Group settings saved. Repository is indexing…',
+          ? 'Repository saved and ready.'
+          : 'Repository saved. Indexing…',
       )
       await refreshHub()
     } catch (err) {
@@ -667,55 +669,51 @@ export function ExitInterviewPage() {
   }
 
   const tabs = [
-    { id: 'group', label: 'Group' },
     { id: 'hub', label: 'Interviews' },
     ...(session ? [{ id: 'live', label: 'Live', disabled: true }] : []),
   ]
 
-  const groupScreen = (
-    <section className="surface">
-      <h2>Group settings</h2>
-      <p className="hint" style={{ marginBottom: 12 }}>
-        Name and repository URL. No commit hash needed.
-      </p>
-      {allTeams.length > 1 ? (
-        <label className="auth-form" style={{ marginBottom: 12 }}>
-          Group
-          <select
-            value={teamId}
-            onChange={(e) => {
-              navigate(`/teams/${e.target.value}/exit`)
-            }}
-          >
-            {allTeams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-      <form className="auth-form" onSubmit={onSaveSettings}>
-        <div className="form-grid two">
-          <label>
-            Group name
-            <input
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Team Alpha"
-              required
-            />
-          </label>
-          <label>
-            Repository URL
-            <input
-              value={githubUrl}
-              onChange={(e) => setGithubUrl(e.target.value)}
-              placeholder="https://github.com/org/repo"
-              required
-            />
-          </label>
+  const selectedSummary = sessions.find((s) => s.id === selectedPastId) ?? null
+  const canDeleteSelected = canDeleteExitSession(user, selectedSummary?.created_by_id)
+
+  const repoSettings = (
+    <section className="surface repo-settings" style={{ marginBottom: 12 }}>
+      <div className="repo-settings-head">
+        <div>
+          <h2 style={{ margin: 0, fontSize: '1rem' }}>Repository</h2>
+          <p className="hint" style={{ margin: '4px 0 0' }}>
+            {team?.name ? `${team.name} · ` : ''}
+            Paste the group GitHub URL (no commit hash).
+          </p>
         </div>
+        {allTeams.length > 1 ? (
+          <label className="auth-form" style={{ margin: 0, minWidth: 180 }}>
+            Group
+            <select
+              value={teamId}
+              onChange={(e) => {
+                navigate(`/teams/${e.target.value}/exit`)
+              }}
+            >
+              {allTeams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+      </div>
+      <form className="auth-form" onSubmit={onSaveRepo} style={{ marginTop: 10 }}>
+        <label>
+          Repository URL
+          <input
+            value={githubUrl}
+            onChange={(e) => setGithubUrl(e.target.value)}
+            placeholder="https://github.com/org/repo"
+            required
+          />
+        </label>
         {repo ? (
           <p className="muted-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
             <span>
@@ -727,24 +725,22 @@ export function ExitInterviewPage() {
           </p>
         ) : null}
         {settingsHint ? <p className="hint">{settingsHint}</p> : null}
-        <button type="submit" disabled={busy || !groupName.trim() || !githubUrl.trim()}>
-          {busy ? 'Saving…' : 'Save group settings'}
+        <button type="submit" disabled={busy || !githubUrl.trim()}>
+          {busy ? 'Saving…' : repoReady ? 'Update repository' : 'Save repository'}
         </button>
       </form>
     </section>
   )
 
-  const selectedSummary = sessions.find((s) => s.id === selectedPastId) ?? null
-  const canDeleteSelected = canDeleteExitSession(user, selectedSummary?.created_by_id)
-
   const hubScreen = (
     <>
+      {repoSettings}
       <div className="interview-hub">
         <section className="interview-hub-list" aria-label="Past interviews">
           <div className="interview-hub-list-header">Past interviews</div>
           {sessions.length === 0 ? (
             <p className="hint" style={{ padding: 14, margin: 0 }}>
-              No interviews yet. Use Start interview.
+              No interviews yet. Save a repository above, then use Start interview.
             </p>
           ) : (
             sessions.map((s) => {
@@ -901,8 +897,7 @@ export function ExitInterviewPage() {
               </label>
               {!repoReady ? (
                 <p className="hint">
-                  Save group settings on the <strong>Group</strong> tab and wait until the repository is
-                  ready.
+                  Save a repository URL on the Interviews page and wait until it is ready.
                 </p>
               ) : null}
               <div className="live-actions">
@@ -1161,8 +1156,7 @@ export function ExitInterviewPage() {
     </section>
   )
 
-  const body =
-    tab === 'group' ? groupScreen : tab === 'live' ? reviewScreen ?? liveScreen : hubScreen
+  const body = tab === 'live' ? reviewScreen ?? liveScreen : hubScreen
 
   return (
     <CourseShell
@@ -1185,11 +1179,7 @@ export function ExitInterviewPage() {
         setTab(id as ExitTab)
       }}
     >
-      <div
-        className={`stack${
-          tab === 'hub' ? ' stack-fill' : tab === 'live' ? ' stack-live' : ' stack-wide'
-        }`}
-      >
+      <div className={`stack${tab === 'hub' ? ' stack-fill' : ' stack-live'}`}>
         {error && <p className="error">{error}</p>}
         {body}
       </div>

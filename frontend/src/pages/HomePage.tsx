@@ -10,7 +10,6 @@ export function HomePage() {
   const [teams, setTeams] = useState<Team[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [groupName, setGroupName] = useState('')
   const [githubUrl, setGithubUrl] = useState('')
   const [createdId, setCreatedId] = useState<string | null>(null)
 
@@ -35,42 +34,35 @@ export function HomePage() {
 
   async function onCreate(event: FormEvent) {
     event.preventDefault()
-    if (!groupName.trim() || !githubUrl.trim()) return
+    if (!user || !githubUrl.trim()) return
+    const name = (user.group_name || user.display_name || user.username || 'Group').trim()
     setBusy(true)
     setError(null)
     try {
       const result = await setupMyGroup({
-        name: groupName.trim(),
+        name,
         github_url: githubUrl.trim(),
         scenario_slug: 'library',
       })
       setCreatedId(result.team.id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not create group')
+      setError(err instanceof Error ? err.message : 'Could not save repository')
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <CourseShell subtitle="Set up your group to begin">
+    <CourseShell subtitle="Add your repository to begin interviews">
       <div className="stack">
         {error && <p className="error">{error}</p>}
         <section className="surface">
-          <h2>Group settings</h2>
+          <h2>Repository</h2>
           <p className="hint" style={{ marginBottom: 12 }}>
-            Enter a group name and repository URL (no commit hash). Then you can start interviews.
+            Your group is already claimed
+            {user?.group_name ? ` (${user.group_name})` : ''}. Paste the GitHub URL (no commit hash).
           </p>
           <form className="auth-form" onSubmit={onCreate}>
-            <label>
-              Group name
-              <input
-                value={groupName}
-                onChange={(e) => setGroupName(e.target.value)}
-                placeholder="Team Alpha"
-                required
-              />
-            </label>
             <label>
               Repository URL
               <input
@@ -80,7 +72,7 @@ export function HomePage() {
                 required
               />
             </label>
-            <button type="submit" disabled={busy || !groupName.trim() || !githubUrl.trim()}>
+            <button type="submit" disabled={busy || !githubUrl.trim()}>
               {busy ? 'Saving…' : 'Save & continue'}
             </button>
           </form>
