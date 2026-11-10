@@ -48,7 +48,8 @@ router = APIRouter(tags=["exit-interviews"])
 
 
 class CreateExitSessionRequest(BaseModel):
-    repository_submission_id: str
+    # Optional — defaults to the team's latest ready repository from group setup.
+    repository_submission_id: str | None = None
     # Real names typed at the laptop — teammates share the cohort login.
     participant_names: list[str] = Field(min_length=1)
     target_duration_minutes: int = Field(default=30, ge=10, le=120)
@@ -195,9 +196,33 @@ def create_exit_session(
     db: Session = Depends(get_db),
 ) -> dict:
     team = _team_access(db, team_id, user)
-    repo = db.get(RepositorySubmission, body.repository_submission_id)
-    if repo is None or repo.team_id != team.id:
-        raise HTTPException(status_code=400, detail="Repository submission not found for team")
+    repo: RepositorySubmission | None = None
+    if body.repository_submission_id:
+        repo = db.get(RepositorySubmission, body.repository_submission_id)
+        if repo is None or repo.team_id != team.id:
+            raise HTTPException(status_code=400, detail="Repository submission not found for team")
+    else:
+        candidates = list(
+            db.exec(
+                select(RepositorySubmission)
+                .where(RepositorySubmission.team_id == team.id)
+                .order_by(RepositorySubmission.updated_at.desc())
+            ).all()
+        )
+        repo = next(
+            (r for r in candidates if r.index_status == RepoIndexStatus.ready.value and r.index_json),
+            None,
+        )
+        if repo is None and candidates:
+            raise HTTPException(
+                status_code=400,
+                detail="Repository index is not ready yet — wait for group setup to finish indexing",
+            )
+        if repo is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Add group details first (repo, group name, scenario) before starting the interview",
+            )
     if repo.index_status != RepoIndexStatus.ready.value or not repo.index_json:
         raise HTTPException(status_code=400, detail="Repository index is not ready")
 

@@ -91,6 +91,36 @@ export async function fetchMyTeams(): Promise<Team[]> {
   return request<Team[]>('/api/me/teams')
 }
 
+export interface ScenarioListItem {
+  slug: string
+  title: string
+  version: string
+  status: string
+  brief: string
+}
+
+export async function listScenarios(): Promise<ScenarioListItem[]> {
+  return request<ScenarioListItem[]>('/api/scenarios')
+}
+
+export async function setupMyGroup(body: {
+  name: string
+  scenario_slug: string
+  github_url: string
+  branch?: string
+}): Promise<{ team: Team; repository: RepositorySubmission }> {
+  return request('/api/me/group-setup', {
+    method: 'POST',
+    body: JSON.stringify({
+      name: body.name,
+      scenario_slug: body.scenario_slug,
+      github_url: body.github_url,
+      branch: body.branch || null,
+      analyze_now: true,
+    }),
+  })
+}
+
 export async function createTeamAdmin(body: {
   name: string
   owner_username: string
@@ -142,29 +172,29 @@ export interface SearchHit {
 }
 
 export async function listTeamRepositories(teamId: string): Promise<RepositorySubmission[]> {
-  return request(`/api/admin/teams/${teamId}/repositories`)
+  return request(`/api/teams/${teamId}/repositories`)
 }
 
 export async function submitRepository(
   teamId: string,
-  body: { github_url: string; commit_sha: string; branch?: string; analyze_now?: boolean },
+  body: { github_url: string; commit_sha?: string; branch?: string; analyze_now?: boolean },
 ): Promise<RepositorySubmission> {
-  return request(`/api/admin/teams/${teamId}/repository`, {
+  return request(`/api/teams/${teamId}/repository`, {
     method: 'POST',
     body: JSON.stringify({ analyze_now: true, ...body }),
   })
 }
 
 export async function analyzeRepository(repoId: string): Promise<RepositorySubmission> {
-  return request(`/api/admin/repositories/${repoId}/analyze`, { method: 'POST' })
+  return request(`/api/repositories/${repoId}/analyze`, { method: 'POST' })
 }
 
 export async function fetchRepositoryStatus(repoId: string): Promise<RepositorySubmission> {
-  return request(`/api/admin/repositories/${repoId}/status`)
+  return request(`/api/repositories/${repoId}/status`)
 }
 
 export async function searchRepository(repoId: string, query: string): Promise<SearchHit[]> {
-  return request<SearchHit[]>(`/api/admin/repositories/${repoId}/search`, {
+  return request<SearchHit[]>(`/api/repositories/${repoId}/search`, {
     method: 'POST',
     body: JSON.stringify({ query }),
   })
@@ -228,8 +258,8 @@ export async function fetchExitSession(sessionId: string): Promise<ExitSession> 
 export async function createExitSession(
   teamId: string,
   body: {
-    repository_submission_id: string
     participant_names: string[]
+    repository_submission_id?: string
     target_duration_minutes?: number
     questions_per_student?: number
   },

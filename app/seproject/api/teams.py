@@ -1,16 +1,26 @@
-"""Teams — admin assigns a cohort credential as the shared login owner."""
+"""Teams — admin assigns a cohort credential; students fill group details."""
 
 from __future__ import annotations
 
+import os
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.seproject.db import get_db
 from app.seproject.deps import AuthUser, ensure_team_access, get_current_user, require_instructor
-from app.seproject.exit_models import AuditEvent, Team, TeamMember
+from app.seproject.exit_models import (
+    AuditEvent,
+    RepoIndexStatus,
+    RepositorySubmission,
+    Team,
+    TeamMember,
+)
+from app.seproject.providers.github import get_repository_provider, parse_repo_url
+from app.seproject.repo.ingest import analyze_submission, analyze_submission_job
+from app.seproject.settings import get_settings
 from app.storage.conversation_store import User
 
 router = APIRouter(tags=["teams"])
@@ -46,6 +56,22 @@ class TeamOut(BaseModel):
 
 class TeamDetailOut(TeamOut):
     members: list[TeamMemberOut]
+
+
+class GroupSetupRequest(BaseModel):
+    """Student workflow step 1: group name, scenario, repo URL (no commit hash)."""
+
+    name: str = Field(min_length=1, max_length=200)
+    scenario_slug: str = Field(min_length=1, max_length=120)
+    github_url: str = Field(min_length=3, max_length=500)
+    branch: str | None = Field(default=None, max_length=200)
+    scenario_version: str | None = None
+    analyze_now: bool = True
+
+
+class GroupSetupOut(BaseModel):
+    team: TeamDetailOut
+    repository: dict
 
 
 def _team_out(team: Team) -> TeamOut:
@@ -209,6 +235,147 @@ def get_team(
 ) -> TeamDetailOut:
     team = ensure_team_access(db, team_id, user)
     return _team_detail(db, team)
+
+
+def _first_membership_team(db: Session, user_id: int) -> Team | None:
+    membership = db.exec(select(TeamMember).where(TeamMember.user_id == user_id)).first()
+    if membership is None:
+        return None
+    return db.get(Team, membership.team_id)
+
+
+def _upsert_team_repo(
+    db: Session,
+    *,
+    team: Team,
+    github_url: str,
+    branch: str | None,
+    actor_id: int | None,
+) -> RepositorySubmission:
+    try:
+        ref = parse_repo_url(github_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    settings = get_settings()
+    provider = get_repository_provider(settings, ref)
+    try:
+        head = provider.resolve_head(ref, branch)
+        sha = str(head.get("sha") or "").strip().lower()
+        if not sha:
+            raise FileNotFoundError("Could not resolve repository HEAD")
+        if not branch and head.get("branch"):
+            branch = str(head["branch"])
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+    display_url = ref.display_url if ref.source == "github" else github_url.strip()
+    row = db.exec(
+        select(RepositorySubmission).where(RepositorySubmission.team_id == team.id)
+    ).first()
+    if row is None:
+        row = RepositorySubmission(
+            team_id=team.id,
+            github_url=display_url,
+            owner=ref.owner,
+            repo=ref.repo,
+            branch=branch,
+            commit_sha=sha,
+            index_status=RepoIndexStatus.pending.value,
+        )
+        db.add(row)
+    else:
+        row.github_url = display_url
+        row.owner = ref.owner
+        row.repo = ref.repo
+        row.branch = branch
+        if row.commit_sha != sha or row.index_status != RepoIndexStatus.ready.value:
+            row.commit_sha = sha
+            row.index_status = RepoIndexStatus.pending.value
+            row.index_error = None
+
+    db.add(
+        AuditEvent(
+            actor_id=actor_id,
+            action="group.setup.repository",
+            target_id=str(team.id),
+            metadata_json=f'{{"url":"{display_url}","sha":"{sha}"}}',
+        )
+    )
+    db.flush()
+    return row
+
+
+@router.post("/me/group-setup", response_model=GroupSetupOut)
+def setup_my_group(
+    body: GroupSetupRequest,
+    background: BackgroundTasks,
+    user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> GroupSetupOut:
+    """Student step 1: set group name, scenario, and repo URL (HEAD resolved server-side)."""
+    team = _first_membership_team(db, user.id)
+    created = False
+    if team is None:
+        team = Team(
+            name=body.name.strip(),
+            scenario_slug=body.scenario_slug.strip(),
+            scenario_version=body.scenario_version,
+            invite_code=_unique_invite(db),
+        )
+        db.add(team)
+        db.flush()
+        _add_member(db, team.id, user.id, set())
+        created = True
+    else:
+        team.name = body.name.strip()
+        team.scenario_slug = body.scenario_slug.strip()
+        team.scenario_version = body.scenario_version
+
+    row = _upsert_team_repo(
+        db,
+        team=team,
+        github_url=body.github_url,
+        branch=body.branch,
+        actor_id=user.id,
+    )
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="group.setup" if not created else "group.setup.create",
+            target_id=team.id,
+            metadata_json=None,
+        )
+    )
+    db.commit()
+    db.refresh(team)
+    db.refresh(row)
+
+    if body.analyze_now and row.index_status != RepoIndexStatus.ready.value:
+        if os.getenv("TESTING") == "1":
+            analyze_submission(db, row.id)
+            db.refresh(row)
+        else:
+            background.add_task(analyze_submission_job, row.id)
+
+    return GroupSetupOut(
+        team=_team_detail(db, team),
+        repository={
+            "id": row.id,
+            "team_id": row.team_id,
+            "github_url": row.github_url,
+            "owner": row.owner,
+            "repo": row.repo,
+            "branch": row.branch,
+            "commit_sha": row.commit_sha,
+            "index_status": row.index_status,
+            "index_error": row.index_error,
+            "attempt_count": row.attempt_count,
+            "summary": row.summary_json,
+        },
+    )
 
 
 @router.get("/me/teams", response_model=list[TeamOut])

@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 from app.seproject.db import get_db
 from app.seproject.deps import AuthUser, ensure_team_access, get_current_user
 from app.seproject.exit_models import AuditEvent, RepoIndexStatus, RepositorySubmission, Team, TeamMember
-from app.seproject.providers.github import parse_repo_url
+from app.seproject.providers.github import get_repository_provider, parse_repo_url
 from app.seproject.repo.ingest import analyze_submission, analyze_submission_job
 from app.seproject.repo.retrieval import (
     get_file,
@@ -20,13 +20,15 @@ from app.seproject.repo.retrieval import (
     search_code,
     strip_contents_for_api,
 )
+from app.seproject.settings import get_settings
 
 router = APIRouter(tags=["repositories"])
 
 
 class RepositorySubmitRequest(BaseModel):
     github_url: str = Field(min_length=3, max_length=500)
-    commit_sha: str = Field(min_length=7, max_length=64)
+    # Optional — when omitted, the default-branch tip is resolved automatically.
+    commit_sha: str | None = Field(default=None, max_length=64)
     branch: str | None = Field(default=None, max_length=200)
     analyze_now: bool = True
 
@@ -90,7 +92,27 @@ def submit_repository(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    sha = body.commit_sha.strip().lower()
+    settings = get_settings()
+    provider = get_repository_provider(settings, ref)
+    branch = (body.branch or "").strip() or None
+    raw_sha = (body.commit_sha or "").strip()
+    try:
+        if not raw_sha or raw_sha.upper() == "HEAD":
+            head = provider.resolve_head(ref, branch)
+            sha = str(head.get("sha") or "").strip().lower()
+            if not sha:
+                raise FileNotFoundError("Could not resolve repository HEAD")
+            if not branch and head.get("branch"):
+                branch = str(head["branch"])
+        else:
+            sha = raw_sha.lower()
+            meta = provider.verify_commit(ref, sha)
+            sha = str(meta.get("sha") or sha).strip().lower()
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
     existing = db.exec(
         select(RepositorySubmission).where(
             RepositorySubmission.team_id == team.id,
@@ -102,29 +124,40 @@ def submit_repository(
             select(RepositorySubmission).where(
                 RepositorySubmission.team_id == team.id,
                 RepositorySubmission.github_url == ref.display_url,
+            )
+        ).first()
+    if existing is None and len(sha) >= 7:
+        existing = db.exec(
+            select(RepositorySubmission).where(
+                RepositorySubmission.team_id == team.id,
                 RepositorySubmission.commit_sha.startswith(sha[:7]),
             )
         ).first()
 
+    display_url = ref.display_url if ref.source == "github" else body.github_url.strip()
     if existing is not None:
         row = existing
-        row.github_url = ref.display_url if ref.source == "github" else body.github_url.strip()
-        row.branch = body.branch
+        row.github_url = display_url
+        row.branch = branch
         row.owner = ref.owner
         row.repo = ref.repo
-        if row.index_status == RepoIndexStatus.ready.value and row.commit_sha.startswith(sha[:7]):
+        if (
+            row.index_status == RepoIndexStatus.ready.value
+            and row.commit_sha == sha
+        ):
             db.commit()
             db.refresh(row)
             return _to_out(row)
+        row.commit_sha = sha
         row.index_status = RepoIndexStatus.pending.value
         row.index_error = None
     else:
         row = RepositorySubmission(
             team_id=team.id,
-            github_url=ref.display_url if ref.source == "github" else body.github_url.strip(),
+            github_url=display_url,
             owner=ref.owner,
             repo=ref.repo,
-            branch=body.branch,
+            branch=branch,
             commit_sha=sha,
             index_status=RepoIndexStatus.pending.value,
         )

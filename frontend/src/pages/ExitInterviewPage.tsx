@@ -14,7 +14,6 @@ import {
   submitProbeAnswer,
   type ExitSession,
   type PolicyDoc,
-  type RepositorySubmission,
 } from '../api/client'
 import { CourseShell } from '../components/CourseShell'
 import { VoiceRoomPanel } from '../components/VoiceRoomPanel'
@@ -32,8 +31,8 @@ export function ExitInterviewPage() {
   const { user, loading } = useAuth()
   const [session, setSession] = useState<ExitSession | null>(null)
   const [sessions, setSessions] = useState<Array<{ id: string; status: string }>>([])
-  const [repos, setRepos] = useState<RepositorySubmission[]>([])
-  const [selectedRepoId, setSelectedRepoId] = useState('')
+  const [repoReady, setRepoReady] = useState(false)
+  const [repoHint, setRepoHint] = useState('Checking group repository…')
   const [participantNames, setParticipantNames] = useState('')
   const [answer, setAnswer] = useState('')
   const [probePrompt, setProbePrompt] = useState<string | null>(null)
@@ -71,8 +70,18 @@ export function ExitInterviewPage() {
         setSessions(exitSessions)
         if (exitSessions[0]) setSession(await fetchExitSession(exitSessions[0].id))
         const r = await listTeamRepositories(teamId)
-        setRepos(r.filter((x) => x.index_status === 'ready'))
-        if (r[0]) setSelectedRepoId(r[0].id)
+        const ready = r.find((x) => x.index_status === 'ready')
+        const pending = r.find((x) => x.index_status === 'pending' || x.index_status === 'running')
+        if (ready) {
+          setRepoReady(true)
+          setRepoHint(`${ready.repo}@${ready.commit_sha.slice(0, 7)} ready`)
+        } else if (pending) {
+          setRepoReady(false)
+          setRepoHint(`${pending.repo} is still indexing…`)
+        } else {
+          setRepoReady(false)
+          setRepoHint('Add group details (repo, group name, scenario) on Overview first.')
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load')
       }
@@ -85,12 +94,11 @@ export function ExitInterviewPage() {
 
   async function onCreate(event: FormEvent) {
     event.preventDefault()
-    if (!teamId || !selectedRepoId || names.length === 0) return
+    if (!teamId || names.length === 0) return
     setBusy(true)
     setError(null)
     try {
       const created = await createExitSession(teamId, {
-        repository_submission_id: selectedRepoId,
         participant_names: names,
         questions_per_student: 3,
       })
@@ -199,7 +207,7 @@ export function ExitInterviewPage() {
         ))}
       </ul>
       <p className="hint" style={{ marginTop: 12 }}>
-        <Link to={`/admin/teams/${teamId}/repository`}>Repository</Link>
+        <Link to="/">Group details</Link>
       </p>
     </>
   )
@@ -207,14 +215,13 @@ export function ExitInterviewPage() {
   const tabs = [
     { to: '/', label: 'Overview', end: true },
     { to: `/teams/${teamId}/exit`, label: 'Interview', end: true },
-    { to: `/admin/teams/${teamId}/repository`, label: 'Repository', end: true },
     { to: '/policy', label: 'Policy', end: true },
   ]
 
   return (
     <CourseShell
       title="Technical examiner"
-      subtitle={`Team ${teamId.slice(0, 8)} · shared login${session ? ` · ${session.status}` : ''}`}
+      subtitle={`Shared login${session ? ` · ${session.status}` : ''}`}
       aside={aside}
       tabs={tabs}
     >
@@ -222,40 +229,26 @@ export function ExitInterviewPage() {
         {error && <p className="error">{error}</p>}
 
         <section className="surface">
-          <h2>Create session</h2>
+          <h2>Start interview</h2>
           <p className="hint" style={{ marginBottom: 12 }}>
-            Freeze a repo first, then type each teammate’s real name (one per line). Same cohort
-            login for everyone.
+            Group repo and scenario come from Overview. Enter each group member’s real name (one per
+            line).
+          </p>
+          <p className="muted-row" style={{ marginBottom: 12 }}>
+            <span>{repoHint}</span>
           </p>
           <form className="auth-form" onSubmit={onCreate}>
-            <div className="form-grid two">
-              <label>
-                Frozen repository
-                <select
-                  value={selectedRepoId}
-                  onChange={(e) => setSelectedRepoId(e.target.value)}
-                  required
-                >
-                  <option value="">Select…</option>
-                  {repos.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.repo}@{r.commit_sha.slice(0, 7)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Participant names
-                <textarea
-                  value={participantNames}
-                  onChange={(e) => setParticipantNames(e.target.value)}
-                  rows={3}
-                  placeholder={'Alex Rivera\nJordan Lee'}
-                  required
-                />
-              </label>
-            </div>
-            <button type="submit" disabled={busy || !selectedRepoId || names.length === 0}>
+            <label>
+              Group member name{names.length === 1 ? '' : 's'}
+              <textarea
+                value={participantNames}
+                onChange={(e) => setParticipantNames(e.target.value)}
+                rows={3}
+                placeholder={'Alex Rivera\nJordan Lee'}
+                required
+              />
+            </label>
+            <button type="submit" disabled={busy || !repoReady || names.length === 0}>
               Create exit interview
             </button>
           </form>

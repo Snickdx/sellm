@@ -18,7 +18,7 @@ export function AdminReposPage() {
   const [rows, setRows] = useState<RepositorySubmission[]>([])
   const [active, setActive] = useState<RepositorySubmission | null>(null)
   const [url, setUrl] = useState('fixture://demo')
-  const [sha, setSha] = useState('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+  const [sha, setSha] = useState('')
   const [branch, setBranch] = useState('main')
   const [query, setQuery] = useState('BookingService')
   const [hits, setHits] = useState<SearchHit[]>([])
@@ -56,7 +56,7 @@ export function AdminReposPage() {
     try {
       const row = await submitRepository(teamId!, {
         github_url: url,
-        commit_sha: sha,
+        ...(sha.trim() ? { commit_sha: sha.trim() } : {}),
         branch: branch || undefined,
       })
       setActive(row)
@@ -162,20 +162,24 @@ export function AdminReposPage() {
         <section className="surface">
           <h2>Submit</h2>
           <form className="auth-form" onSubmit={onSubmit}>
+            <label>
+              GitHub URL
+              <input value={url} onChange={(e) => setUrl(e.target.value)} required />
+            </label>
             <div className="form-grid two">
               <label>
-                GitHub URL
-                <input value={url} onChange={(e) => setUrl(e.target.value)} required />
+                Branch (optional)
+                <input value={branch} onChange={(e) => setBranch(e.target.value)} />
               </label>
               <label>
-                Commit SHA
-                <input value={sha} onChange={(e) => setSha(e.target.value)} required />
+                Commit SHA (optional)
+                <input
+                  value={sha}
+                  onChange={(e) => setSha(e.target.value)}
+                  placeholder="Leave blank to use HEAD"
+                />
               </label>
             </div>
-            <label>
-              Branch (optional)
-              <input value={branch} onChange={(e) => setBranch(e.target.value)} />
-            </label>
             <button type="submit" disabled={busy}>
               {busy ? 'Working…' : 'Submit & analyze'}
             </button>

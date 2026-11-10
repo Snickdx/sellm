@@ -37,6 +37,8 @@ class TreeEntry:
 
 
 class RepositoryProvider(Protocol):
+    def resolve_head(self, ref: RepoRef, branch: str | None = None) -> dict: ...
+
     def verify_commit(self, ref: RepoRef, sha: str) -> dict: ...
 
     def list_tree(self, ref: RepoRef, sha: str) -> list[TreeEntry]: ...
@@ -98,6 +100,23 @@ class GitHubRepositoryProvider:
         if self.settings.github_token:
             headers["Authorization"] = f"Bearer {self.settings.github_token}"
         return headers
+
+    def resolve_head(self, ref: RepoRef, branch: str | None = None) -> dict:
+        """Resolve default-branch (or given branch) tip — students do not enter a SHA."""
+        with httpx.Client(timeout=30.0, headers=self._headers()) as client:
+            branch_name = (branch or "").strip()
+            if not branch_name:
+                repo_url = f"{self.settings.github_api_base}/repos/{ref.owner}/{ref.repo}"
+                repo_resp = client.get(repo_url)
+                if repo_resp.status_code == 404:
+                    raise FileNotFoundError("Repository not found (or private without token)")
+                if repo_resp.status_code == 401:
+                    raise PermissionError("GitHub authentication failed")
+                if repo_resp.status_code == 403:
+                    raise PermissionError("GitHub access forbidden / rate limited")
+                repo_resp.raise_for_status()
+                branch_name = str(repo_resp.json().get("default_branch") or "main")
+            return self.verify_commit(ref, branch_name)
 
     def verify_commit(self, ref: RepoRef, sha: str) -> dict:
         url = f"{self.settings.github_api_base}/repos/{ref.owner}/{ref.repo}/commits/{sha}"
@@ -186,9 +205,16 @@ class FixtureRepositoryProvider:
             raise FileNotFoundError(f"Fixture repo not found: {ref.repo}")
         return path
 
+    def resolve_head(self, ref: RepoRef, branch: str | None = None) -> dict:
+        _ = branch
+        pinned = (self._repo_dir(ref) / ".fixture-sha").read_text(encoding="utf-8").strip()
+        return {"sha": pinned, "message": "fixture commit", "html_url": ref.display_url, "branch": "main"}
+
     def verify_commit(self, ref: RepoRef, sha: str) -> dict:
         repo_dir = self._repo_dir(ref)
         pinned = (repo_dir / ".fixture-sha").read_text(encoding="utf-8").strip()
+        if sha in {"HEAD", "head", "main", "master"}:
+            return self.resolve_head(ref)
         if sha != pinned and not sha.startswith(pinned[:7]):
             raise FileNotFoundError(f"Fixture SHA mismatch: expected {pinned}")
         return {"sha": pinned, "message": "fixture commit", "html_url": ref.display_url}
