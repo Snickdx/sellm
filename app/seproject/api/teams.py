@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
@@ -177,12 +177,12 @@ def set_team_members(
     return _team_detail(db, team)
 
 
-@router.delete("/admin/teams/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/admin/teams/{team_id}")
 def delete_team(
     team_id: str,
     instructor: AuthUser = Depends(require_instructor),
     db: Session = Depends(get_db),
-) -> None:
+) -> Response:
     team = db.get(Team, team_id)
     if team is None:
         raise HTTPException(status_code=404, detail="Team not found")
@@ -198,6 +198,7 @@ def delete_team(
     )
     db.delete(team)
     db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/teams/{team_id}", response_model=TeamDetailOut)
