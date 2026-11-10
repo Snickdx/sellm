@@ -106,17 +106,19 @@ export async function listScenarios(): Promise<ScenarioListItem[]> {
 
 export async function setupMyGroup(body: {
   name: string
-  scenario_slug: string
   github_url: string
+  scenario_slug?: string
   branch?: string
-}): Promise<{ team: Team; repository: RepositorySubmission }> {
+  team_id?: string
+}): Promise<{ team: Team & { repository?: RepositorySubmission | null }; repository: RepositorySubmission }> {
   return request('/api/me/group-setup', {
     method: 'POST',
     body: JSON.stringify({
       name: body.name,
-      scenario_slug: body.scenario_slug,
       github_url: body.github_url,
+      scenario_slug: body.scenario_slug || null,
       branch: body.branch || null,
+      team_id: body.team_id || null,
       analyze_now: true,
     }),
   })
@@ -246,9 +248,16 @@ export interface ExitSession {
   probe_prompt?: string | null
 }
 
-export async function listTeamExitSessions(
-  teamId: string,
-): Promise<Array<{ id: string; status: string; consent_status: string }>> {
+export interface ExitSessionSummary {
+  id: string
+  status: string
+  consent_status: string
+  created_at?: string | null
+  participant_names?: string[]
+  repository_submission_id?: string
+}
+
+export async function listTeamExitSessions(teamId: string): Promise<ExitSessionSummary[]> {
   return request(`/api/teams/${teamId}/exit-sessions`)
 }
 

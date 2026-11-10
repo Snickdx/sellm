@@ -319,16 +319,26 @@ def list_team_exit_sessions(
             .order_by(ExitInterviewSession.created_at.desc())
         ).all()
     )
-    return [
-        {
-            "id": str(r.id),
-            "status": r.status,
-            "consent_status": r.consent_status,
-            "repository_submission_id": str(r.repository_submission_id),
-            "created_at": r.created_at.isoformat() if r.created_at else None,
-        }
-        for r in rows
-    ]
+    out: list[dict] = []
+    for r in rows:
+        participants = list(
+            db.exec(
+                select(InterviewParticipant)
+                .where(InterviewParticipant.session_id == r.id)
+                .order_by(InterviewParticipant.turn_order)
+            ).all()
+        )
+        out.append(
+            {
+                "id": str(r.id),
+                "status": r.status,
+                "consent_status": r.consent_status,
+                "repository_submission_id": str(r.repository_submission_id),
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "participant_names": [p.display_name for p in participants if p.display_name],
+            }
+        )
+    return out
 
 
 @router.post("/exit-sessions/{session_id}/consent")

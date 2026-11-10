@@ -123,6 +123,46 @@ def test_admin_can_patch_team_details(client):
     assert body["repository"]["index_status"] == "ready"
 
 
+def test_student_group_settings_and_named_interview(client):
+    """Exit page flow: save group name+repo, start interview with one member name, list past."""
+    admin = _login(client, "instructor", "instructor-dev")
+    student = _login(client, "studenta", "password123")
+
+    team = client.post(
+        "/api/admin/teams",
+        headers=admin,
+        json={"name": "Seed", "scenario_slug": "library", "owner_username": "studenta"},
+    )
+    assert team.status_code == 201, team.text
+    team_id = team.json()["id"]
+
+    setup = client.post(
+        "/api/me/group-setup",
+        headers=student,
+        json={
+            "team_id": team_id,
+            "name": "Student Group",
+            "github_url": "fixture://demo",
+        },
+    )
+    assert setup.status_code == 200, setup.text
+    assert setup.json()["team"]["name"] == "Student Group"
+    assert setup.json()["repository"]["index_status"] == "ready"
+
+    created = client.post(
+        f"/api/teams/{team_id}/exit-session",
+        headers=student,
+        json={"participant_names": ["Alex Rivera"], "questions_per_student": 1},
+    )
+    assert created.status_code == 201, created.text
+    assert [p["display_name"] for p in created.json()["participants"]] == ["Alex Rivera"]
+
+    listed = client.get(f"/api/teams/{team_id}/exit-sessions", headers=student)
+    assert listed.status_code == 200
+    assert any(s["id"] == created.json()["id"] for s in listed.json())
+    assert listed.json()[0]["participant_names"] == ["Alex Rivera"]
+
+
 def test_policy_public(client):
     response = client.get("/api/policy")
     assert response.status_code == 200

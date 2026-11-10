@@ -75,14 +75,15 @@ class TeamDetailOut(TeamOut):
 
 
 class GroupSetupRequest(BaseModel):
-    """Student workflow step 1: group name, scenario, repo URL (no commit hash)."""
+    """Group settings on the exit interview page: name + repo (no commit hash)."""
 
     name: str = Field(min_length=1, max_length=200)
-    scenario_slug: str = Field(min_length=1, max_length=120)
     github_url: str = Field(min_length=3, max_length=500)
+    scenario_slug: str | None = Field(default=None, max_length=120)
     branch: str | None = Field(default=None, max_length=200)
     scenario_version: str | None = None
     analyze_now: bool = True
+    team_id: str | None = None
 
 
 class GroupSetupOut(BaseModel):
@@ -454,13 +455,21 @@ def setup_my_group(
     user: AuthUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> GroupSetupOut:
-    """Student step 1: set group name, scenario, and repo URL (HEAD resolved server-side)."""
-    team = _first_membership_team(db, user.id)
+    """Set group name + repo URL (HEAD resolved). Used from the exit interview page."""
+    team: Team | None = None
+    if body.team_id:
+        team = ensure_team_access(db, body.team_id, user)
+    else:
+        team = _first_membership_team(db, user.id)
+
     created = False
+    scenario = (body.scenario_slug or "").strip() or None
     if team is None:
+        if not scenario:
+            raise HTTPException(status_code=400, detail="scenario_slug is required when creating a group")
         team = Team(
             name=body.name.strip(),
-            scenario_slug=body.scenario_slug.strip(),
+            scenario_slug=scenario,
             scenario_version=body.scenario_version,
             invite_code=_unique_invite(db),
         )
@@ -470,8 +479,10 @@ def setup_my_group(
         created = True
     else:
         team.name = body.name.strip()
-        team.scenario_slug = body.scenario_slug.strip()
-        team.scenario_version = body.scenario_version
+        if scenario:
+            team.scenario_slug = scenario
+        if body.scenario_version is not None:
+            team.scenario_version = body.scenario_version
 
     row = _upsert_team_repo(
         db,
