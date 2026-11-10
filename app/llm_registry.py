@@ -8,13 +8,15 @@ from typing import Any, Dict, List, Optional, Tuple  # noqa: F401 used by stakeh
 
 from app.llm_wrapper import LLMWrapper
 
+# Keep this list to models still on the OpenAI API. Retired IDs (e.g. gpt-4-turbo,
+# gpt-4, o1-mini) return model_not_found — see https://platform.openai.com/docs/deprecations
 OPENAI_DEFAULT_MODELS = [
     "gpt-4o-mini",
     "gpt-4o",
-    "gpt-4-turbo",
-    "gpt-4",
-    "gpt-3.5-turbo",
-    "o1-mini",
+    "gpt-4.1-mini",
+    "gpt-4.1",
+    "gpt-5.6-luna",
+    "gpt-5.6-sol",
 ]
 
 OLLAMA_FALLBACK_MODELS = ["llama3.2", "mistral", "phi3", "gemma2", "llama3.1"]

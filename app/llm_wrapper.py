@@ -242,12 +242,12 @@ class LLMWrapper:
                 "openrouter": "https://openrouter.ai/api/v1",
             }.get(provider_lower, "https://api.openai.com/v1")
             model_map = {
-                "openai": "gpt-3.5-turbo",
+                "openai": "gpt-4o-mini",
                 "gemini": "gemini-2.0-flash",
                 "groq": "llama3-70b-8192",
                 "openrouter": "mistralai/mistral-7b-instruct",
             }
-            model = self.model or model_map.get(provider_lower, "gpt-3.5-turbo")
+            model = self.model or model_map.get(provider_lower, "gpt-4o-mini")
             return self._call_openai_compatible(
                 user_message,
                 system=system,

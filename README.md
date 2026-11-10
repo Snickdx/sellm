@@ -505,7 +505,7 @@ After logging in, open the **⚙️ Settings** panel in the side nav and enter y
 
 | Provider   | Base URL (autofilled)                                | Models                                      |
 |------------|------------------------------------------------------|---------------------------------------------|
-| OpenAI     | `https://api.openai.com/v1`                          | `gpt-4o-mini`, `gpt-4o`, `o1-mini`, …      |
+| OpenAI     | `https://api.openai.com/v1`                          | `gpt-4o-mini`, `gpt-4o`, `gpt-4.1`, …      |
 | Anthropic  | `https://api.anthropic.com/v1`                       | `claude-3-5-sonnet`, `claude-3-5-haiku`     |
 | Gemini     | `https://generativelanguage.googleapis.com/v1beta/openai/v1` | `gemini-2.0-flash`, `gemini-2.0-flash-lite` |
 | Groq       | `https://api.groq.com/openai/v1`                     | `llama3-70b`, `mixtral-8x7b`, `gemma2-9b`   |
