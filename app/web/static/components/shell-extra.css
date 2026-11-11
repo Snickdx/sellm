@@ -455,8 +455,13 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   border-radius: 10px;
   font: inherit;
 }
+.live-answer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
 .live-answer button[type="submit"] {
-  align-self: flex-start;
   border: none;
   border-radius: 10px;
   padding: 0.45rem 0.9rem;

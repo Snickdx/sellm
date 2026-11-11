@@ -383,7 +383,14 @@
 
   async function onAnswer(event) {
     event.preventDefault();
-    if (!state.session || !state.answer.trim()) return;
+    if (!state.session) return;
+    if (isNextCommand(state.answer)) {
+      state.answer = "";
+      state.sttBase = "";
+      void onVoiceNext();
+      return;
+    }
+    if (!state.answer.trim()) return;
     setBusy(true);
     setError(null);
     try {
@@ -967,16 +974,21 @@
             ${
               canAnswer
                 ? `<form class="chat-compose live-answer" id="exitAnswerForm">
-                    <textarea id="exitAnswer" rows="5" required ${state.busy ? "disabled" : ""}
+                    <textarea id="exitAnswer" rows="5" ${state.busy ? "disabled" : ""}
                       placeholder="${escapeHtml(
                         session.current_participant_name
-                          ? `Speak or type as ${session.current_participant_name}… (say “next” to skip)`
-                          : "Speak or type your answer… (say “next” to skip)",
+                          ? `Speak or type as ${session.current_participant_name}… (or Skip for alternative)`
+                          : "Speak or type your answer… (or Skip for alternative)",
                       )}"
                     >${escapeHtml(state.answer)}</textarea>
-                    <button type="submit" ${state.busy || !state.answer.trim() ? "disabled" : ""}>
-                      ${session.status === "optional_probe" ? "Submit probe" : "Submit answer"}
-                    </button>
+                    <div class="live-answer-actions">
+                      <button type="submit" ${state.busy || !state.answer.trim() ? "disabled" : ""}>
+                        ${session.status === "optional_probe" ? "Submit probe" : "Submit answer"}
+                      </button>
+                      <button type="button" class="ghost" id="exitSkipQ" ${state.busy ? "disabled" : ""}>
+                        ${session.status === "optional_probe" ? "Skip probe" : "Skip for alternative"}
+                      </button>
+                    </div>
                   </form>`
                 : ""
             }
@@ -1004,10 +1016,6 @@
       renderLive();
     });
     $("exitNextQ")?.addEventListener("click", () => {
-      if (viewingCurrent) {
-        void onVoiceNext();
-        return;
-      }
       state.viewIndex = Math.min(state.viewIndex + 1, qs.length - 1);
       renderLive();
     });
@@ -1017,6 +1025,7 @@
         renderLive();
       }
     });
+    $("exitSkipQ")?.addEventListener("click", () => void onVoiceNext());
     $("exitAnswer")?.addEventListener("input", (e) => {
       state.answer = e.target.value;
       state.sttBase = e.target.value;
