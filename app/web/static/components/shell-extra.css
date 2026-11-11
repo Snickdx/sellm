@@ -63,6 +63,37 @@
 .group-card {
   padding: 16px;
 }
+.group-form .form-row {
+  display: grid;
+  gap: 12px;
+  align-items: end;
+}
+.group-form .form-row-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.group-form .form-row-repo {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.group-form .form-grow {
+  min-width: 0;
+}
+.group-form .form-row-action {
+  align-self: end;
+  white-space: nowrap;
+  min-height: 42px;
+}
+.group-status {
+  margin-top: 10px;
+}
+@media (max-width: 720px) {
+  .group-form .form-row-2,
+  .group-form .form-row-repo {
+    grid-template-columns: 1fr;
+  }
+  .group-form .form-row-action {
+    width: 100%;
+  }
+}
 
 /* Exit title bar reuses .chat-header sizing/typography from index.html */
 .exit-header {
@@ -341,12 +372,25 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   color: #334155;
 }
 .auth-form input,
+.auth-form select,
 .auth-form textarea {
   width: 100%;
+  box-sizing: border-box;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
   font: inherit;
+}
+.auth-form select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, #64748b 50%),
+    linear-gradient(135deg, #64748b 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% - 2px), calc(100% - 11px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 28px;
 }
 .auth-form button[type="submit"] {
   border: none;

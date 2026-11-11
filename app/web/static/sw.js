@@ -1,5 +1,5 @@
 /* sellm service worker — cache static shell; network for app/API. */
-const CACHE_VERSION = "sellm-pwa-v8";
+const CACHE_VERSION = "sellm-pwa-v9";
 const PRECACHE = [
   "/offline.html",
   "/manifest.json",
@@ -12,7 +12,7 @@ const PRECACHE = [
   "/icons/icon-maskable-512.png",
   "/static/brand/logo-mark.svg",
   "/static/brand/logo-horizontal-dark.svg",
-  "/static/components/shell-extra.css?v=7",
+  "/static/components/shell-extra.css?v=8",
   "/static/components/api.js?v=3",
   "/static/components/claim.js?v=1",
   "/static/components/exit-voice.js?v=1",

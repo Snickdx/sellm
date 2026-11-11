@@ -16,7 +16,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/static/components/shell-extra.css?v=7" />
+    <link rel="stylesheet" href="/static/components/shell-extra.css?v=8" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -1069,41 +1069,43 @@
                         <section class="surface group-card">
                             <h2 style="margin:0 0 8px;font-size:1rem">Group settings</h2>
                             <p class="hint" style="margin-top:0">Pick your scenario and GitHub repo for exit interviews. Indexing starts after save.</p>
-                            <form class="auth-form" id="groupRepoForm">
-                                <label>
-                                    Group name
-                                    <input id="groupNameInput" placeholder="Alpha Testers" required />
-                                </label>
-                                <label>
-                                    Scenario
-                                    <select id="groupScenario" required>
-                                        <option value="">Loading scenarios…</option>
-                                    </select>
-                                </label>
-                                <label>
-                                    Repository URL
-                                    <input id="groupGithubUrl" placeholder="https://github.com/org/repo" required />
-                                </label>
-                                <div class="live-actions">
-                                    <button type="submit" id="groupRepoSave" disabled>Save settings</button>
+                            <form class="auth-form group-form" id="groupRepoForm">
+                                <div class="form-row form-row-2">
+                                    <label>
+                                        Group name
+                                        <input id="groupNameInput" placeholder="Alpha Testers" required />
+                                    </label>
+                                    <label>
+                                        Scenario
+                                        <select id="groupScenario" required>
+                                            <option value="">Loading scenarios…</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <div class="form-row form-row-repo">
+                                    <label class="form-grow">
+                                        Repository URL
+                                        <input id="groupGithubUrl" placeholder="https://github.com/org/repo" required />
+                                    </label>
+                                    <button type="submit" id="groupRepoSave" class="form-row-action" disabled>Save settings</button>
                                 </div>
                             </form>
-                            <div id="groupRepoStatus" style="margin-top:10px"></div>
+                            <div id="groupRepoStatus" class="group-status"></div>
                         </section>
                         <section class="surface group-card" id="groupMembersPanel">
                             <h2 style="margin:0 0 8px;font-size:1rem">Group members</h2>
                             <p class="hint" style="margin-top:0">Keep 3–4 classmates. Add from ungrouped students; remove someone to free their roster slot.</p>
-                            <form id="groupMembersForm">
-                                <p id="groupSelectedCount" class="hint" style="margin:0 0 8px"></p>
+                            <form class="auth-form group-form" id="groupMembersForm">
+                                <p id="groupSelectedCount" class="hint" style="margin:0"></p>
                                 <div id="groupSelected" class="claim-selected"></div>
-                                <label style="display:block;margin-top:12px">
-                                    Search ungrouped classmates
-                                    <input id="groupSearch" type="search" placeholder="Name or email" autocomplete="off" />
-                                </label>
-                                <div id="groupHits"></div>
-                                <div class="live-actions" style="margin-top:12px">
-                                    <button type="submit" id="groupMembersSave" disabled>Save members</button>
+                                <div class="form-row form-row-repo">
+                                    <label class="form-grow">
+                                        Search ungrouped classmates
+                                        <input id="groupSearch" type="search" placeholder="Name or email" autocomplete="off" />
+                                    </label>
+                                    <button type="submit" id="groupMembersSave" class="form-row-action" disabled>Save members</button>
                                 </div>
+                                <div id="groupHits"></div>
                             </form>
                         </section>
                         <div id="groupNoClaim" class="surface group-card" hidden></div>
