@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>sellm · Course</title>
-    <link rel="stylesheet" href="/static/components/shell-extra.css?v=1" />
+    <link rel="stylesheet" href="/static/components/shell-extra.css?v=2" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -1000,16 +1000,14 @@
                 </div><!-- /view-req -->
 
                 <div id="view-exit" class="view-pane" hidden aria-hidden="true">
-                    <div class="exit-header">
-                        <div class="exit-header-top">
-                            <button type="button" id="sideNavToggleExit" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false">&#9776;</button>
-                            <div class="chat-header-text">
-                                <h1 id="exitHeaderTitle">Exit interviews</h1>
-                                <p class="chat-header-subtitle" id="exitHeaderSubtitle">Start interview and review past sessions</p>
-                            </div>
+                    <div class="chat-header exit-header">
+                        <button type="button" id="sideNavToggleExit" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false">&#9776;</button>
+                        <div class="chat-header-text">
+                            <h1 id="exitHeaderTitle">Exit interviews</h1>
+                            <p class="chat-header-subtitle" id="exitHeaderSubtitle">Start interview and review past sessions</p>
                         </div>
-                        <div id="exitToolbar"></div>
                     </div>
+                    <div id="exitToolbar" class="exit-toolbar-strip" aria-label="Repository"></div>
                     <div class="exit-body">
                         <p id="exitError" class="error" hidden></p>
                         <div id="exitMain" class="view-pane" style="position:relative;"></div>
