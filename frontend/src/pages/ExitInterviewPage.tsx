@@ -403,6 +403,14 @@ export function ExitInterviewPage() {
     }
   }, [selectedPastId])
 
+  // Must stay above any conditional returns — Rules of Hooks.
+  useEffect(() => {
+    if (!session || session.status !== 'closing' || busy || finishingRef.current) return
+    if (tab !== 'live') return
+    void onEndInterview()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id, session?.status, tab, busy])
+
   if (loading) return <main className="page-fallback">Loading…</main>
   if (!user) return <Navigate to="/login" replace />
   if (!teamId) return <Navigate to="/" replace />
@@ -633,14 +641,6 @@ export function ExitInterviewPage() {
       setBusy(false)
     }
   }
-
-  // Questions exhausted → closing: run provisional audit automatically.
-  useEffect(() => {
-    if (!session || session.status !== 'closing' || busy || finishingRef.current) return
-    if (tab !== 'live') return
-    void onEndInterview()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.id, session?.status, tab])
 
   async function onDeleteInterview(id: string) {
     const label =
