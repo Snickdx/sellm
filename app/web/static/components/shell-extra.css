@@ -759,11 +759,42 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   .landing-login { position: static; order: -1; }
 }
 @media (max-width: 720px) {
+  /* Exit hub: separate full screens (list | detail), not stacked master-detail */
   .interview-hub {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(120px, 32vh) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    border: none;
+    border-radius: 0;
+    background: transparent;
   }
-  .interview-hub-list { border-right: none; border-bottom: 1px solid var(--line); }
+  .interview-hub-list {
+    border-right: none;
+    border-bottom: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+  .interview-hub-detail {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+  }
+  .interview-hub.child-screen-list .interview-hub-detail { display: none; }
+  .interview-hub.child-screen-detail .interview-hub-list { display: none; }
+  .interview-hub-detail-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    padding: 8px 12px;
+    font: inherit;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .exit-body { padding: 8px; }
   .fab-labeled {
     right: max(16px, env(safe-area-inset-right));
     bottom: max(16px, env(safe-area-inset-bottom));

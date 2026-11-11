@@ -16,7 +16,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/static/components/shell-extra.css?v=3" />
+    <link rel="stylesheet" href="/static/components/shell-extra.css?v=4" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -111,7 +111,6 @@
             border-right: 1px solid #e2e8f0;
             z-index: 1600;
         }
-        .side-nav-close,
         .app-nav-close {
             display: none;
             border: none;
@@ -123,8 +122,8 @@
             padding: 4px 8px;
             border-radius: 8px;
         }
-        .side-nav-close:hover,
         .app-nav-close:hover { background: #e2e8f0; color: #334155; }
+        #reqBackToList { display: none; }
         .side-nav-toggle,
         .controls-pane-toggle {
             display: none;
@@ -716,42 +715,42 @@
             }
             .chats-workspace {
                 grid-template-columns: 1fr;
+                flex: 1;
+                min-height: 0;
             }
             .chat-body {
                 grid-template-columns: 1fr;
             }
+            /* Req: separate full screens (list | chat), not overlay drawer */
             .conversations-pane {
-                position: fixed;
-                top: 0;
-                left: 0;
-                bottom: 0;
-                width: min(320px, 88vw);
-                max-width: 88vw;
-                border-right: 1px solid #e2e8f0;
-                border-bottom: none;
-                transform: translateX(-105%);
-                transition: transform 0.25s ease;
-                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
-                z-index: 1600;
+                position: relative;
+                width: 100%;
+                max-width: none;
+                border-right: none;
+                transform: none;
+                box-shadow: none;
+                z-index: 1;
             }
-            .conversations-pane.open {
-                transform: translateX(0);
-            }
-            .mobile-app-nav {
-                display: flex !important;
-                gap: 6px;
-                padding: 0 8px 10px;
-                flex-wrap: wrap;
-            }
-            .mobile-app-nav a {
-                font-size: 12px;
-                font-weight: 700;
-                color: #3730a3;
-                text-decoration: none;
-                padding: 6px 10px;
-                border-radius: 999px;
-                background: #eef2ff;
-                border: 1px solid #c7d2fe;
+            #view-req.child-screen-list .chat-pane { display: none; }
+            #view-req.child-screen-list .controls-pane-toggle { display: none; }
+            #view-req.child-screen-list .conversations-pane { display: flex; }
+            #view-req.child-screen-chat .conversations-pane { display: none; }
+            #view-req.child-screen-chat .chat-pane { display: flex; flex-direction: column; min-height: 0; }
+            #view-req.child-screen-chat #reqBackToList { display: inline-flex; }
+            #view-req.child-screen-list #reqBackToList { display: none; }
+            .child-back-btn {
+                display: none;
+                align-items: center;
+                justify-content: center;
+                width: 40px;
+                height: 40px;
+                border: none;
+                border-radius: 10px;
+                background: rgba(255,255,255,0.18);
+                color: #fff;
+                font-size: 20px;
+                cursor: pointer;
+                flex-shrink: 0;
             }
             .controls-pane {
                 position: absolute;
@@ -769,13 +768,11 @@
             .controls-pane.open {
                 transform: translateX(0);
             }
-            body.side-nav-open,
             body.app-nav-open,
             body.controls-pane-open {
                 overflow: hidden;
             }
             .side-nav-toggle,
-            .side-nav-close,
             .controls-pane-toggle,
             .controls-pane-close {
                 display: inline-flex;
@@ -940,12 +937,13 @@
                 </div>
             </aside>
             <div class="chats-main">
-                <div id="view-req" class="view-pane" hidden aria-hidden="true">
+                <div id="view-req" class="view-pane child-screen-list" hidden aria-hidden="true">
                 <div class="chat-header">
-                    <button type="button" id="sideNavToggle" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="sideNav">&#9776;</button>
+                    <button type="button" id="sideNavToggle" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="appNavPane">&#9776;</button>
+                    <button type="button" id="reqBackToList" class="child-back-btn" aria-label="Back to chats" hidden>←</button>
                     <div class="chat-header-text">
-                        <h1>Requirements Gathering Training</h1>
-                        <p class="chat-header-subtitle">Practice extracting and formalizing requirements from stakeholder conversations</p>
+                        <h1 id="reqHeaderTitle">Chats</h1>
+                        <p class="chat-header-subtitle" id="reqHeaderSubtitle">Requirements gathering interviews</p>
                     </div>
                     <button type="button" id="controlsPaneToggle" class="controls-pane-toggle" aria-label="Open controls" aria-expanded="false" aria-controls="controlsPane">⚙</button>
                 </div>
@@ -956,14 +954,8 @@
                         <h2 style="margin:0;">Chats</h2>
                         <div style="display:flex;align-items:center;gap:4px;">
                             <button type="button" id="settingsBtn" class="settings-icon-btn" title="API Configuration" aria-label="API Configuration">⚙️</button>
-                            <button type="button" id="sideNavClose" class="side-nav-close" aria-label="Close chats">&times;</button>
                         </div>
                     </div>
-                    <nav class="mobile-app-nav" aria-label="Primary" style="display:none;margin-top:10px;">
-                        <a href="/req" data-nav="req">Req Interviews</a>
-                        <a href="/exit" data-nav="exit">Exit interviews</a>
-                        <a id="adminLinkMobile" href="/admin" hidden>Admin</a>
-                    </nav>
                     <button type="button" id="newConversationBtn" class="new-chat-btn" style="margin-top:10px;">+ New chat</button>
                 </div>
                 <div id="conversationList" class="conversation-list" role="list"></div>
@@ -1150,9 +1142,9 @@
     <script src="/static/components/api.js?v=1"></script>
     <script src="/static/components/claim.js?v=1"></script>
     <script src="/static/components/exit-voice.js?v=1"></script>
-    <script src="/static/components/exit.js?v=1"></script>
-    <script src="/static/components/chat.js?v=25"></script>
-    <script src="/static/components/router.js?v=2"></script>
+    <script src="/static/components/exit.js?v=21"></script>
+    <script src="/static/components/chat.js?v=26"></script>
+    <script src="/static/components/router.js?v=3"></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {

@@ -223,17 +223,21 @@
   const newConversationBtn = document.getElementById("newConversationBtn");
   const settingsBtn = document.getElementById("settingsBtn");
   const logoutBtn = document.getElementById("logoutBtn");
+  const viewReq = document.getElementById("view-req");
   const sideNav = document.getElementById("sideNav");
   const sideNavToggle = document.getElementById("sideNavToggle");
-  const sideNavClose = document.getElementById("sideNavClose");
   const sideNavBackdrop = document.getElementById("sideNavBackdrop");
   const appNavPane = document.getElementById("appNavPane");
   const appNavClose = document.getElementById("appNavClose");
   const sideNavToggleExit = document.getElementById("sideNavToggleExit");
+  const reqBackToList = document.getElementById("reqBackToList");
+  const reqHeaderTitle = document.getElementById("reqHeaderTitle");
+  const reqHeaderSubtitle = document.getElementById("reqHeaderSubtitle");
   const controlsPane = document.getElementById("controlsPane");
   const controlsPaneToggle = document.getElementById("controlsPaneToggle");
   const controlsPaneClose = document.getElementById("controlsPaneClose");
   const MOBILE_NAV_MQ = window.matchMedia("(max-width: 768px)");
+  let reqChildScreen = "list"; // "list" | "chat" (mobile separate screens)
   const WELCOME_HTML = `Hi! I'm a stakeholder on this project. I'm not very technical, so I might not use all the right terminology - that's just how I talk about things.<br><br><strong>Your task:</strong> Ask me questions to gather requirements, then formalize what I tell you into proper requirements documentation.<br><br>Start with <strong>+ New chat</strong> and pick a scenario (locked for that chat). Switch personas, mode, and model from the right panel anytime.`;
   const settingsBackdrop = document.getElementById("settingsBackdrop");
   const settingsForm = document.getElementById("settingsForm");
@@ -295,7 +299,9 @@
             await refreshQuotaFromMe();
             loadConversations();
           }
-          chatInput?.focus();
+          if (isMobileNav()) showReqScreen(currentConversationId ? "chat" : "list");
+          else syncReqHeader();
+          if (!isMobileNav() || reqChildScreen === "chat") chatInput?.focus();
           return true;
         },
         async logout() {
@@ -443,7 +449,6 @@
 
   function syncBackdrop() {
     const anyOpen = Boolean(
-      (sideNav && sideNav.classList.contains("open")) ||
       (appNavPane && appNavPane.classList.contains("open")) ||
       (controlsPane && controlsPane.classList.contains("open"))
     );
@@ -457,30 +462,41 @@
     }
   }
 
-  function openSideNav() {
-    if (!sideNav) return;
-    closeAppNav({ skipBackdrop: true });
-    closeControlsPane({ skipBackdrop: true });
-    sideNav.classList.add("open");
-    document.body.classList.add("side-nav-open");
-    if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "true");
-    syncBackdrop();
+  function syncReqHeader() {
+    const onChat = reqChildScreen === "chat";
+    if (reqHeaderTitle) {
+      reqHeaderTitle.textContent = onChat && isMobileNav()
+        ? "Requirements interview"
+        : isMobileNav()
+          ? "Chats"
+          : "Requirements Gathering Training";
+    }
+    if (reqHeaderSubtitle) {
+      reqHeaderSubtitle.textContent = onChat && isMobileNav()
+        ? "Ask questions, then formalize requirements"
+        : "Requirements gathering interviews";
+    }
+    if (reqBackToList) {
+      reqBackToList.hidden = !(isMobileNav() && onChat);
+    }
   }
 
-  function closeSideNav(opts = {}) {
-    if (!sideNav) return;
-    sideNav.classList.remove("open");
-    document.body.classList.remove("side-nav-open");
-    if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "false");
-    if (!opts.skipBackdrop) syncBackdrop();
+  function showReqScreen(screen) {
+    reqChildScreen = screen === "chat" ? "chat" : "list";
+    if (!viewReq) return;
+    viewReq.classList.toggle("child-screen-list", reqChildScreen === "list");
+    viewReq.classList.toggle("child-screen-chat", reqChildScreen === "chat");
+    syncReqHeader();
+    if (reqChildScreen === "list") closeControlsPane({ skipBackdrop: true });
+    syncBackdrop();
   }
 
   function openAppNav() {
     if (!appNavPane) return;
-    closeSideNav({ skipBackdrop: true });
     closeControlsPane({ skipBackdrop: true });
     appNavPane.classList.add("open");
     document.body.classList.add("app-nav-open");
+    if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "true");
     if (sideNavToggleExit) sideNavToggleExit.setAttribute("aria-expanded", "true");
     syncBackdrop();
   }
@@ -489,12 +505,12 @@
     if (!appNavPane) return;
     appNavPane.classList.remove("open");
     document.body.classList.remove("app-nav-open");
+    if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "false");
     if (sideNavToggleExit) sideNavToggleExit.setAttribute("aria-expanded", "false");
     if (!opts.skipBackdrop) syncBackdrop();
   }
 
   function closeMobileNavs() {
-    closeSideNav({ skipBackdrop: true });
     closeAppNav({ skipBackdrop: true });
     closeControlsPane({ skipBackdrop: true });
     syncBackdrop();
@@ -502,7 +518,6 @@
 
   function openControlsPane() {
     if (!controlsPane) return;
-    closeSideNav({ skipBackdrop: true });
     closeAppNav({ skipBackdrop: true });
     controlsPane.classList.add("open");
     document.body.classList.add("controls-pane-open");
@@ -555,7 +570,6 @@
       }
       const data = await r.json();
       closeNewChatModal();
-      closeSideNav();
       await loadConversations();
       await openConversation(data.id);
       chatInput?.focus();
@@ -849,7 +863,7 @@
 
   function openSettings() {
     if (!settingsBackdrop) return;
-    closeSideNav();
+    closeMobileNavs();
     renderSettingsProviders();
     if (settingsStatus) settingsStatus.textContent = "";
     settingsBackdrop.classList.add("visible");
@@ -1326,7 +1340,6 @@
   }
 
   function resetConversationUi() {
-    closeSideNav();
     closeControlsPane();
     conversationHistory.length = 0;
     currentConversationId = null;
@@ -1334,6 +1347,7 @@
     chatMessages.innerHTML = `<div class="message assistant"><div class="message-content">${WELCOME_HTML}</div></div>`;
     syncListSelection();
     loadReflectionThreadsForConversation(currentConversationId);
+    if (isMobileNav()) showReqScreen("list");
   }
 
   async function openConversation(conversationId) {
@@ -1364,7 +1378,8 @@
       }
       syncListSelection();
       await loadReflectionThreadsForConversation(currentConversationId);
-      closeSideNav();
+      showReqScreen("chat");
+      closeMobileNavs();
     } catch (e) { console.error(e); }
   }
 
@@ -1586,18 +1601,19 @@
     }
     if (logoutBtn) logoutBtn.addEventListener("click", doLogout);
 
-    function toggleSideNav() {
-      if (sideNav?.classList.contains("open")) closeSideNav();
-      else openSideNav();
-    }
     function toggleAppNav() {
       if (appNavPane?.classList.contains("open")) closeAppNav();
       else openAppNav();
     }
-    if (sideNavToggle) sideNavToggle.addEventListener("click", toggleSideNav);
+    if (sideNavToggle) sideNavToggle.addEventListener("click", toggleAppNav);
     if (sideNavToggleExit) sideNavToggleExit.addEventListener("click", toggleAppNav);
-    if (sideNavClose) sideNavClose.addEventListener("click", closeSideNav);
     if (appNavClose) appNavClose.addEventListener("click", closeAppNav);
+    if (reqBackToList) {
+      reqBackToList.addEventListener("click", () => {
+        showReqScreen("list");
+        closeControlsPane();
+      });
+    }
     if (appNavPane) {
       appNavPane.addEventListener("click", (e) => {
         const link = e.target.closest("a[href]");
@@ -1651,7 +1667,6 @@
     }
     if (newConversationBtn) {
       newConversationBtn.addEventListener("click", () => {
-        closeSideNav();
         openNewChatModal();
       });
     }
@@ -1668,13 +1683,20 @@
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       if (newChatBackdrop?.classList.contains("visible")) closeNewChatModal();
-      else if (sideNav?.classList.contains("open")) closeSideNav();
+      else if (appNavPane?.classList.contains("open")) closeAppNav();
       else if (controlsPane?.classList.contains("open")) closeControlsPane();
+      else if (isMobileNav() && reqChildScreen === "chat") showReqScreen("list");
     });
     const onNavMqChange = () => {
+      closeMobileNavs();
       if (!isMobileNav()) {
-        closeSideNav();
-        closeControlsPane();
+        // Desktop shows both panes; clear mobile-only screen classes.
+        if (viewReq) {
+          viewReq.classList.remove("child-screen-list", "child-screen-chat");
+        }
+        syncReqHeader();
+      } else {
+        showReqScreen(currentConversationId ? reqChildScreen : "list");
       }
     };
     if (typeof MOBILE_NAV_MQ.addEventListener === "function") {
@@ -1682,6 +1704,9 @@
     } else if (typeof MOBILE_NAV_MQ.addListener === "function") {
       MOBILE_NAV_MQ.addListener(onNavMqChange);
     }
+    // Initial mobile screen
+    if (isMobileNav()) showReqScreen("list");
+    else syncReqHeader();
   }
 
   // ── Start ───────────────────────────────────────────────────

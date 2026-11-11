@@ -42,6 +42,7 @@
     selectedPastId: null,
     pastDetail: null,
     hubReport: null,
+    hubScreen: "list", // mobile: "list" | "detail" separate screens
     session: null,
     report: null,
     tab: "hub",
@@ -475,6 +476,7 @@
       if (state.selectedPastId === id) {
         state.selectedPastId = null;
         state.pastDetail = null;
+        state.hubScreen = "list";
       }
       await refreshHub(null);
       render();
@@ -535,6 +537,7 @@
         state.report = null;
         state.probePrompt = null;
         state.tab = "hub";
+        state.hubScreen = "list";
         render();
       });
       return;
@@ -578,6 +581,10 @@
     });
   }
 
+  function isMobileExit() {
+    return window.matchMedia("(max-width: 720px)").matches;
+  }
+
   function renderHub() {
     const root = $("exitMain");
     if (!root) return;
@@ -585,6 +592,9 @@
     const selected = sessions.find((s) => s.id === state.selectedPastId) || null;
     const user = global.SellmRouter.getUser();
     const canDelete = global.SellmApi.canDeleteExitSession(user, selected?.created_by_id);
+    const mobile = isMobileExit();
+    if (!mobile) state.hubScreen = selected ? "detail" : "list";
+    else if (state.hubScreen === "detail" && !selected) state.hubScreen = "list";
 
     const listHtml = !sessions.length
       ? `<p class="hint" style="padding:14px;margin:0">No interviews yet. Save a repository URL, then use Start interview.</p>`
@@ -604,6 +614,11 @@
       const d = state.pastDetail;
       detailHtml = `
         <div class="stack" style="max-width:none;gap:12px">
+          ${
+            mobile
+              ? `<button type="button" class="interview-hub-detail-back" id="exitBackToList">← Interviews</button>`
+              : ""
+          }
           <div>
             <h2 style="margin-bottom:6px">${escapeHtml((selected.participant_names || []).join(", ") || "Interview")}</h2>
             <div class="live-meta">
@@ -656,19 +671,27 @@
         </div>`;
     }
 
+    const screenClass =
+      mobile && state.hubScreen === "detail" ? "child-screen-detail" : "child-screen-list";
+
     root.innerHTML = `
-      <div class="interview-hub">
+      <div class="interview-hub ${screenClass}">
         <section class="interview-hub-list" aria-label="Past interviews">
           <div class="interview-hub-list-header">Past interviews</div>
           ${listHtml}
         </section>
         <section class="interview-hub-detail" aria-label="Interview details">${detailHtml}</section>
       </div>
-      <button type="button" class="fab-labeled" id="exitFabStart">+ Start interview</button>`;
+      ${
+        !mobile || state.hubScreen === "list"
+          ? `<button type="button" class="fab-labeled" id="exitFabStart">+ Start interview</button>`
+          : ""
+      }`;
 
     root.querySelectorAll(".interview-hub-item").forEach((btn) => {
       btn.addEventListener("click", async () => {
         state.selectedPastId = btn.getAttribute("data-id");
+        state.hubScreen = "detail";
         setBusy(true);
         try {
           state.pastDetail = await global.SellmApi.fetchExitSession(state.selectedPastId);
@@ -687,6 +710,11 @@
           renderToolbar();
         }
       });
+    });
+    $("exitBackToList")?.addEventListener("click", () => {
+      state.hubScreen = "list";
+      renderHub();
+      renderToolbar();
     });
     $("exitOpenLive")?.addEventListener("click", () => {
       if (state.selectedPastId) void openLive(state.selectedPastId);

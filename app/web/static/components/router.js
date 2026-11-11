@@ -81,17 +81,16 @@
 
   function updateAdminLinks() {
     const isAdmin = Boolean(user && (user.is_admin || user.role === "admin"));
-    ["adminLink", "adminLinkMobile"].forEach((id) => {
-      const link = $(id);
-      if (!link) return;
+    const link = $("adminLink");
+    if (link) {
       if (isAdmin) {
         link.hidden = false;
-        link.style.display = id === "adminLinkMobile" ? "inline-flex" : "block";
+        link.style.display = "block";
       } else {
         link.hidden = true;
         link.style.display = "none";
       }
-    });
+    }
   }
 
   async function refreshUser() {
