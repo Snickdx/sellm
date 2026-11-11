@@ -2,8 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin · Requirements Chatbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Admin · sellm</title>
+    <meta name="application-name" content="sellm Admin" />
+    <meta name="description" content="Instructor admin for sellm course operations." />
+    <meta name="theme-color" content="#667eea" />
+    <meta name="color-scheme" content="light" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="sellm" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -846,9 +858,12 @@
         <div class="master-detail">
             <aside class="nav-pane" aria-label="Primary navigation">
                 <div class="nav-pane-header">
-                    <div>
-                        <p class="nav-kicker">SWEN · sellm</p>
-                        <h2>Course</h2>
+                    <div class="app-nav-brand" style="display:flex;align-items:center;gap:10px;">
+                        <img src="/static/brand/logo-mark.svg" width="28" height="28" alt="" style="border-radius:7px;flex-shrink:0;" />
+                        <div>
+                            <p class="nav-kicker">SWEN · sellm</p>
+                            <h2>Course</h2>
+                        </div>
                     </div>
                     <button type="button" id="navClose" class="nav-close" aria-label="Close menu">&times;</button>
                 </div>
@@ -923,5 +938,12 @@
     <button type="button" id="createTeamFab" class="fab-labeled" hidden>+ Create group</button>
 
     <script src="/static/components/admin.js?v=20"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function () {});
+        });
+      }
+    </script>
 </body>
 </html>

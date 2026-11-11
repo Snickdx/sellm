@@ -42,15 +42,28 @@
     });
   }
 
+  function blurIfInside(el) {
+    const focused = document.activeElement;
+    if (focused && el && el.contains(focused) && typeof focused.blur === "function") {
+      focused.blur();
+    }
+  }
+
   function showOnly(viewKey) {
     Object.keys(VIEWS).forEach((key) => {
       const el = $(VIEWS[key]);
       if (!el) return;
       const on = key === viewKey;
+      if (!on) blurIfInside(el);
       el.hidden = !on;
       el.setAttribute("aria-hidden", on ? "false" : "true");
+      // Prefer inert on hidden panes so focused descendants cannot remain interactive.
+      if ("inert" in el) el.inert = !on;
     });
     currentView = viewKey;
+    if (global.SellmChat && typeof global.SellmChat.closeMobileNavs === "function") {
+      global.SellmChat.closeMobileNavs();
+    }
   }
 
   function showShell(show) {

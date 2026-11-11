@@ -1705,6 +1705,97 @@ def feedback(request: FeedbackRequest, req: Request):
     }
 
 
+# ── PWA root assets (must stay at site root for installability / SW scope) ──
+_PWA_ROOT_FILES = {
+    "manifest.json": "application/manifest+json",
+    "sw.js": "application/javascript",
+    "offline.html": "text/html; charset=utf-8",
+    "favicon.ico": "image/x-icon",
+    "favicon.svg": "image/svg+xml",
+    "favicon-16.png": "image/png",
+    "favicon-32.png": "image/png",
+    "favicon-48.png": "image/png",
+    "apple-touch-icon.png": "image/png",
+}
+
+
+def _pwa_file(name: str, media_type: str) -> FileResponse:
+    path = STATIC_DIR / name
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail=f"Missing PWA asset: {name}")
+    return FileResponse(path, media_type=media_type)
+
+
+@app.get("/manifest.json")
+async def pwa_manifest():
+    return _pwa_file("manifest.json", _PWA_ROOT_FILES["manifest.json"])
+
+
+@app.get("/sw.js")
+async def pwa_service_worker():
+    return _pwa_file("sw.js", _PWA_ROOT_FILES["sw.js"])
+
+
+@app.get("/offline.html")
+async def pwa_offline():
+    return _pwa_file("offline.html", _PWA_ROOT_FILES["offline.html"])
+
+
+@app.get("/favicon.ico")
+async def pwa_favicon_ico():
+    return _pwa_file("favicon.ico", _PWA_ROOT_FILES["favicon.ico"])
+
+
+@app.get("/favicon.svg")
+async def pwa_favicon_svg():
+    return _pwa_file("favicon.svg", _PWA_ROOT_FILES["favicon.svg"])
+
+
+@app.get("/favicon-16.png")
+async def pwa_favicon_16():
+    return _pwa_file("favicon-16.png", _PWA_ROOT_FILES["favicon-16.png"])
+
+
+@app.get("/favicon-32.png")
+async def pwa_favicon_32():
+    return _pwa_file("favicon-32.png", _PWA_ROOT_FILES["favicon-32.png"])
+
+
+@app.get("/favicon-48.png")
+async def pwa_favicon_48():
+    return _pwa_file("favicon-48.png", _PWA_ROOT_FILES["favicon-48.png"])
+
+
+@app.get("/apple-touch-icon.png")
+async def pwa_apple_touch_icon():
+    return _pwa_file("apple-touch-icon.png", _PWA_ROOT_FILES["apple-touch-icon.png"])
+
+
+@app.get("/icons/{icon_name}")
+async def pwa_icon(icon_name: str):
+    # Allow only known icon filenames under static/icons.
+    safe = Path(icon_name).name
+    path = STATIC_DIR / "icons" / safe
+    if safe != icon_name or not path.is_file() or path.suffix.lower() != ".png":
+        raise HTTPException(status_code=404, detail="Icon not found")
+    return FileResponse(path, media_type="image/png")
+
+
+@app.get("/screenshots/{shot_name}")
+async def pwa_screenshot(shot_name: str):
+    safe = Path(shot_name).name
+    path = STATIC_DIR / "screenshots" / safe
+    if safe != shot_name or not path.is_file() or path.suffix.lower() not in {".webp", ".png", ".jpg", ".jpeg"}:
+        raise HTTPException(status_code=404, detail="Screenshot not found")
+    media = {
+        ".webp": "image/webp",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+    }[path.suffix.lower()]
+    return FileResponse(path, media_type=media)
+
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 

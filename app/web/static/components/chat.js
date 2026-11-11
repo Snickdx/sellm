@@ -227,6 +227,9 @@
   const sideNavToggle = document.getElementById("sideNavToggle");
   const sideNavClose = document.getElementById("sideNavClose");
   const sideNavBackdrop = document.getElementById("sideNavBackdrop");
+  const appNavPane = document.getElementById("appNavPane");
+  const appNavClose = document.getElementById("appNavClose");
+  const sideNavToggleExit = document.getElementById("sideNavToggleExit");
   const controlsPane = document.getElementById("controlsPane");
   const controlsPaneToggle = document.getElementById("controlsPaneToggle");
   const controlsPaneClose = document.getElementById("controlsPaneClose");
@@ -275,6 +278,7 @@
         syncToken() {
           authToken = localStorage.getItem("auth_token");
         },
+        closeMobileNavs,
         async activate() {
           authToken = localStorage.getItem("auth_token");
           const ok = await checkAuth();
@@ -440,6 +444,7 @@
   function syncBackdrop() {
     const anyOpen = Boolean(
       (sideNav && sideNav.classList.contains("open")) ||
+      (appNavPane && appNavPane.classList.contains("open")) ||
       (controlsPane && controlsPane.classList.contains("open"))
     );
     if (!sideNavBackdrop) return;
@@ -454,6 +459,7 @@
 
   function openSideNav() {
     if (!sideNav) return;
+    closeAppNav({ skipBackdrop: true });
     closeControlsPane({ skipBackdrop: true });
     sideNav.classList.add("open");
     document.body.classList.add("side-nav-open");
@@ -461,17 +467,43 @@
     syncBackdrop();
   }
 
-  function closeSideNav() {
+  function closeSideNav(opts = {}) {
     if (!sideNav) return;
     sideNav.classList.remove("open");
     document.body.classList.remove("side-nav-open");
     if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "false");
+    if (!opts.skipBackdrop) syncBackdrop();
+  }
+
+  function openAppNav() {
+    if (!appNavPane) return;
+    closeSideNav({ skipBackdrop: true });
+    closeControlsPane({ skipBackdrop: true });
+    appNavPane.classList.add("open");
+    document.body.classList.add("app-nav-open");
+    if (sideNavToggleExit) sideNavToggleExit.setAttribute("aria-expanded", "true");
+    syncBackdrop();
+  }
+
+  function closeAppNav(opts = {}) {
+    if (!appNavPane) return;
+    appNavPane.classList.remove("open");
+    document.body.classList.remove("app-nav-open");
+    if (sideNavToggleExit) sideNavToggleExit.setAttribute("aria-expanded", "false");
+    if (!opts.skipBackdrop) syncBackdrop();
+  }
+
+  function closeMobileNavs() {
+    closeSideNav({ skipBackdrop: true });
+    closeAppNav({ skipBackdrop: true });
+    closeControlsPane({ skipBackdrop: true });
     syncBackdrop();
   }
 
   function openControlsPane() {
     if (!controlsPane) return;
-    closeSideNav();
+    closeSideNav({ skipBackdrop: true });
+    closeAppNav({ skipBackdrop: true });
     controlsPane.classList.add("open");
     document.body.classList.add("controls-pane-open");
     if (controlsPaneToggle) controlsPaneToggle.setAttribute("aria-expanded", "true");
@@ -1558,10 +1590,20 @@
       if (sideNav?.classList.contains("open")) closeSideNav();
       else openSideNav();
     }
+    function toggleAppNav() {
+      if (appNavPane?.classList.contains("open")) closeAppNav();
+      else openAppNav();
+    }
     if (sideNavToggle) sideNavToggle.addEventListener("click", toggleSideNav);
-    const sideNavToggleExit = document.getElementById("sideNavToggleExit");
-    if (sideNavToggleExit) sideNavToggleExit.addEventListener("click", toggleSideNav);
+    if (sideNavToggleExit) sideNavToggleExit.addEventListener("click", toggleAppNav);
     if (sideNavClose) sideNavClose.addEventListener("click", closeSideNav);
+    if (appNavClose) appNavClose.addEventListener("click", closeAppNav);
+    if (appNavPane) {
+      appNavPane.addEventListener("click", (e) => {
+        const link = e.target.closest("a[href]");
+        if (link) closeMobileNavs();
+      });
+    }
     if (controlsPaneToggle) {
       controlsPaneToggle.addEventListener("click", () => {
         if (controlsPane?.classList.contains("open")) closeControlsPane();
@@ -1571,8 +1613,7 @@
     if (controlsPaneClose) controlsPaneClose.addEventListener("click", closeControlsPane);
     if (sideNavBackdrop) {
       sideNavBackdrop.addEventListener("click", () => {
-        closeSideNav();
-        closeControlsPane();
+        closeMobileNavs();
       });
     }
     if (newChatCancel) newChatCancel.addEventListener("click", closeNewChatModal);

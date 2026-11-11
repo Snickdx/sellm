@@ -15,6 +15,17 @@
   --surface: #f8fafc;
 }
 
+/* Installed PWA: avoid browser-chrome gaps; keep safe-area once at shell edges */
+@media (display-mode: standalone) {
+  html,
+  body {
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    background: #fff;
+  }
+}
+
 .view-pane {
   flex: 1;
   min-height: 0;
@@ -663,6 +674,42 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+}
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+.brand-lockup img {
+  display: block;
+  width: min(168px, 70%);
+  height: auto;
+}
+.brand-lockup--nav {
+  margin: 0 0 6px;
+}
+.brand-lockup--nav img {
+  width: 132px;
+}
+.brand-mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+.app-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.app-nav-brand .brand-copy .kicker {
+  margin: 0;
+}
+.app-nav-brand .brand-copy h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
 }
 .auth-panel h1 { margin: 0 0 8px; font-size: 22px; }
 .auth-panel .lede { margin-bottom: 18px; }

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-label="sellm">
+  <defs>
+    <linearGradient id="sellmGrad" x1="18%" y1="12%" x2="88%" y2="92%">
+      <stop offset="0%" stop-color="#667eea"/>
+      <stop offset="100%" stop-color="#764ba2"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0,8)">
+    <rect width="80" height="80" rx="18" fill="url(#sellmGrad)"/>
+    <path fill="rgba(255,255,255,0.14)"
+          d="M21.25 22.5h37.5a11.25 11.25 0 0 1 11.25 11.25v17.5a11.25 11.25 0 0 1-11.25 11.25H38.75l-10 7.5v-7.5H21.25A11.25 11.25 0 0 1 10 51.25v-17.5A11.25 11.25 0 0 1 21.25 22.5z"/>
+    <path fill="#ffffff" transform="translate(0,0) scale(0.625)"
+          d="M84.5 46.2c-3.1-5.4-9.4-8.7-17.3-8.7-12.2 0-20.6 6.6-20.6 16.2 0 8.2 5.5 12.7 16.8 15.4l7.2 1.7c7.4 1.8 10.4 3.9 10.4 8.1 0 5-4.7 8.2-12.1 8.2-6.5 0-11.4-2.5-14.4-7.4l-8.6 5.1c4.5 8.2 13.1 12.5 23.2 12.5 14.1 0 23.2-7.4 23.2-18.2 0-9.1-5.8-14-17.8-16.8l-7.1-1.6c-6.5-1.5-9.3-3.5-9.3-7.4 0-4.5 4.1-7.4 10.5-7.4 5.4 0 9.5 2.1 11.9 6.3l8-5z"/>
+  </g>
+  <text x="104" y="62"
+        font-family="system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif"
+        font-size="48" font-weight="700" letter-spacing="-1.5"
+        fill="#ffffff">sellm</text>
+</svg>

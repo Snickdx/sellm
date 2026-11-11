@@ -2,9 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>sellm · Course</title>
-    <link rel="stylesheet" href="/static/components/shell-extra.css?v=2" />
+    <meta name="application-name" content="sellm · Course" />
+    <meta name="description" content="Requirements gathering training and exit interviews for SWEN coursework." />
+    <meta name="theme-color" content="#667eea" />
+    <meta name="color-scheme" content="light" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="sellm" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/static/components/shell-extra.css?v=3" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -99,7 +111,8 @@
             border-right: 1px solid #e2e8f0;
             z-index: 1600;
         }
-        .side-nav-close {
+        .side-nav-close,
+        .app-nav-close {
             display: none;
             border: none;
             background: transparent;
@@ -110,7 +123,8 @@
             padding: 4px 8px;
             border-radius: 8px;
         }
-        .side-nav-close:hover { background: #e2e8f0; color: #334155; }
+        .side-nav-close:hover,
+        .app-nav-close:hover { background: #e2e8f0; color: #334155; }
         .side-nav-toggle,
         .controls-pane-toggle {
             display: none;
@@ -681,7 +695,24 @@
                 height: 100dvh;
             }
             .app-nav-pane {
-                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: min(280px, 88vw);
+                max-width: 88vw;
+                display: flex;
+                border-right: 1px solid #e2e8f0;
+                transform: translateX(-105%);
+                transition: transform 0.25s ease;
+                box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+                z-index: 1700;
+            }
+            .app-nav-pane.open {
+                transform: translateX(0);
+            }
+            .app-nav-close {
+                display: inline-flex !important;
             }
             .chats-workspace {
                 grid-template-columns: 1fr;
@@ -739,6 +770,7 @@
                 transform: translateX(0);
             }
             body.side-nav-open,
+            body.app-nav-open,
             body.controls-pane-open {
                 overflow: hidden;
             }
@@ -789,7 +821,10 @@
     <div id="view-landing" class="view-pane landing-shell" hidden aria-hidden="true">
         <div class="landing-grid">
             <section class="auth-panel landing-panel">
-                <p class="eyebrow">sellm · course</p>
+                <div class="brand-lockup">
+                    <img src="/static/brand/logo-horizontal-dark.svg" width="168" height="45" alt="sellm" />
+                </div>
+                <p class="eyebrow">SWEN · course</p>
                 <h1 id="claimTitle">Form a group</h1>
                 <div id="claimFormWrap">
                     <p class="lede">
@@ -817,7 +852,10 @@
                 <div id="claimResultWrap" hidden></div>
             </section>
             <section class="auth-panel landing-panel landing-login">
-                <p class="eyebrow">already claimed?</p>
+                <div class="brand-lockup">
+                    <img src="/static/brand/logo-mark.svg" class="brand-mark" width="28" height="28" alt="" />
+                    <p class="eyebrow" style="margin:0">already claimed?</p>
+                </div>
                 <h1>Sign in</h1>
                 <p class="lede">Use your group&apos;s shared username and password to open exit interviews.</p>
                 <form id="landingLoginForm" class="auth-form">
@@ -879,10 +917,18 @@
     <div id="sideNavBackdrop" class="side-nav-backdrop" aria-hidden="true"></div>
     <div class="shell" id="appShell" hidden aria-hidden="true">
         <div class="master-detail chat-container">
-            <aside class="app-nav-pane" aria-label="Primary navigation">
+            <aside id="appNavPane" class="app-nav-pane" aria-label="Primary navigation">
                 <div class="app-nav-pane-header">
-                    <div class="kicker">SWEN · sellm</div>
-                    <h2>Course</h2>
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div class="app-nav-brand">
+                            <img src="/static/brand/logo-mark.svg" class="brand-mark" width="28" height="28" alt="" />
+                            <div class="brand-copy">
+                                <div class="kicker">SWEN · sellm</div>
+                                <h2>Course</h2>
+                            </div>
+                        </div>
+                        <button type="button" id="appNavClose" class="app-nav-close" aria-label="Close menu">&times;</button>
+                    </div>
                 </div>
                 <nav class="app-nav" aria-label="Primary">
                     <a href="/req" data-nav="req">Req Interviews</a>
@@ -1001,7 +1047,7 @@
 
                 <div id="view-exit" class="view-pane" hidden aria-hidden="true">
                     <div class="chat-header exit-header">
-                        <button type="button" id="sideNavToggleExit" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false">&#9776;</button>
+                        <button type="button" id="sideNavToggleExit" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="appNavPane">&#9776;</button>
                         <div class="chat-header-text">
                             <h1 id="exitHeaderTitle">Exit interviews</h1>
                             <p class="chat-header-subtitle" id="exitHeaderSubtitle">Start interview and review past sessions</p>
@@ -1105,7 +1151,14 @@
     <script src="/static/components/claim.js?v=1"></script>
     <script src="/static/components/exit-voice.js?v=1"></script>
     <script src="/static/components/exit.js?v=1"></script>
-    <script src="/static/components/chat.js?v=24"></script>
-    <script src="/static/components/router.js?v=1"></script>
+    <script src="/static/components/chat.js?v=25"></script>
+    <script src="/static/components/router.js?v=2"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function () {});
+        });
+      }
+    </script>
 </body>
 </html>
