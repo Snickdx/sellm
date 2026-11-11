@@ -7,7 +7,7 @@ the sibling [comp3613-templates](https://github.com/Snickdx/comp3613-templates) 
 ## M0
 
 - Auth is local username/password (cohort credentials + admin users), not institutional SSO.
-- sellm is a single FastAPI app + optional `/course/` SPA; production is bare-metal systemd or Docker/EasyPanel from this repo.
+- sellm is a single FastAPI app with a vanilla student shell (`index.html` + static JS); production is bare-metal systemd or Docker/EasyPanel from this repo.
 - Object storage and Redis are not required. LiveKit is optional via env (see M6 / `docs/EXIT_INTERVIEWS.md`).
 - Skills under `.agents/skills/` are local to sellm (scenario-author/validator, competency-judge, interview-designer).
 - Student starters live in [Snickdx/comp3613-templates](https://github.com/Snickdx/comp3613-templates) (sibling checkout `templates/`), with seven private GitHub submodules (`comp3613-<slug>`). All seven flawed baselines (**0.2.0**) are built on [uwidcit/faststart](https://github.com/uwidcit/faststart) (`96ccfce`): **`job-board`** (State apps), **`library`** (Strategy conflict), **`uwi-connect`** (Observer), **`thesis-tracker`** (Command/audit), **`student-accommodation`** (State listings), **`ta-allocations`** (Strategy auto-alloc), **`career-advising`** (Template Method exploration). Domain APIs live under `/api`; private defect manifests under **`sellm/instructor/private/<slug>/`**, never in student trees. Runtime judge gold: `app/examiner/knowledge/<slug>.yaml`.

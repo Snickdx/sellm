@@ -24,7 +24,8 @@ This system is designed for **requirements gathering training**. It simulates a 
 - **YAML scenarios**: Seven packages under `scenarios/` (canonical authoring home) — pick scenario + persona like choosing Vector vs Neo4j; YAML edits must be reindexed into vector + Neo4j and refresh yaml/direct preprompt packs
 - **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Gemini, Groq, OpenRouter); RAG/direct chat requires a real LLM; YAML mode defaults to heuristic persona replies
 - **Scenario pack**: `data.xlsx` compiled into structured context for direct mode and optional RAG prompt enrichment
-- **Auth + persistence**: Login, per-user conversations (SQLite/Postgres), reflection threads for meta-review
+- **Unified student shell**: One `index.html` for claim/login (`/`), requirements chat (`/req`), and exit interviews (`/exit`) — History-API routing, shared nav/auth
+- **Auth + persistence**: Group claim or login, per-user conversations (SQLite/Postgres), reflection threads for meta-review
 - **Responsive UI**: Collapsible side nav on mobile (conversations, new chat, API config)
 - **Excel knowledge base**: `data.xlsx` is ground truth for retrieval (not cited in stakeholder answers)
 
@@ -102,6 +103,8 @@ uvicorn app:app --reload --host 0.0.0.0 --port 8000
 http://localhost:8000
 ```
 
+Student routes (same shell): `/` claim+login · `/req` requirements chat · `/exit` exit interviews · `/admin` admin.
+
 1. **Sign in** — default training users are seeded on startup (`nick`, `wayne`, `claudine`, `snick`; password `badPassword1`). Roles:
 
 | User | Role | Mode / model controls |
@@ -176,18 +179,22 @@ Keys are encrypted at rest using Fernet (AES-128-CBC) before storage. The model 
 
 ### System overview
 
-The app is a **FastAPI** service with a Jinja2 web UI. Each chat message goes through **auth → mode selection → retrieve or compile scenario pack → stakeholder prompt → LLM generation → persistence**. See **[docs/REFACTOR_NOTES.md](docs/REFACTOR_NOTES.md)** for the comparison-mode refactor.
+The app is a **FastAPI** service with a Jinja2 + vanilla JS student shell (no separate SPA build). Each chat message goes through **auth → mode selection → retrieve or compile scenario pack → stakeholder prompt → LLM generation → persistence**. See **[docs/REFACTOR_NOTES.md](docs/REFACTOR_NOTES.md)** for the comparison-mode refactor and **[docs/EXIT_INTERVIEWS.md](docs/EXIT_INTERVIEWS.md)** for exit interviews.
 
 ```mermaid
 flowchart TB
   subgraph client [Browser]
-    UI[index.html + chat.js]
-    Nav[Side nav: conversations / new chat / config]
+    Shell[index.html shell]
+    Router[router.js]
+    Claim[claim.js]
+    ChatUI[chat.js req view]
+    ExitUI[exit.js + exit-voice.js]
   end
 
   subgraph api [FastAPI app/api/app.py]
     Auth[Bearer session auth]
     Chat[POST /api/chat]
+    ExitAPI["/api/teams /api/exit-sessions"]
     Store[(ConversationStore SQLite or Postgres)]
     Tweaks[behavior_tweaks.json]
   end
@@ -205,9 +212,15 @@ flowchart TB
 
   KB[(data.xlsx)]
 
-  UI --> Auth
-  Nav --> UI
+  Shell --> Router
+  Router --> Claim
+  Router --> ChatUI
+  Router --> ExitUI
+  Claim --> Auth
+  ChatUI --> Auth
+  ExitUI --> Auth
   Auth --> Chat
+  Auth --> ExitAPI
   Chat --> Store
   Chat --> Hybrid
   Chat --> Vector
@@ -236,8 +249,9 @@ Hybrid routing uses `app/mcp/router.py` in-process (no separate MCP sidecar). Ne
 
 | Layer | Module(s) | Role |
 |-------|-----------|------|
-| **UI** | `app/web/templates/index.html`, `app/web/static/components/chat.js` | Chat, mode/LLM selectors, mobile side nav, settings modal, reflection UI |
-| **API** | `app/api/app.py`, `app/api/schemas.py` | Routes, auth, chat orchestration, config |
+| **Student UI** | `app/web/templates/index.html`, `app/web/static/components/{router,claim,chat,exit,exit-voice,api}.js` | Unified shell: claim/login, req chat, exit interviews |
+| **Admin UI** | `app/web/templates/admin.html`, `admin.js` | Users, teams, roster, transcripts |
+| **API** | `app/api/app.py`, `app/api/schemas.py`, `exit_interviews.py`, `roster.py`, `teams.py` | Routes, auth, chat, exit sessions, group claim |
 | **Auth & history** | `app/storage/conversation_store.py` | Users, sessions, conversations, messages, reflection threads |
 | **Vector RAG** | `app/rag_backend.py` | Embeddings, Chroma search, sheet-intent filtering, `SimpleLLM` template fallback |
 | **Graph RAG** | `app/rag_backend_neo4j.py` | Neo4j vector + relationship traversal |
@@ -546,87 +560,65 @@ Popular alternatives:
 ```
 .
 ├── app/
-│   ├── main.py              # Entrypoint module (python -m app.main)
-│   ├── fix_pytree.py        # Torch/pytree compatibility shim
-│   ├── security/
-│   │   └── secret_store.py   # Fernet-encrypted API key storage
-│   ├── scenario/            # Excel scenario_pack, stakeholder_prompt, direct_model
-│   ├── scenarios/           # YAML scenario packages (loader, registry, validator)
-│   ├── chat/                # YAML persona chat / draft review
-│   ├── examiner/            # Exit-interview planner, scorer, judge knowledge
-│   ├── repo/                # Student repo ingest + retrieval
-│   ├── voice/               # LiveKit tokens / egress
-│   ├── models/              # Shared SQLModel tables + se_→flat migrate
-│   ├── llm_wrapper.py       # Stakeholder LLM generation (no template fallback)
-│   ├── llm_registry.py      # Model discovery, dropdown, Ollama name resolution
-│   ├── stakeholder_tone.py  # Plain-language post-processing for stakeholders
-│   ├── rag_backend.py       # ChromaDB RAG + SimpleLLM template fallback
-│   ├── rag_backend_neo4j.py # Neo4j vector + graph RAG
-│   ├── mcp/                 # In-process hybrid router (Chroma + Neo4j)
-│   │   ├── hybrid.py
-│   │   └── router.py
+│   ├── main.py                 # Entrypoint (python -m app.main)
+│   ├── fix_pytree.py           # Torch/pytree compatibility shim
+│   ├── security/               # Fernet-encrypted API key storage
+│   ├── scenario/               # Excel scenario_pack, stakeholder_prompt, direct_model
+│   ├── scenarios/              # YAML scenario packages (loader, registry, validator)
+│   ├── chat/                   # YAML persona chat / draft review
+│   ├── examiner/               # Exit-interview planner, scorer, judge knowledge
+│   ├── repo/                   # Student repo ingest + retrieval
+│   ├── voice/                  # LiveKit tokens / egress (optional)
+│   ├── models/                 # Shared SQLModel tables
+│   ├── llm_wrapper.py / llm_registry.py
+│   ├── rag_backend.py / rag_backend_neo4j.py
+│   ├── mcp/                    # In-process hybrid router (Chroma + Neo4j)
 │   ├── api/
-│   │   ├── app.py           # FastAPI app and route mounting
-│   │   ├── admin.py         # Admin routes
-│   │   ├── schemas.py       # Chat/auth API schemas
-│   │   ├── scenarios.py     # YAML scenario routes
-│   │   ├── teams.py         # Team / group-setup routes
-│   │   ├── repositories.py  # Repo freeze / analyze routes
-│   │   ├── exit_interviews.py
-│   │   ├── voice.py
-│   │   └── policy.py
-│   ├── storage/
-│   │   └── conversation_store.py # SQLModel + SQLite persistence
-│   ├── tweaks/
-│   │   └── behavior_tweaks.py # Runtime tweak store logic
-│   ├── web/
-│   │   ├── templates/
-│   │   │   └── index.html   # Jinja2 template for chat UI
-│   │   └── static/
-│   │       └── components/
-│   │           └── chat.js  # Web chat component logic
-├── config/
-│   ├── behavior/
-│   │   └── behavior_tweaks.json # External behavior tweak data
-
-├── setup/
-│   ├── chroma/
-│   │   └── init_chroma.py   # Chroma setup/warmup script
-│   ├── neo4j/
-│   │   └── load_graph.py    # Neo4j graph load script
-│   ├── users/
-│   │   └── manage_users.py  # CLI: seed / list / add users
-│   └── eval/
-│       └── run_requirements_chat.py  # Scripted chat eval runner
-├── docker/
-│   └── entrypoint.sh        # Container startup (Chroma seed + uvicorn)
-├── docker-compose.yml       # Local stack (+ optional postgres / mcp profiles)
+│   │   ├── app.py              # FastAPI app; serves student shell HTML routes
+│   │   ├── admin.py / roster.py / teams.py / exit_interviews.py / …
+│   │   └── schemas.py
+│   ├── storage/conversation_store.py
+│   ├── tweaks/behavior_tweaks.py
+│   └── web/
+│       ├── templates/
+│       │   ├── index.html      # Unified student shell (claim / req / exit)
+│       │   └── admin.html
+│       └── static/components/
+│           ├── api.js          # Shared fetch + auth_token helpers
+│           ├── router.js       # History-API view switching
+│           ├── claim.js        # Group claim + login landing
+│           ├── chat.js         # Requirements chat
+│           ├── exit.js         # Exit hub / live / review
+│           ├── exit-voice.js   # MediaRecorder + speech recognition
+│           ├── admin.js
+│           └── shell-extra.css
+├── config/behavior/behavior_tweaks.json
+├── setup/                      # chroma / neo4j / users / eval CLIs
+├── docker/entrypoint.sh
+├── docker-compose.yml
 ├── docs/
-│   ├── SETUP_LLM.md         # LLM setup guide
-│   ├── DEPLOY_EASYPANEL.md  # Production on EasyPanel
-│   ├── EXIT_INTERVIEWS.md   # Exit interview dry-run
-│   └── known-limitations.md # Pilot limitations (sellm-local copy)
-├── instructor/
-│   └── private/<slug>/      # Defect manifests + hidden tests (not student-facing)
-├── requirements.txt         # Python dependencies
-├── .env.example             # Env template (copy to app/.env for local dev)
-├── data.xlsx                # Excel knowledge base (RAG / direct modes)
-├── scenarios/               # COMP 3613 YAML scenario packages (yaml mode)
-├── scripts/
-│   ├── sync-scenarios.ps1   # Inventory sellm scenarios; optional -PushToSeproject mirror
-│   └── reindex_scenarios.py # Reload YAML → registry + vector + graph after authoring
-├── storage/
-│   ├── chroma_db_v2/        # ChromaDB database (gitignored)
-│   └── conversations.db     # SQLite chat history (gitignored)
-└── README.md                # This file
+│   ├── SETUP_LLM.md
+│   ├── DEPLOY_EASYPANEL.md
+│   ├── EXIT_INTERVIEWS.md
+│   ├── LEGACY_UI.md            # Student UI layout notes
+│   └── known-limitations.md
+├── instructor/private/<slug>/  # Defect manifests (not student-facing)
+├── scenarios/                  # COMP 3613 YAML packages
+├── scripts/                    # update, reindex_scenarios, sync-scenarios
+├── requirements.txt            # Python only (no Node/SPA build)
+├── .env.example
+├── data.xlsx
+└── README.md
 ```
+
+Student UI is **vanilla HTML/JS** under `app/web/` — there is no `frontend/` Vite/React app and no `npm` build for production.
 
 ## Technologies Used
 
 - **FastAPI**: Modern web framework for building APIs
+- **Jinja2 + vanilla JS**: Unified student/admin web UI (no SPA toolchain)
 - **ChromaDB**: Open-source vector database for embeddings
 - **Neo4j**: Graph database for relationship-aware RAG (optional backend)
-
 - **sentence-transformers**: Library for sentence embeddings
 - **pandas**: Data manipulation and Excel file processing
 - **openpyxl**: Excel file reading library

@@ -1,12 +1,3 @@
-# ── Frontend build ─────────────────────────────────────────
-FROM node:22-bookworm-slim AS frontend
-
-WORKDIR /frontend
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm ci
-COPY frontend/ ./
-RUN npm run build
-
 # ── Build stage: install deps ──────────────────────────────
 FROM python:3.12-slim-bookworm AS builder
 
@@ -50,7 +41,6 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
-COPY --from=frontend /frontend/dist /app/frontend/dist
 
 RUN mkdir -p storage storage/recordings \
     && python -m setup.chroma.init_chroma \
