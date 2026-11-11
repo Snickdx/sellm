@@ -442,6 +442,24 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   align-items: flex-start;
   justify-content: space-between;
 }
+.live-interview .live-end-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 0.55rem 0.95rem;
+  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.live-interview .live-end-btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+.live-interview .live-end-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .live-main {
   flex: 1;
   min-height: 0;

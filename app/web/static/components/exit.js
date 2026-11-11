@@ -145,7 +145,13 @@
   }
 
   function setBusy(v) {
-    state.busy = v;
+    state.busy = !!v;
+  }
+
+  function clearBusyAndRender() {
+    state.busy = false;
+    advancing = false;
+    render();
   }
 
   function orderedQuestions(session) {
@@ -272,7 +278,7 @@
       setError(err instanceof Error ? err.message : "Failed to open interview");
       render();
     } finally {
-      setBusy(false);
+      clearBusyAndRender();
     }
   }
 
@@ -295,7 +301,7 @@
       setError(err instanceof Error ? err.message : "Start failed");
       render();
     } finally {
-      setBusy(false);
+      clearBusyAndRender();
     }
   }
 
@@ -309,7 +315,7 @@
       setError(err instanceof Error ? err.message : "Could not start interview");
       render();
     } finally {
-      setBusy(false);
+      clearBusyAndRender();
     }
   }
 
@@ -336,6 +342,13 @@
   function syncAnswerField() {
     const ta = $("exitAnswer");
     if (ta && document.activeElement !== ta) ta.value = state.answer;
+    if (ta) ta.disabled = state.busy;
+    const btn = $("exitAnswerForm")?.querySelector('button[type="submit"]');
+    if (btn) btn.disabled = state.busy || !state.answer.trim();
+    const skip = $("exitSkipQ");
+    if (skip) skip.disabled = state.busy;
+    const end = $("exitEndBtn");
+    if (end) end.disabled = state.busy;
   }
 
   async function onVoiceNext() {
@@ -363,13 +376,10 @@
       const nqs = orderedQuestions(next);
       const nidx = nqs.findIndex((q) => q.id === next.current_question_id);
       state.viewIndex = nidx >= 0 ? nidx : Math.max(0, nqs.length - 1);
-      render();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not advance");
-      render();
     } finally {
-      advancing = false;
-      setBusy(false);
+      clearBusyAndRender();
       maybeAutoFinish();
     }
   }
@@ -403,12 +413,10 @@
       const qs = orderedQuestions(state.session);
       const idx = qs.findIndex((q) => q.id === state.session.current_question_id);
       if (idx >= 0) state.viewIndex = idx;
-      render();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Answer failed");
-      render();
     } finally {
-      setBusy(false);
+      clearBusyAndRender();
       maybeAutoFinish();
     }
   }
@@ -447,13 +455,11 @@
       destroyVoice();
       await refreshHub(result.session.id);
       state.tab = "live";
-      render();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Finish failed");
-      render();
     } finally {
       finishing = false;
-      setBusy(false);
+      clearBusyAndRender();
     }
   }
 
@@ -479,12 +485,10 @@
         state.hubScreen = "list";
       }
       await refreshHub(null);
-      render();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed");
-      render();
     } finally {
-      setBusy(false);
+      clearBusyAndRender();
     }
   }
 
@@ -843,7 +847,7 @@
               ${!wrappingUp ? '<span class="recording-pill">Recording</span>' : '<span class="audit-pill">Audit</span>'}
             </div>
           </div>
-          <button type="button" id="exitEndBtn" ${state.busy ? "disabled" : ""}>
+          <button type="button" class="live-end-btn" id="exitEndBtn" ${state.busy ? "disabled" : ""}>
             ${
               state.busy || session.status === "processing"
                 ? "Running audit…"
