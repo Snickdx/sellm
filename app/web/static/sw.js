@@ -1,4 +1,5 @@
 /* sellm service worker — PWA install shell only; no asset precache. */
+/* bump: shell-extra v11 / exit.js v28 */
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });

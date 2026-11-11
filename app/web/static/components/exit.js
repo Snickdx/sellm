@@ -41,6 +41,7 @@
     selectedPastId: null,
     pastDetail: null,
     hubReport: null,
+    hubReportReady: false,
     hubScreen: "list", // mobile: "list" | "detail" separate screens
     session: null,
     report: null,
@@ -191,22 +192,27 @@
     if (pick) {
       try {
         state.pastDetail = await global.SellmApi.fetchExitSession(pick);
+        state.hubReportReady = false;
         if (isScored(state.pastDetail.status)) {
           try {
             state.hubReport = await global.SellmApi.fetchExitReport(pick);
           } catch (_) {
             state.hubReport = null;
           }
+          state.hubReportReady = true;
         } else {
           state.hubReport = null;
+          state.hubReportReady = true;
         }
       } catch (_) {
         state.pastDetail = null;
         state.hubReport = null;
+        state.hubReportReady = true;
       }
     } else {
       state.pastDetail = null;
       state.hubReport = null;
+      state.hubReportReady = false;
     }
   }
 
@@ -599,61 +605,64 @@
           })
           .join("");
 
-    let detailHtml = '<p class="hint">Select an interview, or start a new one.</p>';
+    let detailHtml = '<p class="hint hub-detail-empty">Select an interview, or start a new one.</p>';
     if (selected) {
       const d = state.pastDetail;
+      const title = (selected.participant_names || []).join(", ") || "Interview";
+      const summaryBody = !isScored(selected.status)
+        ? ""
+        : state.hubReport
+          ? reportSummaryHtml(state.hubReport)
+          : state.hubReportReady
+            ? '<p class="hint">No report available.</p>'
+            : '<p class="hint">Loading report summary…</p>';
       detailHtml = `
-        <div class="stack" style="max-width:none;gap:12px">
-          <div>
-            <h2 style="margin-bottom:6px">${escapeHtml((selected.participant_names || []).join(", ") || "Interview")}</h2>
-            <div class="live-meta">
-              <span>Status: ${escapeHtml(formatStatus(selected.status))}</span>
-              <span>Consent: ${escapeHtml(selected.consent_status)}</span>
-              ${selected.created_at ? `<span>Started: ${escapeHtml(formatWhen(selected.created_at))}</span>` : ""}
+        <article class="hub-detail">
+          <header class="hub-detail-header">
+            <div class="hub-detail-heading">
+              <h2>${escapeHtml(title)}</h2>
+              <div class="live-meta">
+                <span>${escapeHtml(formatStatus(selected.status))}</span>
+                <span>Consent ${escapeHtml(selected.consent_status)}</span>
+                ${selected.created_at ? `<span>${escapeHtml(formatWhen(selected.created_at))}</span>` : ""}
+              </div>
             </div>
-          </div>
+            <div class="hub-detail-actions live-actions">
+              <button type="button" id="exitOpenLive" ${state.busy || !state.selectedPastId ? "disabled" : ""}>
+                ${
+                  isWrapping(selected.status)
+                    ? "Complete audit"
+                    : isScored(selected.status)
+                      ? "View interview"
+                      : "Continue interview"
+                }
+              </button>
+              ${
+                canDelete
+                  ? `<button type="button" class="ghost danger" id="exitDelete" ${state.busy || !state.selectedPastId ? "disabled" : ""}>Delete</button>`
+                  : ""
+              }
+            </div>
+          </header>
           ${
             d
-              ? `<p class="hint" style="margin:0">Questions: ${d.questions.length} · Unanswered: ${d.unanswered_question_ids.length} · Interviewee: ${escapeHtml(d.current_participant_name || d.participants[0]?.display_name || "—")}</p>
-                 ${
-                   d.participants.length
-                     ? `<ul class="consent-checklist">${d.participants
-                         .map(
-                           (p) =>
-                             `<li>${escapeHtml(p.display_name || `User ${p.user_id}`)} · consent ${escapeHtml(p.consent_status)}</li>`,
-                         )
-                         .join("")}</ul>`
-                     : ""
-                 }
-                 ${isWrapping(selected.status) ? `<p class="audit-banner" role="status">Closing — provisional audit pending. Open to finish scoring.</p>` : ""}
-                 ${
-                   isScored(selected.status)
-                     ? `<div><h3 style="margin:8px 0 6px;font-size:0.95rem">Provisional summary</h3>${
-                         state.hubReport
-                           ? reportSummaryHtml(state.hubReport)
-                           : '<p class="hint">Loading report summary…</p>'
-                       }</div>`
-                     : ""
-                 }`
+              ? `<div class="hub-detail-stats live-meta">
+                  <span>${d.questions.length} questions</span>
+                  <span>${d.unanswered_question_ids.length} unanswered</span>
+                  <span>Interviewee ${escapeHtml(d.current_participant_name || d.participants[0]?.display_name || "—")}</span>
+                </div>
+                ${isWrapping(selected.status) ? `<p class="audit-banner" role="status">Closing — provisional audit pending. Open to finish scoring.</p>` : ""}
+                ${
+                  isScored(selected.status)
+                    ? `<section class="hub-detail-summary">
+                        <h3>Provisional summary</h3>
+                        ${summaryBody}
+                      </section>`
+                    : ""
+                }`
               : '<p class="hint">Loading details…</p>'
           }
-          <div class="live-actions">
-            <button type="button" id="exitOpenLive" ${state.busy || !state.selectedPastId ? "disabled" : ""}>
-              ${
-                isWrapping(selected.status)
-                  ? "Complete audit"
-                  : isScored(selected.status)
-                    ? "View interview"
-                    : "Continue interview"
-              }
-            </button>
-            ${
-              canDelete
-                ? `<button type="button" class="ghost danger" id="exitDelete" ${state.busy || !state.selectedPastId ? "disabled" : ""}>Delete interview</button>`
-                : ""
-            }
-          </div>
-        </div>`;
+        </article>`;
     }
 
     const screenClass =
@@ -681,7 +690,10 @@
       btn.addEventListener("click", async () => {
         state.selectedPastId = btn.getAttribute("data-id");
         state.hubScreen = "detail";
+        state.hubReportReady = false;
+        state.hubReport = null;
         setBusy(true);
+        renderHub();
         try {
           state.pastDetail = await global.SellmApi.fetchExitSession(state.selectedPastId);
           if (isScored(state.pastDetail.status)) {
@@ -690,10 +702,14 @@
             } catch (_) {
               state.hubReport = null;
             }
-          } else state.hubReport = null;
+          } else {
+            state.hubReport = null;
+          }
         } catch (_) {
           state.pastDetail = null;
+          state.hubReport = null;
         } finally {
+          state.hubReportReady = true;
           setBusy(false);
           renderHub();
         }
