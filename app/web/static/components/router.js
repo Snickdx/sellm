@@ -6,6 +6,7 @@
     landing: "view-landing",
     req: "view-req",
     exit: "view-exit",
+    group: "view-group",
     policy: "view-policy",
   };
 
@@ -27,6 +28,7 @@
     if (p === "/" || p === "/login" || p === "/claim") return { view: "landing", teamId: null };
     if (p === "/req") return { view: "req", teamId: null };
     if (p === "/exit") return { view: "exit", teamId: null };
+    if (p === "/group") return { view: "group", teamId: null };
     if (p === "/policy") return { view: "policy", teamId: null };
     const teamExit = p.match(/^\/teams\/([^/]+)\/exit$/);
     if (teamExit) return { view: "exit", teamId: teamExit[1] };
@@ -149,6 +151,9 @@
     if (route.view === "exit" && global.SellmExit) {
       await global.SellmExit.mount({ teamId: route.teamId });
     }
+    if (route.view === "group" && global.SellmGroup && typeof global.SellmGroup.mount === "function") {
+      await global.SellmGroup.mount();
+    }
     if (route.view === "policy" && global.SellmExit) {
       await global.SellmExit.mountPolicy();
     }
@@ -171,7 +176,7 @@
     if (url.origin !== location.origin) return;
     const route = matchRoute(url.pathname);
     // Only intercept shell routes
-    if (!["landing", "req", "exit", "policy"].includes(route.view) && !url.pathname.startsWith("/teams/")) {
+    if (!["landing", "req", "exit", "group", "policy"].includes(route.view) && !url.pathname.startsWith("/teams/")) {
       return;
     }
     event.preventDefault();

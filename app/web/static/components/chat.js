@@ -230,6 +230,7 @@
   const appNavPane = document.getElementById("appNavPane");
   const appNavClose = document.getElementById("appNavClose");
   const sideNavToggleExit = document.getElementById("sideNavToggleExit");
+  const sideNavToggleGroup = document.getElementById("sideNavToggleGroup");
   const reqBackToList = document.getElementById("reqBackToList");
   const reqHeaderTitle = document.getElementById("reqHeaderTitle");
   const reqHeaderSubtitle = document.getElementById("reqHeaderSubtitle");
@@ -503,6 +504,7 @@
     document.body.classList.add("app-nav-open");
     if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "true");
     if (sideNavToggleExit) sideNavToggleExit.setAttribute("aria-expanded", "true");
+    if (sideNavToggleGroup) sideNavToggleGroup.setAttribute("aria-expanded", "true");
     syncBackdrop();
   }
 
@@ -512,6 +514,7 @@
     document.body.classList.remove("app-nav-open");
     if (sideNavToggle) sideNavToggle.setAttribute("aria-expanded", "false");
     if (sideNavToggleExit) sideNavToggleExit.setAttribute("aria-expanded", "false");
+    if (sideNavToggleGroup) sideNavToggleGroup.setAttribute("aria-expanded", "false");
     if (!opts.skipBackdrop) syncBackdrop();
   }
 
@@ -1612,6 +1615,7 @@
     }
     if (sideNavToggle) sideNavToggle.addEventListener("click", toggleAppNav);
     if (sideNavToggleExit) sideNavToggleExit.addEventListener("click", toggleAppNav);
+    if (sideNavToggleGroup) sideNavToggleGroup.addEventListener("click", toggleAppNav);
     if (appNavClose) appNavClose.addEventListener("click", closeAppNav);
     if (reqBackToList) {
       reqBackToList.addEventListener("click", () => {

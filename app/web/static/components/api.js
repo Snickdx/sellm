@@ -117,6 +117,15 @@
         ),
       });
     },
+    myGroup() {
+      return request("/api/me/group");
+    },
+    updateGroupMembers(memberIds) {
+      return request("/api/me/group/members", {
+        method: "PUT",
+        body: JSON.stringify({ member_ids: memberIds }),
+      });
+    },
     listExitSessions(teamId) {
       return request(`/api/teams/${teamId}/exit-sessions`);
     },

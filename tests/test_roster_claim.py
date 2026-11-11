@@ -68,3 +68,30 @@ def test_admin_import_search_hides_ids_and_claim(client):
     assert all(s["status"] == "claimed" for s in claimed_rows)
     assert all(s["account_username"] == payload["username"] for s in claimed_rows)
     assert all(s["group_name"] == "Alpha Testers" for s in claimed_rows)
+
+    student = _login(client, payload["username"], payload["password"])
+    mine = client.get("/api/me/group", headers=student)
+    assert mine.status_code == 200, mine.text
+    group = mine.json()
+    assert group["can_edit_members"] is True
+    assert len(group["members"]) == 3
+    assert group["team_id"] == payload["team_id"]
+
+    available = [
+        s for s in client.get("/api/admin/roster", headers=admin).json()["students"] if s["status"] == "available"
+    ]
+    assert available, "need an ungrouped classmate for swap"
+    swapped_out = member_ids[0]
+    keep = member_ids[1:]
+    new_ids = keep + [available[0]["id"]]
+    updated = client.put("/api/me/group/members", headers=student, json={"member_ids": new_ids})
+    assert updated.status_code == 200, updated.text
+    body = updated.json()
+    assert {m["id"] for m in body["members"]} == set(new_ids)
+    assert available[0]["display_name"] in body["participant_names"]
+
+    after = client.get("/api/admin/roster", headers=admin).json()["students"]
+    by_id = {s["id"]: s for s in after}
+    assert by_id[swapped_out]["status"] == "available"
+    assert by_id[available[0]["id"]]["status"] == "claimed"
+    assert by_id[available[0]["id"]]["group_name"] == "Alpha Testers"

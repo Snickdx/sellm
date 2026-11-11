@@ -1049,18 +1049,42 @@
     }
   }
 
+  function memberOptions() {
+    const names = (state.team?.participant_names || []).map((n) => String(n || "").trim()).filter(Boolean);
+    return [...new Set(names)];
+  }
+
+  function fillIntervieweeSelect() {
+    const select = $("exitIntervieweeName");
+    if (!select) return;
+    const names = memberOptions();
+    const previous = state.intervieweeName.trim();
+    select.innerHTML =
+      `<option value="">Select a group member</option>` +
+      names.map((n) => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join("");
+    if (previous && names.includes(previous)) {
+      select.value = previous;
+    } else {
+      state.intervieweeName = "";
+      select.value = "";
+    }
+    const membersHint = $("exitStartMembersHint");
+    if (membersHint) membersHint.hidden = names.length > 0;
+  }
+
   function openStartModal() {
     const modal = $("exitStartModal");
     if (modal) modal.hidden = false;
-    const input = $("exitIntervieweeName");
-    if (input) {
-      input.value = state.intervieweeName;
-      input.focus();
-    }
+    fillIntervieweeSelect();
+    const select = $("exitIntervieweeName");
+    if (select) select.focus();
     const hint = $("exitStartRepoHint");
     if (hint) hint.hidden = repoReady();
     const submit = $("exitStartSubmit");
-    if (submit) submit.disabled = state.busy || !repoReady() || !state.intervieweeName.trim();
+    if (submit) {
+      submit.disabled =
+        state.busy || !repoReady() || !state.intervieweeName.trim() || memberOptions().length === 0;
+    }
   }
 
   function closeStartModal() {
@@ -1135,10 +1159,13 @@
     $("exitStartModal")?.addEventListener("click", (e) => {
       if (e.target === e.currentTarget) closeStartModal();
     });
-    $("exitIntervieweeName")?.addEventListener("input", (e) => {
+    $("exitIntervieweeName")?.addEventListener("change", (e) => {
       state.intervieweeName = e.target.value;
       const submit = $("exitStartSubmit");
-      if (submit) submit.disabled = state.busy || !repoReady() || !state.intervieweeName.trim();
+      if (submit) {
+        submit.disabled =
+          state.busy || !repoReady() || !state.intervieweeName.trim() || memberOptions().length === 0;
+      }
     });
     $("exitStartForm")?.addEventListener("submit", (e) => void onStartInterview(e));
 

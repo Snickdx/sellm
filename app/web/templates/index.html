@@ -16,7 +16,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/static/components/shell-extra.css?v=6" />
+    <link rel="stylesheet" href="/static/components/shell-extra.css?v=7" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -931,6 +931,7 @@
                 <nav class="app-nav" aria-label="Primary">
                     <a href="/req" data-nav="req">Req Interviews</a>
                     <a href="/exit" data-nav="exit">Exit interviews</a>
+                    <a href="/group" data-nav="group">Group</a>
                     <a id="adminLink" href="/admin" hidden style="display:none;">Admin</a>
                 </nav>
                 <div class="app-nav-footer">
@@ -1054,6 +1055,55 @@
                     </div>
                 </div>
 
+                <div id="view-group" class="view-pane" hidden aria-hidden="true">
+                    <div class="chat-header">
+                        <button type="button" id="sideNavToggleGroup" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="appNavPane">&#9776;</button>
+                        <div class="chat-header-text">
+                            <h1>Group</h1>
+                            <p class="chat-header-subtitle">Members and repository</p>
+                        </div>
+                    </div>
+                    <div class="group-body">
+                        <p id="groupError" class="error" hidden></p>
+                        <p id="groupHint" class="hint" hidden></p>
+                        <section class="surface group-card">
+                            <h2 style="margin:0 0 8px;font-size:1rem">Repository</h2>
+                            <p class="hint" style="margin-top:0">Set the GitHub URL used for exit interviews. Indexing starts after save.</p>
+                            <form class="auth-form" id="groupRepoForm">
+                                <label>
+                                    Group name
+                                    <input id="groupNameInput" placeholder="Alpha Testers" required />
+                                </label>
+                                <label>
+                                    Repository URL
+                                    <input id="groupGithubUrl" placeholder="https://github.com/org/repo" required />
+                                </label>
+                                <div class="live-actions">
+                                    <button type="submit" id="groupRepoSave" disabled>Save repository</button>
+                                </div>
+                            </form>
+                            <div id="groupRepoStatus" style="margin-top:10px"></div>
+                        </section>
+                        <section class="surface group-card" id="groupMembersPanel">
+                            <h2 style="margin:0 0 8px;font-size:1rem">Group members</h2>
+                            <p class="hint" style="margin-top:0">Keep 3–4 classmates. Add from ungrouped students; remove someone to free their roster slot.</p>
+                            <form id="groupMembersForm">
+                                <p id="groupSelectedCount" class="hint" style="margin:0 0 8px"></p>
+                                <div id="groupSelected" class="claim-selected"></div>
+                                <label style="display:block;margin-top:12px">
+                                    Search ungrouped classmates
+                                    <input id="groupSearch" type="search" placeholder="Name or email" autocomplete="off" />
+                                </label>
+                                <div id="groupHits"></div>
+                                <div class="live-actions" style="margin-top:12px">
+                                    <button type="submit" id="groupMembersSave" disabled>Save members</button>
+                                </div>
+                            </form>
+                        </section>
+                        <div id="groupNoClaim" class="surface group-card" hidden></div>
+                    </div>
+                </div>
+
                 <div id="view-policy" class="view-pane" hidden aria-hidden="true"></div>
             </div><!-- /chats-main -->
         </div>
@@ -1065,13 +1115,16 @@
                 <h3 id="startInterviewTitle">Start interview</h3>
                 <button type="button" class="modal-close" id="exitStartClose" aria-label="Close">&times;</button>
             </div>
-            <p class="hint" style="margin-bottom:12px">Enter the interviewee’s group member name, then start.</p>
+            <p class="hint" style="margin-bottom:12px">Pick the interviewee from your group members, then start.</p>
             <form class="auth-form" id="exitStartForm">
                 <label>
-                    Interviewee name
-                    <input id="exitIntervieweeName" placeholder="Alex Rivera" required />
+                    Interviewee
+                    <select id="exitIntervieweeName" required>
+                        <option value="">Select a group member</option>
+                    </select>
                 </label>
-                <p id="exitStartRepoHint" class="hint">Save a repository URL in the toolbar and wait until it is ready.</p>
+                <p id="exitStartMembersHint" class="hint" hidden>Add members on the Group tab before starting.</p>
+                <p id="exitStartRepoHint" class="hint">Save a repository URL on the Group tab and wait until it is ready.</p>
                 <div class="live-actions">
                     <button type="submit" id="exitStartSubmit" disabled>Start interview</button>
                     <button type="button" class="ghost" id="exitStartCancel">Cancel</button>
@@ -1141,12 +1194,13 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/api.js?v=1"></script>
+    <script src="/static/components/api.js?v=2"></script>
     <script src="/static/components/claim.js?v=1"></script>
     <script src="/static/components/exit-voice.js?v=1"></script>
-    <script src="/static/components/exit.js?v=24"></script>
-    <script src="/static/components/chat.js?v=27"></script>
-    <script src="/static/components/router.js?v=3"></script>
+    <script src="/static/components/exit.js?v=25"></script>
+    <script src="/static/components/group.js?v=1"></script>
+    <script src="/static/components/chat.js?v=28"></script>
+    <script src="/static/components/router.js?v=4"></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {

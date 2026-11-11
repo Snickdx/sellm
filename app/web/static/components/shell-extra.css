@@ -46,9 +46,22 @@
 #appShell[hidden] { display: none !important; }
 
 #view-exit,
+#view-group,
 #view-policy {
   height: 100%;
   background: #f8fafc;
+}
+.group-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.group-card {
+  padding: 16px;
 }
 
 /* Exit title bar reuses .chat-header sizing/typography from index.html */
