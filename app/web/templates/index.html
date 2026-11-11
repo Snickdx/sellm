@@ -16,7 +16,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/static/components/shell-extra.css?v=4" />
+    <link rel="stylesheet" href="/static/components/shell-extra.css?v=5" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -123,11 +123,17 @@
             border-radius: 8px;
         }
         .app-nav-close:hover { background: #e2e8f0; color: #334155; }
-        #reqBackToList { display: none; }
+        #reqBackToList,
+        #exitBackBtn { display: none; }
         .side-nav-toggle,
         .controls-pane-toggle {
             display: none;
             flex-shrink: 0;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            min-height: 40px;
+            box-sizing: border-box;
             border: 1px solid rgba(255, 255, 255, 0.35);
             background: rgba(255, 255, 255, 0.12);
             color: white;
@@ -736,24 +742,17 @@
             #view-req.child-screen-list .conversations-pane { display: flex; }
             #view-req.child-screen-chat .conversations-pane { display: none; }
             #view-req.child-screen-chat .chat-pane { display: flex; flex-direction: column; min-height: 0; }
+            /* Child screens: replace hamburger with same-sized back control */
+            #view-req.child-screen-chat #sideNavToggle { display: none !important; }
             #view-req.child-screen-chat #reqBackToList { display: inline-flex; }
-            #view-req.child-screen-list #reqBackToList { display: none; }
-            .child-back-btn {
-                display: none;
-                align-items: center;
-                justify-content: center;
-                width: 40px;
-                height: 40px;
-                border: none;
-                border-radius: 10px;
-                background: rgba(255,255,255,0.18);
-                color: #fff;
-                font-size: 20px;
-                cursor: pointer;
-                flex-shrink: 0;
-            }
+            #view-req.child-screen-list #reqBackToList { display: none !important; }
+            #view-exit.child-screen-detail #sideNavToggleExit,
+            #view-exit.child-screen-live #sideNavToggleExit { display: none !important; }
+            #view-exit.child-screen-detail #exitBackBtn,
+            #view-exit.child-screen-live #exitBackBtn { display: inline-flex; }
+            #view-exit.child-screen-list #exitBackBtn { display: none !important; }
             .controls-pane {
-                position: absolute;
+                position: fixed;
                 top: 0;
                 right: 0;
                 bottom: 0;
@@ -763,7 +762,9 @@
                 transform: translateX(105%);
                 transition: transform 0.25s ease;
                 box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
-                z-index: 20;
+                /* Above side-nav-backdrop (1500) so controls stay interactive */
+                z-index: 1600;
+                background: #fff;
             }
             .controls-pane.open {
                 transform: translateX(0);
@@ -940,7 +941,7 @@
                 <div id="view-req" class="view-pane child-screen-list" hidden aria-hidden="true">
                 <div class="chat-header">
                     <button type="button" id="sideNavToggle" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="appNavPane">&#9776;</button>
-                    <button type="button" id="reqBackToList" class="child-back-btn" aria-label="Back to chats" hidden>←</button>
+                    <button type="button" id="reqBackToList" class="side-nav-toggle" aria-label="Back to chats" hidden>←</button>
                     <div class="chat-header-text">
                         <h1 id="reqHeaderTitle">Chats</h1>
                         <p class="chat-header-subtitle" id="reqHeaderSubtitle">Requirements gathering interviews</p>
@@ -1040,6 +1041,7 @@
                 <div id="view-exit" class="view-pane" hidden aria-hidden="true">
                     <div class="chat-header exit-header">
                         <button type="button" id="sideNavToggleExit" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="appNavPane">&#9776;</button>
+                        <button type="button" id="exitBackBtn" class="side-nav-toggle" aria-label="Back" hidden>←</button>
                         <div class="chat-header-text">
                             <h1 id="exitHeaderTitle">Exit interviews</h1>
                             <p class="chat-header-subtitle" id="exitHeaderSubtitle">Start interview and review past sessions</p>
@@ -1142,8 +1144,8 @@
     <script src="/static/components/api.js?v=1"></script>
     <script src="/static/components/claim.js?v=1"></script>
     <script src="/static/components/exit-voice.js?v=1"></script>
-    <script src="/static/components/exit.js?v=21"></script>
-    <script src="/static/components/chat.js?v=26"></script>
+    <script src="/static/components/exit.js?v=23"></script>
+    <script src="/static/components/chat.js?v=27"></script>
     <script src="/static/components/router.js?v=3"></script>
     <script>
       if ("serviceWorker" in navigator) {

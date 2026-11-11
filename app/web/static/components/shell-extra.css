@@ -781,19 +781,6 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   }
   .interview-hub.child-screen-list .interview-hub-detail { display: none; }
   .interview-hub.child-screen-detail .interview-hub-list { display: none; }
-  .interview-hub-detail-back {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    margin: 0 0 12px;
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: #fff;
-    padding: 8px 12px;
-    font: inherit;
-    cursor: pointer;
-    color: var(--ink);
-  }
   .exit-body { padding: 8px; }
   .fab-labeled {
     right: max(16px, env(safe-area-inset-right));

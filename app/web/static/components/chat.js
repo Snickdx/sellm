@@ -464,20 +464,25 @@
 
   function syncReqHeader() {
     const onChat = reqChildScreen === "chat";
+    const mobileChat = isMobileNav() && onChat;
     if (reqHeaderTitle) {
-      reqHeaderTitle.textContent = onChat && isMobileNav()
+      reqHeaderTitle.textContent = mobileChat
         ? "Requirements interview"
         : isMobileNav()
           ? "Chats"
           : "Requirements Gathering Training";
     }
     if (reqHeaderSubtitle) {
-      reqHeaderSubtitle.textContent = onChat && isMobileNav()
+      reqHeaderSubtitle.textContent = mobileChat
         ? "Ask questions, then formalize requirements"
         : "Requirements gathering interviews";
     }
     if (reqBackToList) {
-      reqBackToList.hidden = !(isMobileNav() && onChat);
+      // CSS also toggles visibility; keep attribute in sync for a11y.
+      reqBackToList.hidden = !mobileChat;
+    }
+    if (sideNavToggle) {
+      sideNavToggle.hidden = mobileChat;
     }
   }
 

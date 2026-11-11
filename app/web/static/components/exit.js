@@ -526,9 +526,14 @@
         : isScored(state.session.status)
           ? "Review"
           : "Live";
+      const mobile = isMobileExit();
       bar.innerHTML = `
         <div class="repo-toolbar">
-          <button type="button" class="ghost" id="exitBackHub">← Interviews</button>
+          ${
+            mobile
+              ? ""
+              : `<button type="button" class="ghost" id="exitBackHub">← Interviews</button>`
+          }
           <span class="repo-toolbar-status">${mode}</span>
         </div>`;
       $("exitBackHub")?.addEventListener("click", () => {
@@ -567,14 +572,24 @@
           <span class="repo-toolbar-label">Repository URL</span>
           <input id="exitGithubUrl" value="${escapeHtml(state.githubUrl)}" placeholder="https://github.com/org/repo" required />
         </label>
-        <button type="submit" ${state.busy || !state.githubUrl.trim() ? "disabled" : ""}>${state.busy ? "Saving…" : "Save"}</button>
+        <button type="submit" id="exitRepoSave" ${state.busy ? "disabled" : ""}>${state.busy ? "Saving…" : "Save"}</button>
         ${status}
         ${state.settingsHint ? `<span class="hint repo-toolbar-hint">${escapeHtml(state.settingsHint)}</span>` : ""}
         ${state.repo?.index_error ? `<span class="error repo-toolbar-hint">${escapeHtml(state.repo.index_error)}</span>` : ""}
       </form>`;
+    const syncSaveEnabled = () => {
+      const btn = $("exitRepoSave");
+      if (btn) btn.disabled = state.busy || !state.githubUrl.trim();
+    };
     $("exitGithubUrl")?.addEventListener("input", (e) => {
       state.githubUrl = e.target.value;
+      syncSaveEnabled();
     });
+    $("exitGithubUrl")?.addEventListener("change", (e) => {
+      state.githubUrl = e.target.value;
+      syncSaveEnabled();
+    });
+    syncSaveEnabled();
     $("exitRepoForm")?.addEventListener("submit", (e) => void onSaveRepo(e));
     $("exitTeamSelect")?.addEventListener("change", (e) => {
       global.SellmRouter.navigate(`/teams/${e.target.value}/exit`);
@@ -583,6 +598,45 @@
 
   function isMobileExit() {
     return window.matchMedia("(max-width: 720px)").matches;
+  }
+
+  function syncExitHeaderChrome() {
+    const view = $("view-exit");
+    const back = $("exitBackBtn");
+    if (!view) return;
+    view.classList.remove("child-screen-list", "child-screen-detail", "child-screen-live");
+    let screen = "list";
+    if (state.tab === "live" && state.session) screen = "live";
+    else if (isMobileExit() && state.hubScreen === "detail") screen = "detail";
+    else screen = "list";
+    view.classList.add(`child-screen-${screen}`);
+    if (back) {
+      const showBack = isMobileExit() && (screen === "detail" || screen === "live");
+      back.hidden = !showBack;
+      back.setAttribute("aria-label", screen === "live" ? "Back to interviews" : "Back to interviews");
+    }
+  }
+
+  function bindExitBackBtn() {
+    const back = $("exitBackBtn");
+    if (!back || back.dataset.bound === "1") return;
+    back.dataset.bound = "1";
+    back.addEventListener("click", () => {
+      if (state.tab === "live" && state.session) {
+        destroyVoice();
+        state.session = null;
+        state.report = null;
+        state.probePrompt = null;
+        state.tab = "hub";
+        state.hubScreen = "list";
+        render();
+        return;
+      }
+      state.hubScreen = "list";
+      renderHub();
+      renderToolbar();
+      syncExitHeaderChrome();
+    });
   }
 
   function renderHub() {
@@ -614,11 +668,6 @@
       const d = state.pastDetail;
       detailHtml = `
         <div class="stack" style="max-width:none;gap:12px">
-          ${
-            mobile
-              ? `<button type="button" class="interview-hub-detail-back" id="exitBackToList">← Interviews</button>`
-              : ""
-          }
           <div>
             <h2 style="margin-bottom:6px">${escapeHtml((selected.participant_names || []).join(", ") || "Interview")}</h2>
             <div class="live-meta">
@@ -711,11 +760,6 @@
         }
       });
     });
-    $("exitBackToList")?.addEventListener("click", () => {
-      state.hubScreen = "list";
-      renderHub();
-      renderToolbar();
-    });
     $("exitOpenLive")?.addEventListener("click", () => {
       if (state.selectedPastId) void openLive(state.selectedPastId);
     });
@@ -723,6 +767,7 @@
       if (state.selectedPastId) void onDeleteInterview(state.selectedPastId);
     });
     $("exitFabStart")?.addEventListener("click", () => openStartModal());
+    syncExitHeaderChrome();
   }
 
   function renderReview() {
@@ -1038,10 +1083,20 @@
 
   function render() {
     setError(state.error);
+    bindExitBackBtn();
     renderToolbar();
     const title = $("exitHeaderTitle");
     const sub = $("exitHeaderSubtitle");
-    if (title) title.textContent = "Exit interviews";
+    if (title) {
+      title.textContent =
+        state.tab === "live" && state.session
+          ? isScored(state.session.status)
+            ? "Interview review"
+            : "Live interview"
+          : state.hubScreen === "detail" && isMobileExit()
+            ? "Interview"
+            : "Exit interviews";
+    }
     if (sub) {
       sub.textContent = state.team?.name
         ? `${state.team.name}${repoReady() ? "" : " · repo not ready"}`
@@ -1052,8 +1107,10 @@
       renderHub();
     } else if (state.session && isScored(state.session.status)) {
       renderReview();
+      syncExitHeaderChrome();
     } else if (state.session) {
       renderLive();
+      syncExitHeaderChrome();
     } else {
       state.tab = "hub";
       renderHub();
@@ -1063,6 +1120,7 @@
   function bindModals() {
     if (bound) return;
     bound = true;
+    bindExitBackBtn();
     $("exitStartClose")?.addEventListener("click", closeStartModal);
     $("exitStartCancel")?.addEventListener("click", closeStartModal);
     $("exitStartModal")?.addEventListener("click", (e) => {
