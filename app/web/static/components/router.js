@@ -132,9 +132,9 @@
       return;
     }
 
-    // Logged in: landing paths go to exit.
+    // Logged in: landing paths go to group settings.
     if (route.view === "landing") {
-      const dest = "/exit";
+      const dest = "/group";
       if (replace || pathOf(pathname) !== dest) {
         history.replaceState({}, "", dest);
       }
@@ -189,7 +189,7 @@
       global.SellmChat.syncToken();
     }
     await refreshUser();
-    await navigate("/exit", { replace: true });
+    await navigate("/group", { replace: true });
   }
 
   async function requireAuth() {

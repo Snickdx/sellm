@@ -929,9 +929,9 @@
                     </div>
                 </div>
                 <nav class="app-nav" aria-label="Primary">
+                    <a href="/group" data-nav="group">Group</a>
                     <a href="/req" data-nav="req">Req Interviews</a>
                     <a href="/exit" data-nav="exit">Exit interviews</a>
-                    <a href="/group" data-nav="group">Group</a>
                     <a id="adminLink" href="/admin" hidden style="display:none;">Admin</a>
                 </nav>
                 <div class="app-nav-footer">
@@ -1048,7 +1048,6 @@
                             <p class="chat-header-subtitle" id="exitHeaderSubtitle">Start interview and review past sessions</p>
                         </div>
                     </div>
-                    <div id="exitToolbar" class="exit-toolbar-strip" aria-label="Repository"></div>
                     <div class="exit-body">
                         <p id="exitError" class="error" hidden></p>
                         <div id="exitMain" class="view-pane" style="position:relative;"></div>
@@ -1066,6 +1065,19 @@
                     <div class="group-body">
                         <p id="groupError" class="error" hidden></p>
                         <p id="groupHint" class="hint" hidden></p>
+                        <section class="surface group-card" id="groupCredBanner" hidden></section>
+                        <section class="surface group-card" id="groupAccountCard">
+                            <h2 style="margin:0 0 8px;font-size:1rem">Shared login</h2>
+                            <p class="hint" style="margin-top:0">This username is shared by your group. Reset the password if anyone loses it — the new password is shown only once.</p>
+                            <div class="form-row form-row-repo" style="align-items:flex-end">
+                                <div class="form-grow">
+                                    <label style="display:block;margin-bottom:4px">Username</label>
+                                    <code id="groupLoginUsername">—</code>
+                                </div>
+                                <button type="button" id="groupResetPassword" class="form-row-action" disabled>Reset password</button>
+                            </div>
+                            <div id="groupPasswordOnce" class="group-status" hidden></div>
+                        </section>
                         <section class="surface group-card">
                             <h2 style="margin:0 0 8px;font-size:1rem">Group settings</h2>
                             <p class="hint" style="margin-top:0">Pick your scenario and GitHub repo for exit interviews. Indexing starts after save.</p>
@@ -1131,8 +1143,10 @@
                         <option value="">Select a group member</option>
                     </select>
                 </label>
-                <p id="exitStartMembersHint" class="hint" hidden>Add members on the Group tab before starting.</p>
-                <p id="exitStartRepoHint" class="hint">Save a repository URL on the Group tab and wait until it is ready.</p>
+                <p id="exitStartMembersHint" class="hint" hidden>Add members on the <a href="/group" data-nav="group">Group</a> page before starting.</p>
+                <p id="exitStartSetupHint" class="hint" hidden>
+                    Set a scenario and repository on the <a href="/group" data-nav="group">Group</a> page, then wait until the repo index is ready.
+                </p>
                 <div class="live-actions">
                     <button type="submit" id="exitStartSubmit" disabled>Start interview</button>
                     <button type="button" class="ghost" id="exitStartCancel">Cancel</button>
@@ -1208,7 +1222,7 @@
     <script src="/static/components/exit.js?v=25"></script>
     <script src="/static/components/group.js?v=2"></script>
     <script src="/static/components/chat.js?v=28"></script>
-    <script src="/static/components/router.js?v=4"></script>
+    <script src="/static/components/router.js?v=5"></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
