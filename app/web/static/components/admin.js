@@ -28,6 +28,7 @@
   let selectedUserId = null;
   let selectedConversationId = null;
   let selectedTeamId = null;
+  let selectedRosterId = null;
   let scenariosCache = null;
   let llmChoices = [];
   let appSettings = null;
@@ -163,6 +164,9 @@
     if (view !== "teams") {
       selectedTeamId = null;
       closeTeamCreateModal();
+    }
+    if (view !== "roster") {
+      selectedRosterId = null;
     }
     syncViewTabs();
     const url = new URL(location.href);
@@ -433,7 +437,14 @@
             <td>
               <strong>${escapeHtml(u.username)}</strong>
               ${exhausted ? '<span class="badge warn">exhausted</span>' : ""}
-              <div class="meta" style="font-size:11px;color:#64748b;">${escapeHtml(u.group_name || "ungrouped")} · ${u.conversation_count} chats</div>
+              <div class="meta" style="font-size:11px;color:#64748b;">${u.conversation_count} chats</div>
+            </td>
+            <td>
+              ${
+                u.group_name
+                  ? `<span class="badge">${escapeHtml(u.group_name)}</span>`
+                  : `<span class="meta" style="color:#94a3b8;">ungrouped</span>`
+              }
             </td>
             <td>
               <select class="u-role" data-id="${u.id}">${roleOptions(role)}</select>
@@ -476,7 +487,7 @@
       .join("");
 
     if (!rows.length) {
-      tableBody.innerHTML = `<tr><td colspan="6" style="color:#64748b;padding:16px;">No users match.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="7" style="color:#64748b;padding:16px;">No users match.</td></tr>`;
     }
 
     tableBody.querySelectorAll(".u-save").forEach((btn) => {
@@ -595,6 +606,7 @@
             <thead>
               <tr>
                 <th>User</th>
+                <th>Claimed group</th>
                 <th>Role</th>
                 <th>Mode</th>
                 <th>LLM</th>
@@ -1251,6 +1263,8 @@
   async function renderRoster() {
     listTitle.textContent = "Class roster";
     detailTitle.textContent = "Student status";
+    const fab = document.getElementById("createTeamFab");
+    if (fab) fab.hidden = true;
     listToolbar.innerHTML = `
       <button type="button" class="btn" id="importRosterBtn">Import classlist.csv</button>
       <button type="button" class="btn btn-secondary" id="uploadRosterBtn">Upload CSV</button>
@@ -1272,10 +1286,9 @@
               s.status === "claimed"
                 ? `<span class="badge">claimed</span>`
                 : `<span class="badge admin">available</span>`;
-            return `<button type="button" class="list-item" data-roster-id="${escapeAttr(s.id)}">
-              <strong>${escapeHtml(s.display_name)}</strong>
-              <span class="meta">${escapeHtml(s.student_number)} · ${escapeHtml(s.email || "—")}</span>
-              ${badge}
+            return `<button type="button" class="user-item" data-roster-id="${escapeAttr(s.id)}">
+              <div class="name">${escapeHtml(s.display_name)} ${badge}</div>
+              <div class="meta">${escapeHtml(s.student_number)} · ${escapeHtml(s.email || "—")}</div>
             </button>`;
           })
           .join("") || `<p class="meta" style="padding:12px;">No roster yet. Import classlist.csv.</p>`;
@@ -1283,23 +1296,102 @@
       const showStudent = (id) => {
         const s = students.find((row) => row.id === id);
         if (!s) return;
+        selectedRosterId = s.id;
+        listBody.querySelectorAll(".user-item").forEach((el) => {
+          el.classList.toggle("active", el.getAttribute("data-roster-id") === s.id);
+        });
         detailTitle.textContent = s.display_name;
+        const claimed = s.status === "claimed" && s.claim_id;
         detailBody.innerHTML = `
-          <div class="stack">
-            <p><strong>Student ID</strong><br/>${escapeHtml(s.student_number)}</p>
-            <p><strong>Email</strong><br/>${escapeHtml(s.email || "—")}</p>
-            <p><strong>Status</strong><br/>${escapeHtml(s.status)}</p>
-            <p><strong>Group</strong><br/>${escapeHtml(s.group_name || "—")}</p>
-            <p><strong>Claimed account</strong><br/>${escapeHtml(s.account_username || "—")}</p>
-            <p><strong>Team id</strong><br/><code>${escapeHtml(s.team_id || "—")}</code></p>
-            <p><strong>Claimed at</strong><br/>${escapeHtml(s.claimed_at || "—")}</p>
-          </div>`;
+          <div class="team-detail-grid">
+            <div class="field"><label>Student ID</label><div>${escapeHtml(s.student_number)}</div></div>
+            <div class="field"><label>Email</label><div>${escapeHtml(s.email || "—")}</div></div>
+            <div class="field"><label>Status</label><div>${escapeHtml(s.status)}</div></div>
+            ${
+              claimed
+                ? `<div class="field"><label>Group</label>
+                    <input id="rosterGroupName" value="${escapeAttr(s.group_name || "")}" /></div>
+                  <div class="field"><label>Claimed account</label><div>${escapeHtml(s.account_username || "—")}</div></div>
+                  <div class="field field-span"><label>Team id</label><div><code>${escapeHtml(s.team_id || "—")}</code></div></div>
+                  <div class="field field-span"><label>Claimed at</label><div>${escapeHtml(s.claimed_at || "—")}</div></div>`
+                : `<div class="field"><label>Group</label><div>—</div></div>
+                   <p class="meta field-span">This student has not claimed a group yet.</p>`
+            }
+          </div>
+          ${
+            claimed
+              ? `<div class="actions" style="margin-top:12px;">
+                  <button type="button" class="btn btn-primary" id="rosterSaveGroupBtn">Save group name</button>
+                  <button type="button" class="btn btn-secondary" id="rosterResetPwBtn">Reset password</button>
+                  <button type="button" class="btn btn-secondary" id="rosterDeleteGroupBtn">Delete group</button>
+                </div>
+                <div id="rosterGroupStatus" class="status"></div>`
+              : ""
+          }`;
+
+        if (!claimed) return;
+        const status = document.getElementById("rosterGroupStatus");
+        document.getElementById("rosterSaveGroupBtn")?.addEventListener("click", async () => {
+          try {
+            const name = document.getElementById("rosterGroupName")?.value.trim();
+            if (!name || name.length < 2) {
+              setStatus(status, "Group name is required.", "err");
+              return;
+            }
+            await api(`/api/admin/roster/groups/${encodeURIComponent(s.claim_id)}`, {
+              method: "PATCH",
+              body: JSON.stringify({ group_name: name }),
+            });
+            selectedRosterId = s.id;
+            await renderRoster();
+          } catch (e) {
+            setStatus(status, e.message, "err");
+          }
+        });
+        document.getElementById("rosterResetPwBtn")?.addEventListener("click", async () => {
+          if (!confirm(`Reset password for ${s.account_username}? The new password is shown only once.`)) return;
+          try {
+            const result = await api(
+              `/api/admin/roster/groups/${encodeURIComponent(s.claim_id)}/reset-password`,
+              { method: "POST" },
+            );
+            setStatus(
+              status,
+              `${result.message} Username: ${result.username} · Password: ${result.password}`,
+              "ok",
+            );
+          } catch (e) {
+            setStatus(status, e.message, "err");
+          }
+        });
+        document.getElementById("rosterDeleteGroupBtn")?.addEventListener("click", async () => {
+          if (
+            !confirm(
+              `Delete group "${s.group_name || ""}"? Members become available again. The shared login (${s.account_username || "account"}) is kept.`,
+            )
+          ) {
+            return;
+          }
+          try {
+            await api(`/api/admin/roster/groups/${encodeURIComponent(s.claim_id)}`, {
+              method: "DELETE",
+            });
+            selectedRosterId = s.id;
+            await renderRoster();
+          } catch (e) {
+            setStatus(status, e.message, "err");
+          }
+        });
       };
 
       listBody.querySelectorAll("[data-roster-id]").forEach((btn) => {
         btn.addEventListener("click", () => showStudent(btn.getAttribute("data-roster-id")));
       });
-      if (students[0]) showStudent(students[0].id);
+      if (selectedRosterId && students.some((s) => s.id === selectedRosterId)) {
+        showStudent(selectedRosterId);
+      } else if (students[0]) {
+        showStudent(students[0].id);
+      }
 
       const fileInput = document.getElementById("rosterFile");
       document.getElementById("importRosterBtn")?.addEventListener("click", async () => {

@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
+from sqlmodel import Session, select
 
 from app.api.schemas import (
     AdminAppKeysGetResponse,
@@ -26,6 +27,8 @@ from app.security.secret_store import (
     is_unchanged_api_key,
     mask_secret,
 )
+from app.db import get_engine
+from app.models.exit import GroupClaim
 from app.storage.conversation_store import (
     ROLE_ADMIN,
     ROLE_STUDENT,
@@ -74,18 +77,39 @@ def _user_role(user) -> str:
     return normalize_role(getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False)))
 
 
-def _user_summary(store, user, settings=None) -> AdminUserSummary:
+def _claimed_group_names() -> Dict[int, str]:
+    """Map shared-login user id → roster claim group name."""
+    try:
+        with Session(get_engine()) as db:
+            rows = list(db.exec(select(GroupClaim)).all())
+    except Exception:
+        return {}
+    out: Dict[int, str] = {}
+    for claim in rows:
+        uid = getattr(claim, "account_user_id", None)
+        name = (getattr(claim, "name", None) or "").strip()
+        if uid is None or not name:
+            continue
+        out[int(uid)] = name
+    return out
+
+
+def _user_summary(store, user, settings=None, claimed_groups: Optional[Dict[int, str]] = None) -> AdminUserSummary:
     role = _user_role(user)
     role_defs = store.role_defaults(role, settings)
     user_mode = (getattr(user, "default_response_mode", None) or "").strip() or None
     user_llm = (getattr(user, "default_llm_choice", None) or "").strip() or None
+    claimed = None
+    if claimed_groups is not None and user.id is not None:
+        claimed = claimed_groups.get(int(user.id))
+    group_name = claimed or getattr(user, "group_name", None)
     return AdminUserSummary(
         id=user.id,
         username=user.username,
         is_admin=role == ROLE_ADMIN,
         role=role,
         can_select_mode_model=role in (ROLE_ADMIN, ROLE_TESTER),
-        group_name=getattr(user, "group_name", None),
+        group_name=group_name,
         admin_notes=getattr(user, "admin_notes", None),
         token_limit=int(getattr(user, "token_limit", 0) or 0),
         tokens_used=int(getattr(user, "tokens_used", 0) or 0),
@@ -152,13 +176,20 @@ async def list_users(request: Request, group: Optional[str] = None):
     store = _store(request)
     settings = store.get_app_settings()
     users = store.list_users()
+    claimed = _claimed_group_names()
+
+    def resolved_group(u) -> str:
+        if u.id is not None and int(u.id) in claimed:
+            return claimed[int(u.id)]
+        return (getattr(u, "group_name", None) or "").strip()
+
     if group is not None:
         needle = group.strip()
         if needle == "" or needle == "(ungrouped)":
-            users = [u for u in users if not (getattr(u, "group_name", None) or "").strip()]
+            users = [u for u in users if not resolved_group(u)]
         else:
-            users = [u for u in users if (getattr(u, "group_name", None) or "") == needle]
-    return [_user_summary(store, u, settings) for u in users]
+            users = [u for u in users if resolved_group(u) == needle]
+    return [_user_summary(store, u, settings, claimed_groups=claimed) for u in users]
 
 
 @router.get("/groups", response_model=List[str])
@@ -202,7 +233,7 @@ async def get_user(user_id: int, request: Request):
     user = store.get_user_by_id(user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return _user_summary(store, user)
+    return _user_summary(store, user, claimed_groups=_claimed_group_names())
 
 
 @router.patch("/users/{user_id}", response_model=AdminUserSummary)
@@ -250,7 +281,7 @@ async def update_user(user_id: int, body: AdminUserUpdateRequest, request: Reque
     )
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
-    return _user_summary(store, updated)
+    return _user_summary(store, updated, claimed_groups=_claimed_group_names())
 
 
 @router.get("/tokens", response_model=AdminTokenSummary)
@@ -259,7 +290,8 @@ async def token_monitor(request: Request):
     store = _store(request)
     summary = store.token_usage_summary()
     settings = store.get_app_settings()
-    users = [_user_summary(store, u, settings) for u in store.list_users()]
+    claimed = _claimed_group_names()
+    users = [_user_summary(store, u, settings, claimed_groups=claimed) for u in store.list_users()]
     return AdminTokenSummary(
         user_count=summary["user_count"],
         total_token_limit=summary["total_token_limit"],
