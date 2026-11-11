@@ -262,8 +262,44 @@
   const REFLECT_BTN_LABEL = "Reflect on session";
   const REFLECT_SEND_LABEL = "Send";
 
+  const UNIFIED = document.body?.dataset?.unifiedShell === "1";
+  let chatActivated = false;
+
   // ── Init ────────────────────────────────────────────────────
   async function init() {
+    if (UNIFIED) {
+      // Router owns the auth gate + landing; chat activates on /req.
+      bindEvents();
+      loadRuntimeConfig();
+      window.SellmChat = {
+        syncToken() {
+          authToken = localStorage.getItem("auth_token");
+        },
+        async activate() {
+          authToken = localStorage.getItem("auth_token");
+          const ok = await checkAuth();
+          if (!ok) return false;
+          showApp();
+          if (!chatActivated) {
+            chatActivated = true;
+            await loadUserConfig();
+            await refreshQuotaFromMe();
+            loadConversations();
+            await loadYamlScenarios();
+            applyLockedScenario(null);
+          } else {
+            await refreshQuotaFromMe();
+            loadConversations();
+          }
+          chatInput?.focus();
+          return true;
+        },
+        async logout() {
+          await doLogout();
+        },
+      };
+      return;
+    }
     // Overlay starts hidden so authed navigations from /exit don't flash login.
     // If there is no token, show login immediately (before the /api/auth/me round-trip).
     if (!authToken) showLogin();
@@ -377,6 +413,12 @@
 
   // ── Login / Logout ──────────────────────────────────────────
   function showLogin() {
+    if (UNIFIED) {
+      if (window.SellmRouter && typeof window.SellmRouter.requireAuth === "function") {
+        window.SellmRouter.requireAuth();
+      }
+      return;
+    }
     if (loginOverlay) {
       loginOverlay.classList.remove("hidden");
       loginOverlay.setAttribute("aria-hidden", "false");
@@ -652,13 +694,22 @@
     await fetch("/api/auth/logout", { method: "POST", headers: authHeaders() });
     setAuth(null, null);
     currentUser = null;
-    showLogin();
+    chatActivated = false;
+    isAdmin = false;
+    updateAdminLink();
     resetConversationUi();
-    conversationList.innerHTML = "";
+    if (conversationList) conversationList.innerHTML = "";
     if (loginUsername) loginUsername.value = "";
     if (loginPassword) loginPassword.value = "";
     if (loginError) loginError.hidden = true;
     userApiKeys = {};
+    if (UNIFIED) {
+      if (window.SellmRouter && typeof window.SellmRouter.requireAuth === "function") {
+        window.SellmRouter.requireAuth();
+      }
+      return;
+    }
+    showLogin();
   }
 
   // ── User API Config ─────────────────────────────────────────
@@ -1503,12 +1554,13 @@
     }
     if (logoutBtn) logoutBtn.addEventListener("click", doLogout);
 
-    if (sideNavToggle) {
-      sideNavToggle.addEventListener("click", () => {
-        if (sideNav?.classList.contains("open")) closeSideNav();
-        else openSideNav();
-      });
+    function toggleSideNav() {
+      if (sideNav?.classList.contains("open")) closeSideNav();
+      else openSideNav();
     }
+    if (sideNavToggle) sideNavToggle.addEventListener("click", toggleSideNav);
+    const sideNavToggleExit = document.getElementById("sideNavToggleExit");
+    if (sideNavToggleExit) sideNavToggleExit.addEventListener("click", toggleSideNav);
     if (sideNavClose) sideNavClose.addEventListener("click", closeSideNav);
     if (controlsPaneToggle) {
       controlsPaneToggle.addEventListener("click", () => {

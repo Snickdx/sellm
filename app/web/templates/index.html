@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Requirements Chatbot</title>
+    <title>sellm · Course</title>
+    <link rel="stylesheet" href="/static/components/shell-extra.css?v=1" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -44,6 +45,18 @@
             min-width: 0;
             min-height: 0;
             overflow: hidden;
+            position: relative;
+        }
+        .chats-main > .view-pane {
+            flex: 1;
+            min-height: 0;
+        }
+        #view-req .chats-workspace {
+            flex: 1;
+            min-height: 0;
+        }
+        #view-req .chat-header {
+            flex-shrink: 0;
         }
         .chats-workspace {
             flex: 1;
@@ -772,18 +785,65 @@
         }
     </style>
 </head>
-<body>
-    <div id="loginOverlay" class="login-overlay hidden" aria-hidden="true">
+<body data-unified-shell="1">
+    <div id="view-landing" class="view-pane landing-shell" hidden aria-hidden="true">
+        <div class="landing-grid">
+            <section class="auth-panel landing-panel">
+                <p class="eyebrow">sellm · course</p>
+                <h1 id="claimTitle">Form a group</h1>
+                <div id="claimFormWrap">
+                    <p class="lede">
+                        Search classmates by name, pick yourself plus 2 or 3 others, choose a group name,
+                        then claim a shared login. Student IDs are never shown here.
+                    </p>
+                    <form id="claimForm" class="auth-form">
+                        <label>
+                            Search classmates
+                            <input id="claimSearch" type="text" placeholder="Type a first or last name" autocomplete="off" />
+                        </label>
+                        <div id="claimHits"></div>
+                        <div class="claim-selected">
+                            <p class="hint" id="claimSelectedCount" style="margin:0 0 8px">Selected 0/4 (need 3–4)</p>
+                            <div id="claimSelected"><p class="hint">No members selected yet.</p></div>
+                        </div>
+                        <label>
+                            Group name
+                            <input id="claimGroupName" type="text" placeholder="e.g. ByteForce" required minlength="2" maxlength="80" />
+                        </label>
+                        <p id="claimError" class="error" hidden></p>
+                        <button type="submit" id="claimSubmit" disabled>Claim shared credentials</button>
+                    </form>
+                </div>
+                <div id="claimResultWrap" hidden></div>
+            </section>
+            <section class="auth-panel landing-panel landing-login">
+                <p class="eyebrow">already claimed?</p>
+                <h1>Sign in</h1>
+                <p class="lede">Use your group&apos;s shared username and password to open exit interviews.</p>
+                <form id="landingLoginForm" class="auth-form">
+                    <label>
+                        Username
+                        <input id="landingUsername" class="login-input" required autocomplete="username" />
+                    </label>
+                    <label>
+                        Password
+                        <input id="landingPassword" class="login-input" type="password" required autocomplete="current-password" />
+                    </label>
+                    <p id="landingLoginError" class="error" hidden></p>
+                    <button type="submit" id="landingLoginBtn">Log in</button>
+                </form>
+                <p class="hint" style="margin-top:14px"><a href="/req" data-nav="req">Requirements chat</a></p>
+            </section>
+        </div>
+    </div>
+
+    <!-- Legacy overlay kept hidden; unified landing owns auth -->
+    <div id="loginOverlay" class="login-overlay hidden" aria-hidden="true" hidden>
         <div class="login-card">
-            <div style="text-align:center;margin-bottom:20px;">
-                <div style="font-size:40px;margin-bottom:8px;">🗣️</div>
-                <h1 style="font-size:24px;color:#1f2937;">Requirements Chatbot</h1>
-                <p style="color:#6b7280;font-size:14px;margin-top:6px;">Sign in to continue</p>
-            </div>
             <div id="loginError" class="login-error" hidden></div>
             <form id="loginForm">
-                <input type="text" id="loginUsername" class="login-input" placeholder="Username" autocomplete="username" required />
-                <input type="password" id="loginPassword" class="login-input" placeholder="Password" autocomplete="current-password" required />
+                <input type="text" id="loginUsername" class="login-input" autocomplete="username" />
+                <input type="password" id="loginPassword" class="login-input" autocomplete="current-password" />
                 <button type="submit" class="login-btn">Sign in</button>
             </form>
         </div>
@@ -817,7 +877,7 @@
     </div>
 
     <div id="sideNavBackdrop" class="side-nav-backdrop" aria-hidden="true"></div>
-    <div class="shell">
+    <div class="shell" id="appShell" hidden aria-hidden="true">
         <div class="master-detail chat-container">
             <aside class="app-nav-pane" aria-label="Primary navigation">
                 <div class="app-nav-pane-header">
@@ -825,8 +885,8 @@
                     <h2>Course</h2>
                 </div>
                 <nav class="app-nav" aria-label="Primary">
-                    <a href="/req" class="active" aria-current="page">Req Interviews</a>
-                    <a href="/">Exit interviews</a>
+                    <a href="/req" data-nav="req">Req Interviews</a>
+                    <a href="/exit" data-nav="exit">Exit interviews</a>
                     <a id="adminLink" href="/admin" hidden style="display:none;">Admin</a>
                 </nav>
                 <div class="app-nav-footer">
@@ -834,6 +894,7 @@
                 </div>
             </aside>
             <div class="chats-main">
+                <div id="view-req" class="view-pane" hidden aria-hidden="true">
                 <div class="chat-header">
                     <button type="button" id="sideNavToggle" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="sideNav">&#9776;</button>
                     <div class="chat-header-text">
@@ -853,8 +914,8 @@
                         </div>
                     </div>
                     <nav class="mobile-app-nav" aria-label="Primary" style="display:none;margin-top:10px;">
-                        <a href="/req" aria-current="page">Req Interviews</a>
-                        <a href="/">Exit interviews</a>
+                        <a href="/req" data-nav="req">Req Interviews</a>
+                        <a href="/exit" data-nav="exit">Exit interviews</a>
                         <a id="adminLinkMobile" href="/admin" hidden>Admin</a>
                     </nav>
                     <button type="button" id="newConversationBtn" class="new-chat-btn" style="margin-top:10px;">+ New chat</button>
@@ -936,9 +997,70 @@
                 </div>
             </main>
                 </div>
+                </div><!-- /view-req -->
+
+                <div id="view-exit" class="view-pane" hidden aria-hidden="true">
+                    <div class="exit-header">
+                        <div class="exit-header-top">
+                            <button type="button" id="sideNavToggleExit" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false">&#9776;</button>
+                            <div class="chat-header-text">
+                                <h1 id="exitHeaderTitle">Exit interviews</h1>
+                                <p class="chat-header-subtitle" id="exitHeaderSubtitle">Start interview and review past sessions</p>
+                            </div>
+                        </div>
+                        <div id="exitToolbar"></div>
+                    </div>
+                    <div class="exit-body">
+                        <p id="exitError" class="error" hidden></p>
+                        <div id="exitMain" class="view-pane" style="position:relative;"></div>
+                    </div>
+                </div>
+
+                <div id="view-policy" class="view-pane" hidden aria-hidden="true"></div>
+            </div><!-- /chats-main -->
+        </div>
+    </div>
+
+    <div id="exitStartModal" class="modal-backdrop" hidden>
+        <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="startInterviewTitle">
+            <div class="modal-header">
+                <h3 id="startInterviewTitle">Start interview</h3>
+                <button type="button" class="modal-close" id="exitStartClose" aria-label="Close">&times;</button>
+            </div>
+            <p class="hint" style="margin-bottom:12px">Enter the interviewee’s group member name, then start.</p>
+            <form class="auth-form" id="exitStartForm">
+                <label>
+                    Interviewee name
+                    <input id="exitIntervieweeName" placeholder="Alex Rivera" required />
+                </label>
+                <p id="exitStartRepoHint" class="hint">Save a repository URL in the toolbar and wait until it is ready.</p>
+                <div class="live-actions">
+                    <button type="submit" id="exitStartSubmit" disabled>Start interview</button>
+                    <button type="button" class="ghost" id="exitStartCancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="exitConsentModal" class="modal-backdrop" hidden>
+        <div class="modal-panel modal-panel-wide" role="dialog" aria-modal="true" aria-labelledby="exitConsentTitle">
+            <div class="modal-header">
+                <h3 id="exitConsentTitle">Consent</h3>
+                <button type="button" class="modal-close" id="exitConsentClose" aria-label="Close">&times;</button>
+            </div>
+            <p class="hint" id="exitConsentSummary" style="margin-top:0"></p>
+            <ul class="consent-checklist" id="exitConsentBullets"></ul>
+            <label class="consent-check">
+                <input type="checkbox" id="exitConsentCheck" />
+                <span>I give consent for this exit interview and any recording.</span>
+            </label>
+            <div class="live-actions" style="margin-top:14px">
+                <button type="button" id="exitConsentStart" disabled>Start interview</button>
+                <button type="button" class="ghost" id="exitConsentCancel">Cancel</button>
             </div>
         </div>
     </div>
+
     <div id="newChatBackdrop" class="reflection-backdrop" aria-hidden="true">
         <div class="new-chat-modal" role="dialog" aria-labelledby="newChatTitle">
             <h3 id="newChatTitle">Start a new chat</h3>
@@ -981,6 +1103,11 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/chat.js?v=23"></script>
+    <script src="/static/components/api.js?v=1"></script>
+    <script src="/static/components/claim.js?v=1"></script>
+    <script src="/static/components/exit-voice.js?v=1"></script>
+    <script src="/static/components/exit.js?v=1"></script>
+    <script src="/static/components/chat.js?v=24"></script>
+    <script src="/static/components/router.js?v=1"></script>
 </body>
 </html>

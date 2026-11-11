@@ -919,9 +919,15 @@ def _chat_page(request: Request) -> HTMLResponse:
     )
 
 
+@app.get("/", response_class=HTMLResponse)
 @app.get("/req", response_class=HTMLResponse)
-async def requirements_chat(request: Request):
-    """Legacy requirements chatbot UI (claim/login landing is at /)."""
+@app.get("/login", response_class=HTMLResponse)
+@app.get("/claim", response_class=HTMLResponse)
+@app.get("/exit", response_class=HTMLResponse)
+@app.get("/policy", response_class=HTMLResponse)
+@app.get("/teams/{team_id}/exit", response_class=HTMLResponse)
+async def student_shell(request: Request, team_id: str | None = None):
+    """Unified student shell (claim/login, req chat, exit interviews)."""
     return _chat_page(request)
 
 
@@ -1702,60 +1708,19 @@ def feedback(request: FeedbackRequest, req: Request):
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-# Exit-interview React SPA (vite base=/) — claim/login landing at /
-COURSE_DIST = _PROJECT_ROOT / "frontend" / "dist"
-COURSE_ASSETS = COURSE_DIST / "assets"
-if COURSE_ASSETS.is_dir():
-    app.mount("/assets", StaticFiles(directory=str(COURSE_ASSETS)), name="course-assets")
-
-
-def _spa_index() -> FileResponse:
-    if not COURSE_DIST.is_dir():
-        raise HTTPException(
-            status_code=404,
-            detail="Course SPA not built. Run: cd frontend && npm ci && npm run build",
-        )
-    index = COURSE_DIST / "index.html"
-    if not index.is_file():
-        raise HTTPException(status_code=404, detail="Course SPA index missing")
-    return FileResponse(index)
-
-
 @app.get("/course")
 @app.get("/course/")
 async def course_root_redirect():
-    return RedirectResponse(url="/")
+    return RedirectResponse(url="/exit")
 
 
 @app.get("/course/{full_path:path}")
 async def course_path_redirect(full_path: str):
-    """Keep old /course/* bookmarks working after SPA moved to /."""
-    return RedirectResponse(url=f"/{full_path}")
-
-
-@app.get("/")
-async def spa_root():
-    return _spa_index()
-
-
-@app.get("/{full_path:path}")
-async def spa_fallback(full_path: str):
-    """Serve SPA assets or index for client-side routes (API/admin/req registered above)."""
-    if not COURSE_DIST.is_dir():
-        raise HTTPException(
-            status_code=404,
-            detail="Course SPA not built. Run: cd frontend && npm ci && npm run build",
-        )
-    # Never hijack known non-SPA prefixes if they somehow reach here.
-    head = (full_path or "").split("/", 1)[0]
-    if head in {"api", "admin", "static", "req", "docs", "openapi.json", "redoc"}:
-        raise HTTPException(status_code=404, detail="Not found")
-    candidate = (COURSE_DIST / full_path).resolve()
-    try:
-        candidate.relative_to(COURSE_DIST.resolve())
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail="Not found") from exc
-    if candidate.is_file():
-        return FileResponse(candidate)
-    return _spa_index()
+    """Map old React SPA bookmarks into the unified shell."""
+    path = (full_path or "").strip("/")
+    if path.startswith("teams/") and path.endswith("/exit"):
+        return RedirectResponse(url=f"/{path}")
+    if path in {"login", "claim", "policy"}:
+        return RedirectResponse(url=f"/{path}")
+    return RedirectResponse(url="/exit")
 
