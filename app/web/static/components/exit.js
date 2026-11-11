@@ -549,13 +549,10 @@
     back.dataset.bound = "1";
     back.addEventListener("click", () => {
       if (state.tab === "live" && state.session) {
-        destroyVoice();
-        state.session = null;
-        state.report = null;
-        state.probePrompt = null;
-        state.tab = "hub";
-        state.hubScreen = "list";
-        render();
+        goToHub({
+          selectedPastId: state.session.id,
+          hubScreen: isMobileExit() ? "list" : "detail",
+        });
         return;
       }
       state.hubScreen = "list";
@@ -712,6 +709,17 @@
     syncExitHeaderChrome();
   }
 
+  function goToHub(opts = {}) {
+    destroyVoice();
+    state.session = null;
+    state.report = null;
+    state.probePrompt = null;
+    state.tab = "hub";
+    state.hubScreen = opts.hubScreen || "list";
+    if (opts.selectedPastId !== undefined) state.selectedPastId = opts.selectedPastId;
+    render();
+  }
+
   function renderReview() {
     const root = $("exitMain");
     const session = state.session;
@@ -728,6 +736,10 @@
               <span>Interviewee: ${escapeHtml(session.current_participant_name || session.participants[0]?.display_name || "—")}</span>
               <span>${qs.length} questions · ${session.unanswered_question_ids.length} unanswered</span>
             </div>
+          </div>
+          <div class="live-actions">
+            <button type="button" class="ghost" id="exitBackHub">← Interviews</button>
+            <button type="button" id="exitReviewStart" ${state.busy || !setupReady() ? "disabled" : ""}>+ Start interview</button>
           </div>
         </div>
         <div class="review-layout">
@@ -780,6 +792,14 @@
           </section>
         </div>
       </section>`;
+
+    $("exitBackHub")?.addEventListener("click", () => {
+      goToHub({ selectedPastId: session.id, hubScreen: isMobileExit() ? "list" : "detail" });
+    });
+    $("exitReviewStart")?.addEventListener("click", () => {
+      goToHub({ selectedPastId: session.id, hubScreen: "list" });
+      openStartModal();
+    });
 
     void (async () => {
       const box = $("exitRecordingPlayer");
@@ -847,15 +867,18 @@
               ${!wrappingUp ? '<span class="recording-pill">Recording</span>' : '<span class="audit-pill">Audit</span>'}
             </div>
           </div>
-          <button type="button" class="live-end-btn" id="exitEndBtn" ${state.busy ? "disabled" : ""}>
-            ${
-              state.busy || session.status === "processing"
-                ? "Running audit…"
-                : wrappingUp
-                  ? "Complete audit"
-                  : "End interview"
-            }
-          </button>
+          <div class="live-actions">
+            <button type="button" class="ghost" id="exitBackHub">← Interviews</button>
+            <button type="button" class="live-end-btn" id="exitEndBtn" ${state.busy ? "disabled" : ""}>
+              ${
+                state.busy || session.status === "processing"
+                  ? "Running audit…"
+                  : wrappingUp
+                    ? "Complete audit"
+                    : "End interview"
+              }
+            </button>
+          </div>
         </div>
         ${
           wrappingUp
@@ -945,6 +968,12 @@
       </section>`;
 
     root.dataset.voiceSession = needVoice ? session.id : "";
+    $("exitBackHub")?.addEventListener("click", () => {
+      goToHub({
+        selectedPastId: session.id,
+        hubScreen: isMobileExit() ? "list" : "detail",
+      });
+    });
     $("exitEndBtn")?.addEventListener("click", () => void onEndInterview());
     $("exitPrevQ")?.addEventListener("click", () => {
       state.viewIndex = Math.max(0, state.viewIndex - 1);
@@ -1171,7 +1200,25 @@
         // keep /exit without forcing team URL
       }
       state.teamId = preferred;
-      if (state.tab !== "live") state.tab = "hub";
+      // Remounting Exit (e.g. nav click) should return to the hub unless a live
+      // interview is still in progress — scored/review views used to trap users.
+      if (
+        state.tab === "live" &&
+        state.session &&
+        !isScored(state.session.status) &&
+        !isWrapping(state.session.status)
+      ) {
+        /* keep live */
+      } else {
+        state.tab = "hub";
+        if (state.session && isScored(state.session.status)) {
+          state.selectedPastId = state.session.id;
+        }
+        state.session = null;
+        state.report = null;
+        state.probePrompt = null;
+        state.hubScreen = "list";
+      }
       await refreshHub(state.selectedPastId);
       render();
     } catch (err) {
