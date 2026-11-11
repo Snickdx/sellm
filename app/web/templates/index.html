@@ -1060,26 +1060,32 @@
                         <button type="button" id="sideNavToggleGroup" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="appNavPane">&#9776;</button>
                         <div class="chat-header-text">
                             <h1>Group</h1>
-                            <p class="chat-header-subtitle">Members and repository</p>
+                            <p class="chat-header-subtitle">Scenario, members, and repository</p>
                         </div>
                     </div>
                     <div class="group-body">
                         <p id="groupError" class="error" hidden></p>
                         <p id="groupHint" class="hint" hidden></p>
                         <section class="surface group-card">
-                            <h2 style="margin:0 0 8px;font-size:1rem">Repository</h2>
-                            <p class="hint" style="margin-top:0">Set the GitHub URL used for exit interviews. Indexing starts after save.</p>
+                            <h2 style="margin:0 0 8px;font-size:1rem">Group settings</h2>
+                            <p class="hint" style="margin-top:0">Pick your scenario and GitHub repo for exit interviews. Indexing starts after save.</p>
                             <form class="auth-form" id="groupRepoForm">
                                 <label>
                                     Group name
                                     <input id="groupNameInput" placeholder="Alpha Testers" required />
                                 </label>
                                 <label>
+                                    Scenario
+                                    <select id="groupScenario" required>
+                                        <option value="">Loading scenarios…</option>
+                                    </select>
+                                </label>
+                                <label>
                                     Repository URL
                                     <input id="groupGithubUrl" placeholder="https://github.com/org/repo" required />
                                 </label>
                                 <div class="live-actions">
-                                    <button type="submit" id="groupRepoSave" disabled>Save repository</button>
+                                    <button type="submit" id="groupRepoSave" disabled>Save settings</button>
                                 </div>
                             </form>
                             <div id="groupRepoStatus" style="margin-top:10px"></div>
@@ -1194,11 +1200,11 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/api.js?v=2"></script>
+    <script src="/static/components/api.js?v=3"></script>
     <script src="/static/components/claim.js?v=1"></script>
     <script src="/static/components/exit-voice.js?v=1"></script>
     <script src="/static/components/exit.js?v=25"></script>
-    <script src="/static/components/group.js?v=1"></script>
+    <script src="/static/components/group.js?v=2"></script>
     <script src="/static/components/chat.js?v=28"></script>
     <script src="/static/components/router.js?v=4"></script>
     <script>

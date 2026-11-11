@@ -63,6 +63,7 @@ class GroupMemberOut(BaseModel):
 class MyGroupOut(BaseModel):
     team_id: str
     group_name: str
+    scenario_slug: str | None = None
     claim_id: str | None = None
     members: list[GroupMemberOut] = Field(default_factory=list)
     participant_names: list[str] = Field(default_factory=list)
@@ -417,6 +418,7 @@ def _my_group_out(db: Session, team: Team, claim: GroupClaim | None) -> MyGroupO
     return MyGroupOut(
         team_id=team.id,
         group_name=team.name,
+        scenario_slug=team.scenario_slug,
         claim_id=claim.id if claim else None,
         members=members,
         participant_names=names,
@@ -601,16 +603,13 @@ def admin_rename_group(
     if clash is not None:
         raise HTTPException(status_code=409, detail="That group name is already taken")
 
+    account_user_id = int(claim.account_user_id)
     claim.name = group_name
     db.add(claim)
     team = db.get(Team, claim.team_id)
     if team is not None:
         team.name = group_name
         db.add(team)
-
-    store = _store(request)
-    store.update_user(int(claim.account_user_id), group_name=group_name)
-
     db.add(
         AuditEvent(
             actor_id=instructor.id,
@@ -621,6 +620,9 @@ def admin_rename_group(
     )
     db.commit()
     db.refresh(claim)
+
+    # Conversation store uses a separate session; commit first to avoid SQLite locks.
+    _store(request).update_user(account_user_id, group_name=group_name)
     return _admin_group_out(claim)
 
 
@@ -634,13 +636,11 @@ def admin_delete_group(
     """Release roster members and remove the claim. Keeps the shared login account."""
     claim = _require_claim(db, claim_id)
     out = _admin_group_out(claim)
+    account_user_id = int(claim.account_user_id)
     _release_claim_members(db, claim)
 
     for m in db.exec(select(TeamMember).where(TeamMember.team_id == claim.team_id)).all():
         db.delete(m)
-
-    store = _store(request)
-    store.update_user(int(claim.account_user_id), clear_group=True)
 
     db.add(
         AuditEvent(
@@ -652,6 +652,9 @@ def admin_delete_group(
     )
     db.delete(claim)
     db.commit()
+
+    # Conversation store uses a separate session; commit first to avoid SQLite locks.
+    _store(request).update_user(account_user_id, clear_group=True)
     return out
 
 
@@ -667,11 +670,9 @@ def admin_reset_group_password(
 ) -> AdminPasswordResetResponse:
     """Generate a new password for the group's shared login (shown once)."""
     claim = _require_claim(db, claim_id)
+    account_user_id = int(claim.account_user_id)
+    username = claim.account_username
     password = _password()
-    store = _store(request)
-    updated = store.update_user(int(claim.account_user_id), password=password)
-    if updated is None:
-        raise HTTPException(status_code=404, detail="Group account not found")
 
     db.add(
         AuditEvent(
@@ -682,9 +683,14 @@ def admin_reset_group_password(
         )
     )
     db.commit()
+
+    updated = _store(request).update_user(account_user_id, password=password)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Group account not found")
+
     return AdminPasswordResetResponse(
-        claim_id=claim.id,
-        username=claim.account_username,
+        claim_id=claim_id,
+        username=username,
         password=password,
         message="Save this password now. It is shown only once.",
     )

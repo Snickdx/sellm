@@ -126,6 +126,9 @@
         body: JSON.stringify({ member_ids: memberIds }),
       });
     },
+    listScenarios() {
+      return request("/api/scenarios");
+    },
     listExitSessions(teamId) {
       return request(`/api/teams/${teamId}/exit-sessions`);
     },

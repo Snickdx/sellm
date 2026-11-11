@@ -1,5 +1,5 @@
 /**
- * Group settings: roster members + repository URL.
+ * Group settings: scenario, repository, and roster members.
  */
 (function (global) {
   const MIN = 3;
@@ -8,8 +8,10 @@
   let state = {
     group: null,
     selected: [],
+    scenarios: [],
     githubUrl: "",
     groupName: "",
+    scenarioSlug: "",
     busy: false,
     hint: "",
     error: null,
@@ -41,6 +43,7 @@
   function syncFromGroup(group) {
     state.group = group;
     state.groupName = group?.group_name || "";
+    state.scenarioSlug = group?.scenario_slug || state.scenarioSlug || "";
     state.selected = (group?.members || []).map((m) => ({
       id: m.id,
       display_name: m.display_name,
@@ -48,6 +51,38 @@
     }));
     const repo = group?.repository;
     if (repo?.github_url) state.githubUrl = repo.github_url;
+  }
+
+  function fillScenarioSelect() {
+    const select = $("groupScenario");
+    if (!select) return;
+    const preferred = state.scenarioSlug;
+    select.innerHTML = "";
+    if (!state.scenarios.length) {
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "No scenarios available";
+      select.appendChild(empty);
+      select.disabled = true;
+      return;
+    }
+    select.disabled = state.busy;
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Select a scenario";
+    select.appendChild(placeholder);
+    state.scenarios.forEach((s) => {
+      const opt = document.createElement("option");
+      opt.value = s.slug;
+      opt.textContent = s.title || s.slug;
+      select.appendChild(opt);
+    });
+    if (preferred && [...select.options].some((o) => o.value === preferred)) {
+      select.value = preferred;
+      state.scenarioSlug = preferred;
+    } else {
+      select.value = "";
+    }
   }
 
   function renderSelected() {
@@ -108,7 +143,11 @@
   function syncRepoSaveEnabled() {
     const btn = $("groupRepoSave");
     if (!btn) return;
-    btn.disabled = state.busy || !state.githubUrl.trim() || !state.groupName.trim();
+    btn.disabled =
+      state.busy ||
+      !state.githubUrl.trim() ||
+      !state.groupName.trim() ||
+      !state.scenarioSlug.trim();
   }
 
   function render() {
@@ -131,6 +170,7 @@
     if (nameInput && document.activeElement !== nameInput) nameInput.value = state.groupName;
     const urlInput = $("groupGithubUrl");
     if (urlInput && document.activeElement !== urlInput) urlInput.value = state.githubUrl;
+    fillScenarioSelect();
 
     const membersPanel = $("groupMembersPanel");
     const noClaim = $("groupNoClaim");
@@ -167,7 +207,7 @@
     const saveMembers = $("groupMembersSave");
     if (saveMembers) saveMembers.textContent = state.busy ? "Saving…" : "Save members";
     const saveRepo = $("groupRepoSave");
-    if (saveRepo) saveRepo.textContent = state.busy ? "Saving…" : "Save repository";
+    if (saveRepo) saveRepo.textContent = state.busy ? "Saving…" : "Save settings";
   }
 
   async function load() {
@@ -176,12 +216,21 @@
     state.hint = "";
     render();
     try {
-      const group = await global.SellmApi.myGroup();
+      const [group, scenarios] = await Promise.all([
+        global.SellmApi.myGroup(),
+        global.SellmApi.listScenarios().catch(() => []),
+      ]);
+      state.scenarios = scenarios || [];
       syncFromGroup(group);
     } catch (err) {
       state.group = null;
       state.selected = [];
       state.error = err instanceof Error ? err.message : "Could not load group";
+      try {
+        state.scenarios = await global.SellmApi.listScenarios();
+      } catch (_) {
+        state.scenarios = [];
+      }
     } finally {
       setBusy(false);
       render();
@@ -214,7 +263,7 @@
 
   async function onSaveRepo(event) {
     event.preventDefault();
-    if (!state.githubUrl.trim() || !state.groupName.trim()) return;
+    if (!state.githubUrl.trim() || !state.groupName.trim() || !state.scenarioSlug.trim()) return;
     setBusy(true);
     state.error = null;
     state.hint = "";
@@ -223,6 +272,7 @@
       const result = await global.SellmApi.setupGroup({
         name: state.groupName.trim(),
         github_url: state.githubUrl.trim(),
+        scenario_slug: state.scenarioSlug.trim(),
         team_id: state.group?.team_id || null,
       });
       if (result?.team || result?.repository) {
@@ -232,17 +282,19 @@
           state.group = {
             ...(state.group || {}),
             group_name: result.team?.name || state.groupName,
+            scenario_slug: result.team?.scenario_slug || state.scenarioSlug,
             team_id: result.team?.id || state.group?.team_id,
             repository: result.repository,
             participant_names: result.team?.participant_names || state.group?.participant_names || [],
           };
           state.groupName = state.group.group_name;
+          state.scenarioSlug = state.group.scenario_slug || state.scenarioSlug;
           if (result.repository?.github_url) state.githubUrl = result.repository.github_url;
         }
       }
-      state.hint = "Repository saved.";
+      state.hint = "Group settings saved.";
     } catch (err) {
-      state.error = err instanceof Error ? err.message : "Could not save repository";
+      state.error = err instanceof Error ? err.message : "Could not save settings";
     } finally {
       setBusy(false);
       render();
@@ -255,6 +307,10 @@
 
     $("groupNameInput")?.addEventListener("input", (e) => {
       state.groupName = e.target.value;
+      syncRepoSaveEnabled();
+    });
+    $("groupScenario")?.addEventListener("change", (e) => {
+      state.scenarioSlug = e.target.value;
       syncRepoSaveEnabled();
     });
     $("groupGithubUrl")?.addEventListener("input", (e) => {
