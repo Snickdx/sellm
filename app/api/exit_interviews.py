@@ -230,12 +230,17 @@ def create_exit_session(
             )
     if repo.index_status != RepoIndexStatus.ready.value or not repo.index_json:
         raise HTTPException(status_code=400, detail="Repository index is not ready")
+    if not (team.scenario_slug or "").strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Set a scenario on the Group page before starting the interview",
+        )
 
     raw_names = body.participant_names or list(team.participant_names or [])
     if not raw_names:
         raise HTTPException(
             status_code=400,
-            detail="No group member names on this team — set them in Admin → Teams",
+            detail="No group member names on this team — set them on the Group page",
         )
     names = _normalize_participant_names(raw_names)
     slot_ids = [_slot_user_id(i) for i in range(len(names))]

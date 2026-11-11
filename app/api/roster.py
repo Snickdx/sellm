@@ -65,6 +65,7 @@ class MyGroupOut(BaseModel):
     group_name: str
     scenario_slug: str | None = None
     claim_id: str | None = None
+    account_username: str | None = None
     members: list[GroupMemberOut] = Field(default_factory=list)
     participant_names: list[str] = Field(default_factory=list)
     can_edit_members: bool = False
@@ -73,6 +74,12 @@ class MyGroupOut(BaseModel):
 
 class UpdateGroupMembersRequest(BaseModel):
     member_ids: list[str] = Field(min_length=MIN_MEMBERS, max_length=MAX_MEMBERS)
+
+
+class GroupPasswordResetOut(BaseModel):
+    username: str
+    password: str
+    message: str
 
 
 class AdminStudentOut(BaseModel):
@@ -408,18 +415,27 @@ def _members_out(db: Session, member_ids: list[str]) -> list[GroupMemberOut]:
     return out
 
 
-def _my_group_out(db: Session, team: Team, claim: GroupClaim | None) -> MyGroupOut:
+def _my_group_out(
+    db: Session,
+    team: Team,
+    claim: GroupClaim | None,
+    *,
+    login_username: str | None = None,
+) -> MyGroupOut:
     if claim is not None:
         members = _members_out(db, list(claim.member_ids or []))
         names = list(claim.member_names or []) or [m.display_name for m in members]
+        username = claim.account_username or login_username
     else:
         members = []
         names = list(team.participant_names or [])
+        username = login_username
     return MyGroupOut(
         team_id=team.id,
         group_name=team.name,
         scenario_slug=team.scenario_slug,
         claim_id=claim.id if claim else None,
+        account_username=username,
         members=members,
         participant_names=names,
         can_edit_members=claim is not None,
@@ -437,7 +453,48 @@ def get_my_group(
     if team is None:
         raise HTTPException(status_code=404, detail="No group yet — claim classmates from the landing page")
     claim = _claim_for_team(db, team.id, user.id)
-    return _my_group_out(db, team, claim)
+    return _my_group_out(db, team, claim, login_username=user.username)
+
+
+@router.post("/me/group/reset-password", response_model=GroupPasswordResetOut)
+def reset_my_group_password(
+    request: Request,
+    user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> GroupPasswordResetOut:
+    """Generate a new password for this group's shared login (shown once)."""
+    team = _first_team_for_user(db, user.id)
+    if team is None:
+        raise HTTPException(status_code=404, detail="No group yet — claim classmates from the landing page")
+    claim = _claim_for_team(db, team.id, user.id)
+    account_user_id = int(claim.account_user_id) if claim is not None else int(user.id)
+    username = (claim.account_username if claim is not None else None) or user.username
+    if claim is not None and int(claim.account_user_id) != int(user.id):
+        raise HTTPException(
+            status_code=403,
+            detail="Sign in with the shared group account to reset its password",
+        )
+
+    password = _password()
+    db.add(
+        AuditEvent(
+            actor_id=user.id,
+            action="roster.reset_password_self",
+            target_id=claim.id if claim else team.id,
+            metadata_json=None,
+        )
+    )
+    db.commit()
+
+    updated = _store(request).update_user(account_user_id, password=password)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Group account not found")
+
+    return GroupPasswordResetOut(
+        username=username,
+        password=password,
+        message="Save this password now. It is shown only once.",
+    )
 
 
 @router.put("/me/group/members", response_model=MyGroupOut)
@@ -513,7 +570,7 @@ def update_my_group_members(
     db.commit()
     db.refresh(team)
     db.refresh(claim)
-    return _my_group_out(db, team, claim)
+    return _my_group_out(db, team, claim, login_username=user.username)
 
 
 def _admin_group_out(claim: GroupClaim) -> AdminGroupOut:

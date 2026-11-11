@@ -88,6 +88,19 @@
     const passInput = $("landingPassword");
     if (userInput) userInput.value = result.username || "";
     if (passInput) passInput.value = result.password || "";
+    try {
+      sessionStorage.setItem(
+        "sellm_claim_creds",
+        JSON.stringify({
+          username: result.username || "",
+          password: result.password || "",
+          group_name: result.group_name || "",
+          at: Date.now(),
+        }),
+      );
+    } catch (_) {
+      /* ignore storage failures */
+    }
   }
 
   function bindOnce() {

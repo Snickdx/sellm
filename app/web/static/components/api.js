@@ -120,6 +120,9 @@
     myGroup() {
       return request("/api/me/group");
     },
+    resetGroupPassword() {
+      return request("/api/me/group/reset-password", { method: "POST" });
+    },
     updateGroupMembers(memberIds) {
       return request("/api/me/group/members", {
         method: "PUT",

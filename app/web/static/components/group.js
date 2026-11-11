@@ -5,6 +5,8 @@
   const MIN = 3;
   const MAX = 4;
 
+  const CLAIM_CREDS_KEY = "sellm_claim_creds";
+
   let state = {
     group: null,
     selected: [],
@@ -15,6 +17,9 @@
     busy: false,
     hint: "",
     error: null,
+    passwordOnce: null,
+    claimCreds: null,
+    fallbackUsername: "",
   };
   let bound = false;
   let searchTimer = null;
@@ -150,6 +155,86 @@
       !state.scenarioSlug.trim();
   }
 
+  function readClaimCreds() {
+    try {
+      const raw = sessionStorage.getItem(CLAIM_CREDS_KEY);
+      if (!raw) return null;
+      const creds = JSON.parse(raw);
+      if (!creds?.username || !creds?.password) return null;
+      return creds;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clearClaimCreds() {
+    try {
+      sessionStorage.removeItem(CLAIM_CREDS_KEY);
+    } catch (_) {
+      /* ignore */
+    }
+    state.claimCreds = null;
+  }
+
+  function loginUsername() {
+    return String(
+      state.group?.account_username ||
+        global.SellmRouter?.getUser?.()?.username ||
+        state.fallbackUsername ||
+        "",
+    ).trim();
+  }
+
+  function renderAccount() {
+    const username = loginUsername();
+    const userEl = $("groupLoginUsername");
+    if (userEl) userEl.textContent = username || "—";
+    const resetBtn = $("groupResetPassword");
+    if (resetBtn) {
+      resetBtn.disabled = Boolean(state.busy) || !username;
+      resetBtn.textContent = state.busy ? "Working…" : "Reset password";
+    }
+
+    const once = $("groupPasswordOnce");
+    if (once) {
+      if (state.passwordOnce) {
+        once.hidden = false;
+        once.innerHTML = `<div class="claim-cred-box" style="margin-top:8px">
+          <p class="lede" style="margin:0 0 8px">${escapeHtml(state.passwordOnce.message || "Save this password now. It is shown only once.")}</p>
+          <p style="margin:0 0 6px"><strong>Username</strong><br><code>${escapeHtml(state.passwordOnce.username || username)}</code></p>
+          <p style="margin:0"><strong>Password</strong><br><code>${escapeHtml(state.passwordOnce.password || "")}</code></p>
+        </div>`;
+      } else {
+        once.hidden = true;
+        once.innerHTML = "";
+      }
+    }
+
+    const banner = $("groupCredBanner");
+    if (!banner) return;
+    const creds = state.claimCreds;
+    const matches = Boolean(creds?.username && username && creds.username === username);
+    if (!matches) {
+      banner.hidden = true;
+      banner.innerHTML = "";
+      return;
+    }
+    banner.hidden = false;
+    banner.innerHTML = `
+      <h2 style="margin:0 0 8px;font-size:1rem">Record your credentials</h2>
+      <p class="lede" style="margin:0 0 10px">Your group was just claimed. Save this username and password now — the password will not be shown again.</p>
+      <div class="claim-cred-box">
+        <p class="hint" style="margin:0 0 8px">Group · ${escapeHtml(creds.group_name || state.groupName || "")}</p>
+        <p style="margin:0 0 6px"><strong>Username</strong><br><code>${escapeHtml(creds.username)}</code></p>
+        <p style="margin:0 0 10px"><strong>Password</strong><br><code>${escapeHtml(creds.password)}</code></p>
+        <button type="button" class="ghost" id="groupCredDismiss">I saved these</button>
+      </div>`;
+    $("groupCredDismiss")?.addEventListener("click", () => {
+      clearClaimCreds();
+      renderAccount();
+    });
+  }
+
   function render() {
     const err = $("groupError");
     if (err) {
@@ -171,6 +256,7 @@
     const urlInput = $("groupGithubUrl");
     if (urlInput && document.activeElement !== urlInput) urlInput.value = state.githubUrl;
     fillScenarioSelect();
+    renderAccount();
 
     const membersPanel = $("groupMembersPanel");
     const noClaim = $("groupNoClaim");
@@ -214,14 +300,21 @@
     setBusy(true);
     state.error = null;
     state.hint = "";
+    state.passwordOnce = null;
+    state.claimCreds = readClaimCreds();
     render();
     try {
+      const me = await global.SellmApi.me().catch(() => null);
+      state.fallbackUsername = String(me?.username || "").trim();
       const [group, scenarios] = await Promise.all([
         global.SellmApi.myGroup(),
         global.SellmApi.listScenarios().catch(() => []),
       ]);
       state.scenarios = scenarios || [];
       syncFromGroup(group);
+      if (!state.group.account_username && state.fallbackUsername) {
+        state.group.account_username = state.fallbackUsername;
+      }
     } catch (err) {
       state.group = null;
       state.selected = [];
@@ -231,6 +324,34 @@
       } catch (_) {
         state.scenarios = [];
       }
+    } finally {
+      setBusy(false);
+      render();
+    }
+  }
+
+  async function onResetPassword() {
+    const username = loginUsername();
+    if (!username) return;
+    if (
+      !confirm(
+        `Reset password for ${username}? The new password is shown only once — save it before leaving this page.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    state.error = null;
+    state.hint = "";
+    state.passwordOnce = null;
+    render();
+    try {
+      const result = await global.SellmApi.resetGroupPassword();
+      state.passwordOnce = result;
+      state.hint = "Password reset. Record the new password below.";
+      clearClaimCreds();
+    } catch (err) {
+      state.error = err instanceof Error ? err.message : "Could not reset password";
     } finally {
       setBusy(false);
       render();
@@ -319,6 +440,7 @@
     });
     $("groupMembersForm")?.addEventListener("submit", (e) => void onSaveMembers(e));
     $("groupRepoForm")?.addEventListener("submit", (e) => void onSaveRepo(e));
+    $("groupResetPassword")?.addEventListener("click", () => void onResetPassword());
 
     const search = $("groupSearch");
     const hits = $("groupHits");

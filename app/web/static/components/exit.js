@@ -37,7 +37,6 @@
     teams: [],
     team: null,
     repo: null,
-    githubUrl: "",
     sessions: [],
     selectedPastId: null,
     pastDetail: null,
@@ -48,7 +47,6 @@
     tab: "hub",
     busy: false,
     error: null,
-    settingsHint: "",
     intervieweeName: "",
     answer: "",
     sttBase: "",
@@ -111,6 +109,28 @@
     return Boolean(state.repo && state.repo.index_status === "ready");
   }
 
+  function scenarioReady() {
+    return Boolean((state.team?.scenario_slug || "").trim());
+  }
+
+  function setupReady() {
+    return scenarioReady() && repoReady();
+  }
+
+  function canStartInterview() {
+    return (
+      !state.busy &&
+      setupReady() &&
+      Boolean(state.intervieweeName.trim()) &&
+      memberOptions().length > 0
+    );
+  }
+
+  function syncStartSubmit() {
+    const submit = $("exitStartSubmit");
+    if (submit) submit.disabled = !canStartInterview();
+  }
+
   function setError(msg) {
     state.error = msg;
     const el = $("exitError");
@@ -155,8 +175,6 @@
     state.sessions = sessions || [];
     const latest = (repos || [])[0] || null;
     state.repo = latest;
-    if (latest?.github_url && !state.githubUrl) state.githubUrl = latest.github_url;
-    else if (latest?.url && !state.githubUrl) state.githubUrl = latest.url;
 
     const pick =
       preferId ||
@@ -183,31 +201,6 @@
     } else {
       state.pastDetail = null;
       state.hubReport = null;
-    }
-  }
-
-  async function onSaveRepo(event) {
-    event.preventDefault();
-    if (!state.githubUrl.trim()) return;
-    setBusy(true);
-    setError(null);
-    state.settingsHint = "";
-    try {
-      const result = await global.SellmApi.setupGroup({
-        name: state.team?.name || "Group",
-        github_url: state.githubUrl.trim(),
-        team_id: state.teamId,
-      });
-      state.repo = result.repository;
-      state.team = result.team || state.team;
-      state.settingsHint = "Repository saved.";
-      await refreshHub(state.selectedPastId);
-      render();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setBusy(false);
-      renderToolbar();
     }
   }
 
@@ -285,7 +278,7 @@
 
   async function onStartInterview(event) {
     event.preventDefault();
-    if (!state.teamId || !state.intervieweeName.trim()) return;
+    if (!state.teamId || !state.intervieweeName.trim() || !setupReady()) return;
     setBusy(true);
     setError(null);
     try {
@@ -524,85 +517,6 @@
       .join("")}</div>`;
   }
 
-  function renderToolbar() {
-    const bar = $("exitToolbar");
-    if (!bar) return;
-    if (state.tab === "live" && state.session) {
-      const mode = isWrapping(state.session.status)
-        ? "Audit"
-        : isScored(state.session.status)
-          ? "Review"
-          : "Live";
-      const mobile = isMobileExit();
-      bar.innerHTML = `
-        <div class="repo-toolbar">
-          ${
-            mobile
-              ? ""
-              : `<button type="button" class="ghost" id="exitBackHub">← Interviews</button>`
-          }
-          <span class="repo-toolbar-status">${mode}</span>
-        </div>`;
-      $("exitBackHub")?.addEventListener("click", () => {
-        destroyVoice();
-        state.session = null;
-        state.report = null;
-        state.probePrompt = null;
-        state.tab = "hub";
-        state.hubScreen = "list";
-        render();
-      });
-      return;
-    }
-    const teamOpts =
-      state.teams.length > 1
-        ? `<select class="repo-toolbar-group" id="exitTeamSelect" aria-label="Group">
-            ${state.teams
-              .map(
-                (t) =>
-                  `<option value="${escapeHtml(t.id)}" ${t.id === state.teamId ? "selected" : ""}>${escapeHtml(t.name)}</option>`,
-              )
-              .join("")}
-          </select>`
-        : "";
-    const status = state.repo
-      ? `<span class="repo-toolbar-status${repoReady() ? " ready" : ""}" title="${escapeHtml(state.repo.index_error || "")}">
-          ${escapeHtml(state.repo.repo || state.repo.name || "repo")}${
-            state.repo.commit_sha ? `@${escapeHtml(String(state.repo.commit_sha).slice(0, 7))}` : ""
-          } · ${escapeHtml(state.repo.index_status || "")}
-        </span>`
-      : "";
-    bar.innerHTML = `
-      <form class="repo-toolbar" id="exitRepoForm">
-        ${teamOpts}
-        <label class="repo-toolbar-field">
-          <span class="repo-toolbar-label">Repository URL</span>
-          <input id="exitGithubUrl" value="${escapeHtml(state.githubUrl)}" placeholder="https://github.com/org/repo" required />
-        </label>
-        <button type="submit" id="exitRepoSave" ${state.busy ? "disabled" : ""}>${state.busy ? "Saving…" : "Save"}</button>
-        ${status}
-        ${state.settingsHint ? `<span class="hint repo-toolbar-hint">${escapeHtml(state.settingsHint)}</span>` : ""}
-        ${state.repo?.index_error ? `<span class="error repo-toolbar-hint">${escapeHtml(state.repo.index_error)}</span>` : ""}
-      </form>`;
-    const syncSaveEnabled = () => {
-      const btn = $("exitRepoSave");
-      if (btn) btn.disabled = state.busy || !state.githubUrl.trim();
-    };
-    $("exitGithubUrl")?.addEventListener("input", (e) => {
-      state.githubUrl = e.target.value;
-      syncSaveEnabled();
-    });
-    $("exitGithubUrl")?.addEventListener("change", (e) => {
-      state.githubUrl = e.target.value;
-      syncSaveEnabled();
-    });
-    syncSaveEnabled();
-    $("exitRepoForm")?.addEventListener("submit", (e) => void onSaveRepo(e));
-    $("exitTeamSelect")?.addEventListener("change", (e) => {
-      global.SellmRouter.navigate(`/teams/${e.target.value}/exit`);
-    });
-  }
-
   function isMobileExit() {
     return window.matchMedia("(max-width: 720px)").matches;
   }
@@ -618,9 +532,10 @@
     else screen = "list";
     view.classList.add(`child-screen-${screen}`);
     if (back) {
-      const showBack = isMobileExit() && (screen === "detail" || screen === "live");
+      // Live always has a header back (repo toolbar removed); detail only on mobile.
+      const showBack = screen === "live" || (isMobileExit() && screen === "detail");
       back.hidden = !showBack;
-      back.setAttribute("aria-label", screen === "live" ? "Back to interviews" : "Back to interviews");
+      back.setAttribute("aria-label", "Back to interviews");
     }
   }
 
@@ -641,7 +556,6 @@
       }
       state.hubScreen = "list";
       renderHub();
-      renderToolbar();
       syncExitHeaderChrome();
     });
   }
@@ -657,8 +571,22 @@
     if (!mobile) state.hubScreen = selected ? "detail" : "list";
     else if (state.hubScreen === "detail" && !selected) state.hubScreen = "list";
 
+    const teamSwitcher =
+      state.teams.length > 1
+        ? `<label class="hint" style="display:block;padding:10px 14px 0;margin:0">
+            Group
+            <select id="exitTeamSelect" aria-label="Group" style="display:block;margin-top:4px;width:100%;max-width:280px">
+              ${state.teams
+                .map(
+                  (t) =>
+                    `<option value="${escapeHtml(t.id)}" ${t.id === state.teamId ? "selected" : ""}>${escapeHtml(t.name)}</option>`,
+                )
+                .join("")}
+            </select>
+          </label>`
+        : "";
     const listHtml = !sessions.length
-      ? `<p class="hint" style="padding:14px;margin:0">No interviews yet. Save a repository URL, then use Start interview.</p>`
+      ? `<p class="hint" style="padding:14px;margin:0">No interviews yet. Set scenario and repository on <a href="/group" data-nav="group">Group</a>, then use Start interview.</p>`
       : sessions
           .map((s) => {
             const active = s.id === state.selectedPastId;
@@ -734,6 +662,7 @@
       <div class="interview-hub ${screenClass}">
         <section class="interview-hub-list" aria-label="Past interviews">
           <div class="interview-hub-list-header">Past interviews</div>
+          ${teamSwitcher}
           ${listHtml}
         </section>
         <section class="interview-hub-detail" aria-label="Interview details">${detailHtml}</section>
@@ -744,6 +673,9 @@
           : ""
       }`;
 
+    $("exitTeamSelect")?.addEventListener("change", (e) => {
+      global.SellmRouter.navigate(`/teams/${e.target.value}/exit`);
+    });
     root.querySelectorAll(".interview-hub-item").forEach((btn) => {
       btn.addEventListener("click", async () => {
         state.selectedPastId = btn.getAttribute("data-id");
@@ -763,7 +695,6 @@
         } finally {
           setBusy(false);
           renderHub();
-          renderToolbar();
         }
       });
     });
@@ -1078,13 +1009,9 @@
     fillIntervieweeSelect();
     const select = $("exitIntervieweeName");
     if (select) select.focus();
-    const hint = $("exitStartRepoHint");
-    if (hint) hint.hidden = repoReady();
-    const submit = $("exitStartSubmit");
-    if (submit) {
-      submit.disabled =
-        state.busy || !repoReady() || !state.intervieweeName.trim() || memberOptions().length === 0;
-    }
+    const setupHint = $("exitStartSetupHint");
+    if (setupHint) setupHint.hidden = setupReady();
+    syncStartSubmit();
   }
 
   function closeStartModal() {
@@ -1117,7 +1044,6 @@
   function render() {
     setError(state.error);
     bindExitBackBtn();
-    renderToolbar();
     const title = $("exitHeaderTitle");
     const sub = $("exitHeaderSubtitle");
     if (title) {
@@ -1131,9 +1057,17 @@
             : "Exit interviews";
     }
     if (sub) {
-      sub.textContent = state.team?.name
-        ? `${state.team.name}${repoReady() ? "" : " · repo not ready"}`
-        : "Start interview and review past sessions";
+      if (!state.team?.name) {
+        sub.textContent = "Start interview and review past sessions";
+      } else if (!scenarioReady() && !repoReady()) {
+        sub.textContent = `${state.team.name} · set scenario & repo in Group`;
+      } else if (!scenarioReady()) {
+        sub.textContent = `${state.team.name} · set scenario in Group`;
+      } else if (!repoReady()) {
+        sub.textContent = `${state.team.name} · repo not ready`;
+      } else {
+        sub.textContent = state.team.name;
+      }
     }
     if (state.tab === "hub") {
       destroyVoice();
@@ -1157,17 +1091,26 @@
     $("exitStartClose")?.addEventListener("click", closeStartModal);
     $("exitStartCancel")?.addEventListener("click", closeStartModal);
     $("exitStartModal")?.addEventListener("click", (e) => {
-      if (e.target === e.currentTarget) closeStartModal();
+      if (e.target === e.currentTarget) {
+        closeStartModal();
+        return;
+      }
+      if (e.target.closest?.('a[href="/group"]')) closeStartModal();
     });
     $("exitIntervieweeName")?.addEventListener("change", (e) => {
       state.intervieweeName = e.target.value;
-      const submit = $("exitStartSubmit");
-      if (submit) {
-        submit.disabled =
-          state.busy || !repoReady() || !state.intervieweeName.trim() || memberOptions().length === 0;
-      }
+      syncStartSubmit();
     });
-    $("exitStartForm")?.addEventListener("submit", (e) => void onStartInterview(e));
+    $("exitStartForm")?.addEventListener("submit", (e) => {
+      if (!setupReady()) {
+        e.preventDefault();
+        const setupHint = $("exitStartSetupHint");
+        if (setupHint) setupHint.hidden = false;
+        syncStartSubmit();
+        return;
+      }
+      void onStartInterview(e);
+    });
 
     $("exitConsentClose")?.addEventListener("click", () => {
       if (state.busy) return;
@@ -1211,9 +1154,8 @@
         const root = $("exitMain");
         if (root) {
           root.innerHTML =
-            '<p class="hint" style="padding:20px">No group yet. Claim a group from the landing page, then return here.</p>';
+            '<p class="hint" style="padding:20px">No group yet. Claim a group from the landing page, then set scenario and repository on <a href="/group" data-nav="group">Group</a>.</p>';
         }
-        renderToolbar();
         return;
       }
       const preferred = teamId && state.teams.some((t) => t.id === teamId) ? teamId : state.teams[0].id;

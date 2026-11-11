@@ -16,7 +16,7 @@
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="stylesheet" href="/static/components/shell-extra.css?v=8" />
+    <link rel="stylesheet" href="/static/components/shell-extra.css?v=9" />
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -1069,12 +1069,14 @@
                         <section class="surface group-card" id="groupAccountCard">
                             <h2 style="margin:0 0 8px;font-size:1rem">Shared login</h2>
                             <p class="hint" style="margin-top:0">This username is shared by your group. Reset the password if anyone loses it — the new password is shown only once.</p>
-                            <div class="form-row form-row-repo" style="align-items:flex-end">
-                                <div class="form-grow">
-                                    <label style="display:block;margin-bottom:4px">Username</label>
-                                    <code id="groupLoginUsername">—</code>
+                            <div class="auth-form group-form">
+                                <div class="form-row form-row-repo">
+                                    <div class="form-grow">
+                                        <label style="display:block;margin-bottom:4px">Username</label>
+                                        <code id="groupLoginUsername">—</code>
+                                    </div>
+                                    <button type="button" id="groupResetPassword" class="form-row-action">Reset password</button>
                                 </div>
-                                <button type="button" id="groupResetPassword" class="form-row-action" disabled>Reset password</button>
                             </div>
                             <div id="groupPasswordOnce" class="group-status" hidden></div>
                         </section>
@@ -1216,13 +1218,13 @@
             <p id="reflectionStatus" class="feedback-note"></p>
         </div>
     </div>
-    <script src="/static/components/api.js?v=3"></script>
-    <script src="/static/components/claim.js?v=1"></script>
+    <script src="/static/components/api.js?v=4"></script>
+    <script src="/static/components/claim.js?v=2"></script>
     <script src="/static/components/exit-voice.js?v=1"></script>
     <script src="/static/components/exit.js?v=25"></script>
-    <script src="/static/components/group.js?v=2"></script>
+    <script src="/static/components/group.js?v=3"></script>
     <script src="/static/components/chat.js?v=28"></script>
-    <script src="/static/components/router.js?v=5"></script>
+    <script src="/static/components/router.js?v=6"></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
