@@ -15,6 +15,8 @@ type Props = {
   subtitle?: string
   children: ReactNode
   aside?: ReactNode
+  /** Compact toolbar under the header (e.g. repo URL + save). Takes precedence over tabs. */
+  toolbar?: ReactNode
   tabs?: CourseTab[]
   activeTab?: string
   onTabChange?: (id: string) => void
@@ -25,6 +27,7 @@ export function CourseShell({
   subtitle,
   children,
   aside,
+  toolbar,
   tabs,
   activeTab,
   onTabChange,
@@ -92,7 +95,11 @@ export function CourseShell({
             </div>
           </header>
 
-          {tabs && tabs.length > 0 ? (
+          {toolbar ? (
+            <div className="child-tab-bar child-toolbar" aria-label="Page tools">
+              {toolbar}
+            </div>
+          ) : tabs && tabs.length > 0 ? (
             <div className="child-tab-bar" role="tablist" aria-label="Exit sections">
               {tabs.map((tab) => {
                 const on = tab.id === activeTab

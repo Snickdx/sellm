@@ -668,79 +668,74 @@ export function ExitInterviewPage() {
     }
   }
 
-  const tabs = [
-    { id: 'hub', label: 'Interviews' },
-    ...(session ? [{ id: 'live', label: 'Live', disabled: true }] : []),
-  ]
-
   const selectedSummary = sessions.find((s) => s.id === selectedPastId) ?? null
   const canDeleteSelected = canDeleteExitSession(user, selectedSummary?.created_by_id)
 
-  const repoSettings = (
-    <section className="surface repo-settings" style={{ marginBottom: 12 }}>
-      <div className="repo-settings-head">
-        <div>
-          <h2 style={{ margin: 0, fontSize: '1rem' }}>Repository</h2>
-          <p className="hint" style={{ margin: '4px 0 0' }}>
-            {team?.name ? `${team.name} · ` : ''}
-            Paste the group GitHub URL (no commit hash).
-          </p>
-        </div>
-        {allTeams.length > 1 ? (
-          <label className="auth-form" style={{ margin: 0, minWidth: 180 }}>
-            Group
-            <select
-              value={teamId}
-              onChange={(e) => {
-                navigate(`/teams/${e.target.value}/exit`)
-              }}
-            >
-              {allTeams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-      </div>
-      <form className="auth-form" onSubmit={onSaveRepo} style={{ marginTop: 10 }}>
-        <label>
-          Repository URL
-          <input
-            value={githubUrl}
-            onChange={(e) => setGithubUrl(e.target.value)}
-            placeholder="https://github.com/org/repo"
-            required
-          />
-        </label>
-        {repo ? (
-          <p className="muted-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
-            <span>
-              {repo.repo}
-              {repo.commit_sha ? `@${repo.commit_sha.slice(0, 7)}` : ''}
-            </span>
-            <span>{repo.index_status}</span>
-            {repo.index_error ? <span className="error">{repo.index_error}</span> : null}
-          </p>
-        ) : null}
-        {settingsHint ? <p className="hint">{settingsHint}</p> : null}
-        <button type="submit" disabled={busy || !githubUrl.trim()}>
-          {busy ? 'Saving…' : repoReady ? 'Update repository' : 'Save repository'}
-        </button>
-      </form>
-    </section>
+  const hubToolbar = (
+    <form className="repo-toolbar" onSubmit={onSaveRepo}>
+      {allTeams.length > 1 ? (
+        <select
+          className="repo-toolbar-group"
+          value={teamId}
+          aria-label="Group"
+          onChange={(e) => navigate(`/teams/${e.target.value}/exit`)}
+        >
+          {allTeams.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      ) : null}
+      <label className="repo-toolbar-field">
+        <span className="repo-toolbar-label">Repository URL</span>
+        <input
+          value={githubUrl}
+          onChange={(e) => setGithubUrl(e.target.value)}
+          placeholder="https://github.com/org/repo"
+          required
+        />
+      </label>
+      <button type="submit" disabled={busy || !githubUrl.trim()}>
+        {busy ? 'Saving…' : 'Save'}
+      </button>
+      {repo ? (
+        <span className={`repo-toolbar-status${repoReady ? ' ready' : ''}`} title={repo.index_error || undefined}>
+          {repo.repo}
+          {repo.commit_sha ? `@${repo.commit_sha.slice(0, 7)}` : ''} · {repo.index_status}
+        </span>
+      ) : null}
+      {settingsHint ? <span className="hint repo-toolbar-hint">{settingsHint}</span> : null}
+      {repo?.index_error ? <span className="error repo-toolbar-hint">{repo.index_error}</span> : null}
+    </form>
+  )
+
+  const liveToolbar = (
+    <div className="repo-toolbar">
+      <button
+        type="button"
+        className="ghost"
+        onClick={() => {
+          setSession(null)
+          setReport(null)
+          setProbePrompt(null)
+          setTab('hub')
+        }}
+      >
+        ← Interviews
+      </button>
+      <span className="repo-toolbar-status">{wrappingUp ? 'Audit' : interviewScored ? 'Review' : 'Live'}</span>
+    </div>
   )
 
   const hubScreen = (
     <>
-      {repoSettings}
       <div className="interview-hub">
         <section className="interview-hub-list" aria-label="Past interviews">
           <div className="interview-hub-list-header">Past interviews</div>
           {sessions.length === 0 ? (
             <p className="hint" style={{ padding: 14, margin: 0 }}>
-              No interviews yet. Save a repository above, then use Start interview.
+              No interviews yet. Save a repository URL, then use Start interview.
             </p>
           ) : (
             sessions.map((s) => {
@@ -896,9 +891,7 @@ export function ExitInterviewPage() {
                 />
               </label>
               {!repoReady ? (
-                <p className="hint">
-                  Save a repository URL on the Interviews page and wait until it is ready.
-                </p>
+                <p className="hint">Save a repository URL in the toolbar and wait until it is ready.</p>
               ) : null}
               <div className="live-actions">
                 <button type="submit" disabled={busy || !repoReady || !intervieweeName.trim()}>
@@ -1166,18 +1159,7 @@ export function ExitInterviewPage() {
           ? `${team.name}${repoReady ? '' : ' · repo not ready'}`
           : 'Start interview and review past sessions'
       }
-      tabs={tabs}
-      activeTab={tab}
-      onTabChange={(id) => {
-        // Live is only entered via Interviews → open/view, never by clicking the tab.
-        if (id === 'live') return
-        if (tab === 'live') {
-          setSession(null)
-          setReport(null)
-          setProbePrompt(null)
-        }
-        setTab(id as ExitTab)
-      }}
+      toolbar={tab === 'hub' ? hubToolbar : liveToolbar}
     >
       <div className={`stack${tab === 'hub' ? ' stack-fill' : ' stack-live'}`}>
         {error && <p className="error">{error}</p>}

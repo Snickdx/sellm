@@ -117,9 +117,11 @@ button:disabled {
 /* ── Viewport shell (matches sellm chat) ── */
 
 .shell {
-  width: 100vw;
+  width: 100%;
+  max-width: 100%;
   height: 100vh;
   height: 100dvh;
+  overflow: hidden;
 }
 
 .nav-backdrop {
@@ -487,12 +489,81 @@ button:disabled {
   flex-direction: column;
 }
 
-.repo-settings-head {
+.child-toolbar {
+  align-items: center;
+  gap: 8px;
+}
+
+.repo-toolbar {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
+}
+
+.repo-toolbar-field {
+  display: flex;
+  flex: 1;
+  min-width: 160px;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.repo-toolbar-label {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.repo-toolbar-field input,
+.repo-toolbar-group {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 500;
+  color: var(--ink);
+  background: #fff;
+}
+
+.repo-toolbar-group {
+  flex: 0 1 140px;
+  max-width: 180px;
+}
+
+.repo-toolbar button[type='submit'] {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.9rem;
+}
+
+.repo-toolbar-status {
+  flex: 0 1 auto;
+  max-width: 100%;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repo-toolbar-status.ready {
+  color: var(--ok);
+}
+
+.repo-toolbar-hint {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 11px;
 }
 
 .interview-hub {
@@ -649,12 +720,62 @@ button:disabled {
 @media (max-width: 720px) {
   .interview-hub {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(140px, 0.4fr) minmax(0, 1fr);
+    grid-template-rows: minmax(120px, 32vh) minmax(0, 1fr);
   }
 
   .interview-hub-list {
     border-right: none;
     border-bottom: 1px solid var(--line);
+  }
+
+  .stack-fill {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .fab-labeled {
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .repo-toolbar-field {
+    flex: 1 1 100%;
+  }
+
+  .repo-toolbar-label {
+    display: none;
+  }
+
+  .repo-toolbar button[type='submit'] {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  .repo-toolbar-group {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .live-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .live-actions button {
+    width: 100%;
+  }
+
+  .live-answer button[type='submit'] {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .claim-chip {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .claim-chip .ghost {
+    width: 100%;
   }
 }
 
@@ -1274,7 +1395,23 @@ textarea:focus {
   }
 
   .live-camera {
-    max-width: 160px;
+    max-width: min(220px, 100%);
+    width: 100%;
+    justify-self: center;
+  }
+
+  .live-interview .live-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .question-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .question-nav .ghost {
+    flex: 1 1 auto;
   }
 }
 
@@ -1312,12 +1449,14 @@ textarea:focus {
 
 .landing-shell {
   align-items: stretch;
-  padding: 24px 16px;
+  justify-content: flex-start;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 
 .landing-grid {
   width: min(960px, 100%);
-  margin: auto;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.85fr);
   gap: 16px;
@@ -1345,19 +1484,25 @@ textarea:focus {
 }
 
 .auth-shell {
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* Fill #root (overflow:hidden) and scroll internally — critical on mobile. */
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 16px;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   background: linear-gradient(135deg, var(--purple-1) 0%, var(--purple-2) 100%);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .auth-panel {
   width: 100%;
   max-width: 380px;
+  margin: auto 0;
   background: #fff;
   border-radius: 20px;
   padding: 36px 32px;
@@ -1443,6 +1588,79 @@ textarea:focus {
   .header-chat-link {
     display: none;
   }
+
+  .main-header {
+    padding: 10px 12px;
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+
+  .main-header h1 {
+    font-size: 15px;
+  }
+
+  .main-header p {
+    font-size: 11px;
+  }
+
+  .child-tab-bar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .child-tab-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .child-tab-bar button {
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+
+  .surface {
+    padding: 14px;
+  }
+
+  .auth-panel {
+    padding: 24px 18px;
+    border-radius: 16px;
+  }
+
+  .auth-panel h1 {
+    font-size: 20px;
+  }
+
+  .landing-shell {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .modal-backdrop {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    align-items: flex-end;
+  }
+
+  .modal-panel,
+  .modal-panel-wide {
+    width: 100%;
+    max-height: min(92dvh, 92vh);
+    border-radius: 16px 16px 12px 12px;
+  }
+
+  .page-fallback {
+    padding: 20px 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .interview-hub {
+    grid-template-rows: minmax(110px, 28vh) minmax(0, 1fr);
+  }
+
+  .live-meta,
+  .muted-row {
+    gap: 6px 10px;
+    font-size: 11px;
+  }
 }
 
 .claim-hits {
@@ -1466,7 +1684,8 @@ textarea:focus {
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  padding: 10px 12px;
+  padding: 12px;
+  min-height: 44px;
   text-align: left;
   border: 0;
   border-radius: 0;
