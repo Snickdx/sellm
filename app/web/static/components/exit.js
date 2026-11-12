@@ -360,6 +360,8 @@
     const next = String(state.answer ?? "");
     // Always write — STT must win over focus/placeholder state.
     ta.value = next;
+    ta.dataset.sttBase = String(state.sttBase ?? "");
+    ta.dataset.sttSynced = "1";
     ta.disabled = Boolean(state.busy);
     const btn = document.querySelector('#exitAnswerForm button[type="submit"]');
     if (btn) btn.disabled = state.busy || !next.trim();
@@ -1191,6 +1193,8 @@
     $("exitAnswer")?.addEventListener("input", (e) => {
       state.answer = e.target.value;
       state.sttBase = e.target.value;
+      e.target.dataset.sttBase = e.target.value;
+      e.target.dataset.sttSynced = "1";
       const btn = $("exitAnswerForm")?.querySelector('button[type="submit"]');
       if (btn) btn.disabled = state.busy || !state.answer.trim();
     });

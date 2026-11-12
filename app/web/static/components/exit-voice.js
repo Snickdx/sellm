@@ -501,6 +501,29 @@
           if (result.isFinal) finals.push(text);
           else interim += (interim ? " " : "") + text;
         }
+
+        // Write the answer box directly — do not rely solely on parent callbacks.
+        const ta =
+          document.querySelector("#exitAnswerForm textarea") ||
+          document.getElementById("exitAnswer");
+        if (ta) {
+          let base = String(ta.dataset.sttBase || "").trim();
+          // If the student typed manually, treat current value as the new base.
+          if (ta.dataset.sttSynced !== "1" && String(ta.value || "").trim()) {
+            base = String(ta.value || "").trim();
+          }
+          finals.forEach((text) => {
+            base = `${base} ${text}`.trim();
+          });
+          ta.dataset.sttBase = base;
+          ta.dataset.sttSynced = "1";
+          const shown = interim ? `${base} ${interim}`.trim() : base;
+          ta.value = shown;
+          // Keep submit button state in sync.
+          const btn = document.querySelector('#exitAnswerForm button[type="submit"]');
+          if (btn) btn.disabled = !shown.trim();
+        }
+
         finals.forEach((text) => {
           try {
             onTranscript?.(text, true);
