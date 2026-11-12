@@ -216,6 +216,16 @@ class AdminUserUpdateRequest(BaseModel):
     password: Optional[str] = None
 
 
+class AdminUserDeleteRequest(BaseModel):
+    user_ids: List[int]
+
+
+class AdminUserDeleteResult(BaseModel):
+    deleted: List[int]
+    skipped: List[int] = []
+    failed: List[dict] = []
+
+
 class AdminConversationSummary(BaseModel):
     id: str
     title: str

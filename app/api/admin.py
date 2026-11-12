@@ -16,6 +16,8 @@ from app.api.schemas import (
     AdminConversationSummary,
     AdminTokenSummary,
     AdminUserCreateRequest,
+    AdminUserDeleteRequest,
+    AdminUserDeleteResult,
     AdminUserSummary,
     AdminUserUpdateRequest,
     ChatMessage,
@@ -28,7 +30,7 @@ from app.security.secret_store import (
     mask_secret,
 )
 from app.db import get_engine
-from app.models.exit import GroupClaim
+from app.models.exit import AuditEvent, ClassStudent, GroupClaim, TeamMember
 from app.storage.conversation_store import (
     ROLE_ADMIN,
     ROLE_STUDENT,
@@ -282,6 +284,94 @@ async def update_user(user_id: int, body: AdminUserUpdateRequest, request: Reque
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
     return _user_summary(store, updated, claimed_groups=_claimed_group_names())
+
+
+def _cleanup_exit_membership(user_id: int, actor_id: int | None = None) -> None:
+    """Release roster claim / team membership owned by this login (best-effort)."""
+    try:
+        with Session(get_engine()) as db:
+            claims = list(
+                db.exec(select(GroupClaim).where(GroupClaim.account_user_id == user_id)).all()
+            )
+            for claim in claims:
+                for row in db.exec(
+                    select(ClassStudent).where(ClassStudent.group_claim_id == claim.id)
+                ).all():
+                    row.status = "available"
+                    row.group_claim_id = None
+                    db.add(row)
+                for m in db.exec(select(TeamMember).where(TeamMember.team_id == claim.team_id)).all():
+                    db.delete(m)
+                db.add(
+                    AuditEvent(
+                        actor_id=actor_id,
+                        action="admin.user.delete_claim",
+                        target_id=claim.id,
+                        metadata_json=None,
+                    )
+                )
+                db.delete(claim)
+            for m in db.exec(select(TeamMember).where(TeamMember.user_id == user_id)).all():
+                db.delete(m)
+            db.commit()
+    except Exception:
+        # Exit tables may be unavailable in some test setups; user row still deletes.
+        return
+
+
+def _delete_one_user(store, user_id: int, *, actor_id: int, actor_username: str) -> None:
+    target = store.get_user_by_id(user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+    if int(user_id) == int(actor_id):
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    if (target.username or "").strip().lower() == (actor_username or "").strip().lower():
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    _cleanup_exit_membership(int(user_id), actor_id=actor_id)
+    if not store.delete_user(int(user_id)):
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+
+
+@router.post("/users/bulk-delete", response_model=AdminUserDeleteResult)
+async def bulk_delete_users(body: AdminUserDeleteRequest, request: Request):
+    admin = _require_admin(request)
+    store = _store(request)
+    ids = list(dict.fromkeys(int(x) for x in (body.user_ids or []) if x is not None))
+    if not ids:
+        raise HTTPException(status_code=400, detail="user_ids required")
+    deleted: List[int] = []
+    skipped: List[int] = []
+    failed: List[dict] = []
+    for uid in ids:
+        if int(uid) == int(admin.id):
+            skipped.append(uid)
+            continue
+        try:
+            _delete_one_user(
+                store,
+                uid,
+                actor_id=int(admin.id),
+                actor_username=str(getattr(admin, "username", "") or ""),
+            )
+            deleted.append(uid)
+        except HTTPException as exc:
+            failed.append({"id": uid, "detail": exc.detail})
+        except Exception as exc:
+            failed.append({"id": uid, "detail": str(exc)})
+    return AdminUserDeleteResult(deleted=deleted, skipped=skipped, failed=failed)
+
+
+@router.delete("/users/{user_id}", response_model=AdminUserDeleteResult)
+async def delete_user(user_id: int, request: Request):
+    admin = _require_admin(request)
+    store = _store(request)
+    _delete_one_user(
+        store,
+        user_id,
+        actor_id=int(admin.id),
+        actor_username=str(getattr(admin, "username", "") or ""),
+    )
+    return AdminUserDeleteResult(deleted=[user_id], skipped=[], failed=[])
 
 
 @router.get("/tokens", response_model=AdminTokenSummary)

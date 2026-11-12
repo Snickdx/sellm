@@ -26,6 +26,7 @@
   let view = "users";
   let users = [];
   let selectedUserId = null;
+  let selectedUserIds = new Set();
   let selectedConversationId = null;
   let selectedTeamId = null;
   let selectedRosterId = null;
@@ -408,6 +409,72 @@
     }
   }
 
+  function syncUsersDeleteButton() {
+    const btn = document.getElementById("deleteUsersBtn");
+    const countEl = document.getElementById("usersSelectedCount");
+    const n = selectedUserIds.size;
+    if (countEl) countEl.textContent = n ? `${n} selected` : "";
+    if (btn) {
+      btn.disabled = n === 0;
+      btn.textContent = n > 1 ? `Delete ${n}` : "Delete selected";
+    }
+    const selectAll = document.getElementById("usersSelectAll");
+    if (selectAll) {
+      const boxes = [...document.querySelectorAll(".u-select")];
+      const checked = boxes.filter((b) => b.checked).length;
+      selectAll.checked = boxes.length > 0 && checked === boxes.length;
+      selectAll.indeterminate = checked > 0 && checked < boxes.length;
+    }
+  }
+
+  async function deleteSelectedUsers() {
+    const status = document.getElementById("usersGridStatus");
+    const ids = [...selectedUserIds];
+    if (!ids.length) return;
+    const names = ids
+      .map((id) => users.find((u) => u.id === id)?.username || String(id))
+      .slice(0, 8);
+    const more = ids.length > names.length ? ` (+${ids.length - names.length} more)` : "";
+    const ok = window.confirm(
+      `Delete ${ids.length} user${ids.length === 1 ? "" : "s"}?\n\n${names.join(", ")}${more}\n\nThis removes their chats, keys, and group membership. Cannot be undone.`
+    );
+    if (!ok) return;
+    const btn = document.getElementById("deleteUsersBtn");
+    if (btn) btn.disabled = true;
+    try {
+      const result = await api("/api/admin/users/bulk-delete", {
+        method: "POST",
+        body: JSON.stringify({ user_ids: ids }),
+      });
+      const deleted = Array.isArray(result?.deleted) ? result.deleted : [];
+      const skipped = Array.isArray(result?.skipped) ? result.skipped : [];
+      const failed = Array.isArray(result?.failed) ? result.failed : [];
+      selectedUserIds = new Set();
+      if (selectedUserId && deleted.includes(selectedUserId)) {
+        selectedUserId = null;
+        closeUserDetailModal();
+      }
+      await loadUsers();
+      paintUsersTable();
+      const parts = [];
+      if (deleted.length) parts.push(`Deleted ${deleted.length}`);
+      if (skipped.length) parts.push(`skipped ${skipped.length} (self)`);
+      if (failed.length) parts.push(`failed ${failed.length}`);
+      const kind = failed.length ? "err" : "ok";
+      setStatus(status, parts.join(" · ") || "No changes.", kind);
+      if (failed.length) {
+        const detail = failed
+          .slice(0, 3)
+          .map((f) => `${f.id}: ${f.detail}`)
+          .join("; ");
+        setStatus(status, `${parts.join(" · ")}. ${detail}`, "err");
+      }
+    } catch (e) {
+      setStatus(status, e.message, "err");
+      syncUsersDeleteButton();
+    }
+  }
+
   function paintUsersTable() {
     const tableBody = document.getElementById("usersGridBody");
     const search = document.getElementById("userFilter");
@@ -426,14 +493,23 @@
       })
       .filter((u) => !roleNeedle || (u.role || (u.is_admin ? "admin" : "student")) === roleNeedle);
 
+    const visibleIds = new Set(rows.map((u) => u.id));
+    selectedUserIds = new Set([...selectedUserIds].filter((id) => visibleIds.has(id) || users.some((u) => u.id === id)));
+
     tableBody.innerHTML = rows
       .map((u) => {
         const role = u.role || (u.is_admin ? "admin" : "student");
         const exhausted = u.token_limit > 0 && u.tokens_used >= u.token_limit;
         const modeVal = u.default_response_mode || "";
         const llmVal = u.default_llm_choice || "";
+        const isSelf =
+          Boolean(currentUser) &&
+          String(u.username || "").trim().toLowerCase() === String(currentUser).trim().toLowerCase();
         return `
-          <tr data-id="${u.id}" class="${u.id === selectedUserId ? "selected" : ""}">
+          <tr data-id="${u.id}" class="${u.id === selectedUserId ? "selected" : ""}${selectedUserIds.has(u.id) ? " checked" : ""}">
+            <td class="col-check">
+              <input type="checkbox" class="u-select" data-id="${u.id}" ${selectedUserIds.has(u.id) ? "checked" : ""} ${isSelf ? "disabled title=\"You cannot delete your own account\"" : ""} />
+            </td>
             <td>
               <strong>${escapeHtml(u.username)}</strong>
               ${exhausted ? '<span class="badge warn">exhausted</span>' : ""}
@@ -487,8 +563,19 @@
       .join("");
 
     if (!rows.length) {
-      tableBody.innerHTML = `<tr><td colspan="7" style="color:#64748b;padding:16px;">No users match.</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="8" style="color:#64748b;padding:16px;">No users match.</td></tr>`;
     }
+
+    tableBody.querySelectorAll(".u-select").forEach((box) => {
+      box.addEventListener("change", () => {
+        const id = Number(box.dataset.id);
+        if (box.checked) selectedUserIds.add(id);
+        else selectedUserIds.delete(id);
+        box.closest("tr")?.classList.toggle("checked", box.checked);
+        syncUsersDeleteButton();
+      });
+    });
+    syncUsersDeleteButton();
 
     tableBody.querySelectorAll(".u-save").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -599,12 +686,15 @@
             <option value="admin">Admin</option>
           </select>
           <button type="button" class="btn btn-primary" id="addUserBtn">+ User</button>
+          <button type="button" class="btn btn-danger" id="deleteUsersBtn" disabled>Delete selected</button>
+          <span id="usersSelectedCount" class="meta" style="font-size:12px;color:#64748b;"></span>
         </div>
         <div id="usersGridStatus" class="status"></div>
         <div class="users-table-wrap">
           <table class="users-grid">
             <thead>
               <tr>
+                <th class="col-check"><input type="checkbox" id="usersSelectAll" title="Select all visible" /></th>
                 <th>User</th>
                 <th>Claimed group</th>
                 <th>Role</th>
@@ -623,6 +713,18 @@
       document.getElementById("groupFilter")?.addEventListener("change", paintUsersTable);
       document.getElementById("roleFilter")?.addEventListener("change", paintUsersTable);
       document.getElementById("addUserBtn")?.addEventListener("click", () => renderCreateUser());
+      document.getElementById("usersSelectAll")?.addEventListener("change", (e) => {
+        const on = e.target.checked;
+        document.querySelectorAll(".u-select:not(:disabled)").forEach((box) => {
+          box.checked = on;
+          const id = Number(box.dataset.id);
+          if (on) selectedUserIds.add(id);
+          else selectedUserIds.delete(id);
+          box.closest("tr")?.classList.toggle("checked", on);
+        });
+        syncUsersDeleteButton();
+      });
+      document.getElementById("deleteUsersBtn")?.addEventListener("click", () => void deleteSelectedUsers());
       paintUsersTable();
     } catch (e) {
       detailBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;
@@ -1014,11 +1116,195 @@
     }
   }
 
-  function parseNameLines(raw) {
-    return String(raw || "")
-      .split(/[\n,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
+  function normalizeMemberName(name) {
+    return String(name || "").trim().replace(/\s+/g, " ");
+  }
+
+  function nameKey(name) {
+    return normalizeMemberName(name).toLowerCase();
+  }
+
+  /**
+   * Badge + autocomplete editor for team participant names.
+   * suggestions: [{ name, meta? }] from the class roster.
+   * Returns { getNames }.
+   */
+  function mountNamePicker(root, { names = [], suggestions = [] } = {}) {
+    if (!root) return { getNames: () => [] };
+    const selected = [];
+    const seen = new Set();
+    (names || []).forEach((raw) => {
+      const name = normalizeMemberName(raw);
+      if (!name || seen.has(nameKey(name))) return;
+      seen.add(nameKey(name));
+      selected.push(name);
+    });
+
+    const catalog = (suggestions || [])
+      .map((s) => ({
+        name: normalizeMemberName(s.name || s.display_name || s),
+        meta: s.meta || s.email || "",
+      }))
+      .filter((s) => s.name);
+
+    root.classList.add("name-picker");
+    root.innerHTML = `
+      <div class="name-picker-badges" data-badges></div>
+      <ul class="name-suggest" data-suggest hidden></ul>
+    `;
+    const badgesEl = root.querySelector("[data-badges]");
+    const suggestEl = root.querySelector("[data-suggest]");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "name-picker-input";
+    input.placeholder = selected.length ? "Add classmate…" : "Type a student name…";
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("aria-autocomplete", "list");
+    badgesEl.appendChild(input);
+
+    let activeIndex = -1;
+    let filtered = [];
+
+    function getNames() {
+      return selected.slice();
+    }
+
+    function hideSuggest() {
+      suggestEl.hidden = true;
+      suggestEl.innerHTML = "";
+      activeIndex = -1;
+      filtered = [];
+    }
+
+    function removeName(name) {
+      const key = nameKey(name);
+      const idx = selected.findIndex((n) => nameKey(n) === key);
+      if (idx < 0) return;
+      selected.splice(idx, 1);
+      seen.delete(key);
+      renderBadges();
+    }
+
+    function renderBadges() {
+      badgesEl.querySelectorAll(".name-badge").forEach((el) => el.remove());
+      selected.forEach((name) => {
+        const badge = document.createElement("span");
+        badge.className = "name-badge";
+        badge.innerHTML = `<span>${escapeHtml(name)}</span>`;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "name-badge-remove";
+        btn.setAttribute("aria-label", `Remove ${name}`);
+        btn.textContent = "×";
+        btn.addEventListener("click", () => {
+          removeName(name);
+          input.focus();
+        });
+        badge.appendChild(btn);
+        badgesEl.insertBefore(badge, input);
+      });
+      input.placeholder = selected.length ? "Add classmate…" : "Type a student name…";
+    }
+
+    function addName(raw) {
+      const name = normalizeMemberName(raw);
+      if (!name) return false;
+      if (seen.has(nameKey(name))) return false;
+      seen.add(nameKey(name));
+      selected.push(name);
+      input.value = "";
+      hideSuggest();
+      renderBadges();
+      return true;
+    }
+
+    function matchSuggestions(q) {
+      const query = nameKey(q);
+      if (!query) return [];
+      const taken = new Set(selected.map(nameKey));
+      return catalog
+        .filter((s) => !taken.has(nameKey(s.name)) && nameKey(s.name).includes(query))
+        .slice(0, 8);
+    }
+
+    function renderSuggest(q) {
+      filtered = matchSuggestions(q);
+      if (!filtered.length) {
+        hideSuggest();
+        return;
+      }
+      activeIndex = 0;
+      suggestEl.hidden = false;
+      suggestEl.innerHTML = "";
+      filtered.forEach((row, i) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.setAttribute("aria-selected", i === activeIndex ? "true" : "false");
+        btn.innerHTML = `<strong>${escapeHtml(row.name)}</strong>${
+          row.meta ? `<span class="hint">${escapeHtml(row.meta)}</span>` : ""
+        }`;
+        btn.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          addName(row.name);
+          input.focus();
+        });
+        li.appendChild(btn);
+        suggestEl.appendChild(li);
+      });
+    }
+
+    function markActive() {
+      [...suggestEl.querySelectorAll("button")].forEach((btn, i) => {
+        btn.setAttribute("aria-selected", i === activeIndex ? "true" : "false");
+      });
+    }
+
+    input.addEventListener("input", () => {
+      renderSuggest(input.value.trim());
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" && filtered.length) {
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % filtered.length;
+        markActive();
+        return;
+      }
+      if (e.key === "ArrowUp" && filtered.length) {
+        e.preventDefault();
+        activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
+        markActive();
+        return;
+      }
+      if (e.key === "Escape") {
+        hideSuggest();
+        return;
+      }
+      if (e.key === "Backspace" && !input.value && selected.length) {
+        removeName(selected[selected.length - 1]);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "," || e.key === "Tab") {
+        if (filtered.length && activeIndex >= 0) {
+          e.preventDefault();
+          addName(filtered[activeIndex].name);
+          return;
+        }
+        const typed = input.value.trim();
+        if (typed && (e.key === "Enter" || e.key === ",")) {
+          e.preventDefault();
+          addName(typed);
+        }
+      }
+    });
+
+    input.addEventListener("blur", () => {
+      setTimeout(hideSuggest, 120);
+    });
+
+    renderBadges();
+    return { getNames };
   }
 
   async function loadScenarios() {
@@ -1053,7 +1339,7 @@
     if (body) body.innerHTML = "";
   }
 
-  async function openTeamCreateModal(students, scenarios) {
+  async function openTeamCreateModal(students, scenarios, rosterSuggestions) {
     const modal = document.getElementById("teamCreateModal");
     const body = document.getElementById("teamCreateModalBody");
     if (!modal || !body) return;
@@ -1072,7 +1358,7 @@
         <div class="field"><label>Scenario</label>${scenarioSelectHtml(scenarios, "", "teamScenario")}</div>
         <div class="field field-span"><label>Repository URL</label><input id="teamRepo" placeholder="https://github.com/org/repo or fixture://demo" /></div>
         <div class="field field-span"><label>Group member names</label>
-          <textarea id="teamParticipantNames" rows="3" placeholder="Alex Rivera&#10;Jordan Lee"></textarea>
+          <div id="teamParticipantNames"></div>
         </div>
         <div class="field field-span"><label>Student login</label>
           <select id="teamOwner">${ownerOptions || "<option value=\"\">No student accounts</option>"}</select>
@@ -1084,6 +1370,10 @@
       </div>
       <div id="teamStatus" class="status"></div>
     `;
+    const namePicker = mountNamePicker(document.getElementById("teamParticipantNames"), {
+      names: [],
+      suggestions: rosterSuggestions || [],
+    });
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
     const status = document.getElementById("teamStatus");
@@ -1094,7 +1384,7 @@
         const owner = document.getElementById("teamOwner")?.value.trim();
         const scenario = document.getElementById("teamScenario")?.value.trim();
         const githubUrl = document.getElementById("teamRepo")?.value.trim();
-        const participantNames = parseNameLines(document.getElementById("teamParticipantNames")?.value);
+        const participantNames = namePicker.getNames();
         if (!name || !owner) {
           setStatus(status, "Group name and student login are required.", "err");
           return;
@@ -1118,7 +1408,7 @@
     });
   }
 
-  function paintTeamDetail(team, students, scenarios) {
+  function paintTeamDetail(team, students, scenarios, rosterSuggestions) {
     if (!team) {
       detailTitle.textContent = "Group setup";
       detailBody.innerHTML = `<p style="color:#64748b;font-size:14px;">Select a team, or use <strong>Create group</strong> to add one.</p>`;
@@ -1136,7 +1426,6 @@
           return `<option value="${escapeAttr(u.username)}" ${sel}>${escapeHtml(u.username)}</option>`;
         })
         .join("") || `<option value="">No student accounts</option>`;
-    const namesText = (team.participant_names || []).join("\n");
     const repoUrl = team.repository?.github_url || "";
     const repoStatus = team.repository
       ? `${team.repository.repo}@${String(team.repository.commit_sha || "").slice(0, 7)} · ${team.repository.index_status}`
@@ -1148,7 +1437,7 @@
         <div class="field"><label>Scenario</label>${scenarioSelectHtml(scenarios, team.scenario_slug || "", "editTeamScenario")}</div>
         <div class="field field-span"><label>Repository URL</label><input id="editTeamRepo" value="${escapeAttr(repoUrl)}" placeholder="https://github.com/org/repo" /></div>
         <div class="field field-span"><label>Group member names</label>
-          <textarea id="editTeamNames" rows="3">${escapeHtml(namesText)}</textarea>
+          <div id="editTeamNames"></div>
         </div>
         <div class="field field-span"><label>Student login</label>
           <select id="editTeamLogin">${loginOptions}</select>
@@ -1161,6 +1450,10 @@
       </div>
       <div id="teamMemberStatus" class="status"></div>
     `;
+    const namePicker = mountNamePicker(document.getElementById("editTeamNames"), {
+      names: team.participant_names || [],
+      suggestions: rosterSuggestions || [],
+    });
     document.getElementById("saveTeamDetailsBtn")?.addEventListener("click", async () => {
       const ms = document.getElementById("teamMemberStatus");
       try {
@@ -1175,7 +1468,7 @@
             name: document.getElementById("editTeamName")?.value.trim(),
             scenario_slug: document.getElementById("editTeamScenario")?.value.trim() || null,
             github_url: document.getElementById("editTeamRepo")?.value.trim() || null,
-            participant_names: parseNameLines(document.getElementById("editTeamNames")?.value),
+            participant_names: namePicker.getNames(),
           }),
         });
         await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, {
@@ -1210,12 +1503,19 @@
     const fab = document.getElementById("createTeamFab");
     if (fab) fab.hidden = false;
     try {
-      const [teams, userRows, scenarios] = await Promise.all([
+      const [teams, userRows, scenarios, roster] = await Promise.all([
         api("/api/admin/teams"),
         api("/api/admin/users"),
         loadScenarios(),
+        api("/api/admin/roster").catch(() => null),
       ]);
       const students = (userRows || []).filter((u) => (u.role || "student") === "student");
+      const rosterSuggestions = (roster?.students || [])
+        .map((s) => ({
+          name: s.display_name,
+          meta: s.email || "",
+        }))
+        .filter((s) => s.name);
       if (selectedTeamId && !(teams || []).some((t) => t.id === selectedTeamId)) {
         selectedTeamId = null;
       }
@@ -1239,7 +1539,7 @@
           .join("") || `<p class="meta" style="padding:12px;">No teams yet. Use Create group.</p>`;
 
       const selected = (teams || []).find((t) => t.id === selectedTeamId) || null;
-      paintTeamDetail(selected, students, scenarios);
+      paintTeamDetail(selected, students, scenarios, rosterSuggestions);
 
       listBody.querySelectorAll(".team-item").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -1247,12 +1547,12 @@
           listBody.querySelectorAll(".team-item").forEach((el) => el.classList.remove("active"));
           btn.classList.add("active");
           const team = (teams || []).find((t) => t.id === selectedTeamId);
-          paintTeamDetail(team, students, scenarios);
+          paintTeamDetail(team, students, scenarios, rosterSuggestions);
         });
       });
 
       if (fab) {
-        fab.onclick = () => openTeamCreateModal(students, scenarios);
+        fab.onclick = () => openTeamCreateModal(students, scenarios, rosterSuggestions);
       }
     } catch (e) {
       listBody.innerHTML = `<p class="status err">${escapeHtml(e.message)}</p>`;

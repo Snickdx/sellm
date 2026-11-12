@@ -1153,6 +1153,25 @@ class ConversationStore:
                 session.delete(sess)
                 session.commit()
 
+    def delete_user(self, user_id: int) -> bool:
+        """Delete a user and their conversations, sessions, and API keys."""
+        user = self.get_user_by_id(user_id)
+        if user is None:
+            return False
+        for convo in self.list_conversations_for_user(user_id, limit=10_000):
+            self.delete_conversation(convo.id)
+        with Session(self.engine) as session:
+            row = session.get(User, user_id)
+            if row is None:
+                return False
+            for sess in session.exec(select(AuthSession).where(AuthSession.user_id == user_id)).all():
+                session.delete(sess)
+            for key in session.exec(select(UserApiKey).where(UserApiKey.user_id == user_id)).all():
+                session.delete(key)
+            session.delete(row)
+            session.commit()
+        return True
+
     def get_user_api_config(self, user_id: int, provider: str) -> Optional[UserApiKey]:
         with Session(self.engine) as session:
             return session.exec(
