@@ -347,36 +347,62 @@
     }
   }
 
-  function onTranscript(text, isFinal) {
-    if (isFinal && isNextCommand(text)) {
+  function answerFieldEl() {
+    return (
+      document.querySelector("#exitAnswerForm textarea") ||
+      document.getElementById("exitAnswer")
+    );
+  }
+
+  function writeAnswerField() {
+    const ta = answerFieldEl();
+    if (!ta) return false;
+    const next = String(state.answer ?? "");
+    // Always write — STT must win over focus/placeholder state.
+    ta.value = next;
+    ta.disabled = Boolean(state.busy);
+    const btn = document.querySelector('#exitAnswerForm button[type="submit"]');
+    if (btn) btn.disabled = state.busy || !next.trim();
+    return true;
+  }
+
+  function applyTranscript(text, isFinal) {
+    const chunk = String(text || "").trim();
+    if (!chunk) return;
+    if (isFinal && isNextCommand(chunk)) {
       state.answer = state.sttBase;
-      syncAnswerField({ fromStt: true });
+      writeAnswerField();
       void onVoiceNext();
       return;
     }
-    if (!isFinal && isNextCommand(text)) {
+    if (!isFinal && isNextCommand(chunk)) {
       state.answer = state.sttBase;
-      syncAnswerField({ fromStt: true });
+      writeAnswerField();
       return;
     }
     if (isFinal) {
-      state.sttBase = `${state.sttBase} ${text}`.trim();
+      state.sttBase = `${state.sttBase} ${chunk}`.trim();
       state.answer = state.sttBase;
     } else {
-      state.answer = `${state.sttBase} ${text}`.trim();
+      state.answer = `${state.sttBase} ${chunk}`.trim();
     }
-    syncAnswerField({ fromStt: true });
+    writeAnswerField();
+    // Re-apply on next frame in case a concurrent render reset the node.
+    window.requestAnimationFrame(() => writeAnswerField());
   }
 
-  function syncAnswerField({ fromStt = false } = {}) {
-    const ta = $("exitAnswer");
-    if (ta) {
-      // Speech must fill the field even while focused; typing updates sttBase on input.
-      if (fromStt || document.activeElement !== ta) ta.value = state.answer;
-      ta.disabled = state.busy;
-    }
-    const btn = $("exitAnswerForm")?.querySelector('button[type="submit"]');
-    if (btn) btn.disabled = state.busy || !state.answer.trim();
+  function onTranscript(text, isFinal) {
+    applyTranscript(text, isFinal);
+    const skip = $("exitSkipQ");
+    if (skip) skip.disabled = state.busy;
+    const end = $("exitEndBtn");
+    if (end) end.disabled = state.busy;
+    const cancel = $("exitCancelBtn");
+    if (cancel) cancel.disabled = state.busy;
+  }
+
+  function syncAnswerField() {
+    writeAnswerField();
     const skip = $("exitSkipQ");
     if (skip) skip.disabled = state.busy;
     const end = $("exitEndBtn");
@@ -389,9 +415,21 @@
   function syncSttAnswerChrome(activity) {
     if (activity) state.sttActivity = activity;
     const a = state.sttActivity || {};
+    // Backup path: mirror live interim preview into the answer field.
+    if (a.enabled && a.preview && a.phase === "hearing") {
+      const live = String(a.preview || "").trim();
+      if (live) state.answer = `${state.sttBase} ${live}`.trim();
+    } else if (a.enabled && a.preview && a.phase === "transcribing" && a.isFinal && !state.answer) {
+      const live = String(a.preview || "").trim();
+      if (live) {
+        state.sttBase = `${state.sttBase} ${live}`.trim();
+        state.answer = state.sttBase;
+      }
+    }
+    writeAnswerField();
     const status = $("exitSttStatus");
     const preview = $("exitSttPreview");
-    const ta = $("exitAnswer");
+    const ta = answerFieldEl();
     if (status) {
       const phase = a.phase || (a.enabled ? "listening" : "off");
       status.hidden = false;
@@ -417,7 +455,8 @@
     }
     if (ta && !wrappingLive()) {
       ta.placeholder = a.enabled
-        ? ta.dataset.speakPlaceholder || ta.placeholder
+        ? ta.dataset.speakPlaceholder ||
+          "Speak or type your answer… (or Skip for alternative)"
         : "Type your answer… (speech to text is off)";
     }
   }

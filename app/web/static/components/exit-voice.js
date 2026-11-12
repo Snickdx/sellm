@@ -123,17 +123,20 @@
     const sttLabelEl = root.querySelector("[data-stt-label]");
     const sttPreviewEl = root.querySelector("[data-stt-preview]");
 
-    function emitSttActivity() {
+    function emitSttActivity(extra = {}) {
       const payload = {
         enabled: speechWanted,
         available: sttAvailable,
         phase: sttPhase,
         preview: sttPreview,
+        transcript: sttPreview,
+        isFinal: false,
+        ...extra,
       };
       onSttActivity?.(payload);
     }
 
-    function setSttPhase(phase, preview) {
+    function setSttPhase(phase, preview, extra = {}) {
       sttPhase = phase;
       if (preview !== undefined) sttPreview = String(preview || "");
       if (sttStatusEl) sttStatusEl.dataset.phase = phase;
@@ -155,7 +158,7 @@
         sttPreviewEl.hidden = !show;
         sttPreviewEl.textContent = show ? sttPreview : "";
       }
-      emitSttActivity();
+      emitSttActivity(extra);
     }
 
     function isSpeechEnabled() {
@@ -490,25 +493,34 @@
       recognition.lang = "en-US";
       recognition.onresult = (event) => {
         let interim = "";
-        let gotFinal = false;
+        let finals = [];
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           const text = (result[0]?.transcript || "").trim();
           if (!text) continue;
-          if (result.isFinal) {
-            gotFinal = true;
-            onTranscript?.(text, true);
-          } else interim += (interim ? " " : "") + text;
+          if (result.isFinal) finals.push(text);
+          else interim += (interim ? " " : "") + text;
         }
+        finals.forEach((text) => {
+          try {
+            onTranscript?.(text, true);
+          } catch (_) {
+            /* keep UI feedback even if answer wiring throws */
+          }
+          setSttPhase("transcribing", text, { transcript: text, isFinal: true, preview: text });
+        });
         if (interim) {
-          onTranscript?.(interim, false);
-          setSttPhase("hearing", interim);
+          try {
+            onTranscript?.(interim, false);
+          } catch (_) {
+            /* keep UI feedback even if answer wiring throws */
+          }
+          setSttPhase("hearing", interim, { transcript: interim, isFinal: false, preview: interim });
           if (hearingTimer) window.clearTimeout(hearingTimer);
           hearingTimer = window.setTimeout(() => {
             if (speechWanted && !cancelled) setSttPhase("listening", "");
           }, 1400);
-        } else if (gotFinal) {
-          setSttPhase("transcribing", "");
+        } else if (finals.length) {
           if (hearingTimer) window.clearTimeout(hearingTimer);
           hearingTimer = window.setTimeout(() => {
             if (speechWanted && !cancelled) setSttPhase("listening", "");
