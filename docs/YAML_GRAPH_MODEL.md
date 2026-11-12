@@ -86,38 +86,41 @@ Document text includes project, stakeholder, sheet/kind, statement, and acceptan
 
 ## Visual map
 
+Circular nodes, straight directed edges:
+
 ```mermaid
+%%{init: {"flowchart": {"curve": "linear"}}}%%
 flowchart LR
-    classDef pkg fill:#eef2ff,stroke:#4f46e5,color:#111827,stroke-width:1px;
-    classDef actor fill:#ecfeff,stroke:#0891b2,color:#111827,stroke-width:1px;
-    classDef knowledge fill:#f0fdf4,stroke:#16a34a,color:#111827,stroke-width:1px;
-    classDef governance fill:#fff7ed,stroke:#ea580c,color:#111827,stroke-width:1px;
-    classDef provenance fill:#fdf2f8,stroke:#db2777,color:#111827,stroke-width:1px;
-    classDef domain fill:#f8fafc,stroke:#475569,color:#111827,stroke-width:1px;
+    classDef pkg fill:#eef2ff,stroke:#4f46e5,color:#111827,stroke-width:1.5px;
+    classDef actor fill:#ecfeff,stroke:#0891b2,color:#111827,stroke-width:1.5px;
+    classDef knowledge fill:#f0fdf4,stroke:#16a34a,color:#111827,stroke-width:1.5px;
+    classDef governance fill:#fff7ed,stroke:#ea580c,color:#111827,stroke-width:1.5px;
+    classDef provenance fill:#fdf2f8,stroke:#db2777,color:#111827,stroke-width:1.5px;
+    classDef domain fill:#f8fafc,stroke:#475569,color:#111827,stroke-width:1.5px;
 
-    SC["Project"]:::pkg
-    PE["Stakeholder"]:::actor
-    FA["Requirement / Constraint / Task / …"]:::knowledge
-    CAT["Category"]:::domain
-    FAM["FactFamily"]:::domain
-    AC["AcceptanceCriterion"]:::domain
-    SR["Role"]:::governance
-    CP["Capability"]:::governance
-    DE["Decision"]:::provenance
-    CU["SourceCue"]:::provenance
+    SC((Project)):::pkg
+    PE((Stakeholder)):::actor
+    FA((Knowledge<br/>Requirement<br/>Constraint<br/>Task)):::knowledge
+    CAT((Category)):::domain
+    FAM((FactFamily)):::domain
+    AC((Acceptance<br/>Criterion)):::domain
+    SR((Role)):::governance
+    CP((Capability)):::governance
+    DE((Decision)):::provenance
+    CU((SourceCue)):::provenance
 
-    SC -- HAS_PERSONA --> PE
-    SC -- HAS_FACT --> FA
-    SC -- HAS_DECISION --> DE
-    PE -- KNOWS --> FA
-    PE -- HAS_ROLE --> SR
-    PE -- CAN --> CP
-    FA -- IN_CATEGORY --> CAT
-    FA -- IN_FAMILY --> FAM
-    FA -- HAS_CRITERION --> AC
-    FA -- FROM_DECISION --> DE
-    DE -- PRODUCED --> FA
-    FA -- CITED_FROM --> CU
+    SC -->|HAS_PERSONA| PE
+    SC -->|HAS_FACT| FA
+    SC -->|HAS_DECISION| DE
+    PE -->|KNOWS| FA
+    PE -->|HAS_ROLE| SR
+    PE -->|CAN| CP
+    FA -->|IN_CATEGORY| CAT
+    FA -->|IN_FAMILY| FAM
+    FA -->|HAS_CRITERION| AC
+    FA -->|FROM_DECISION| DE
+    DE -->|PRODUCED| FA
+    FA -->|CITED_FROM| CU
 ```
 
 ## Reindex
