@@ -514,15 +514,13 @@
         .role-defaults-fields .field label { margin-bottom: 2px; }
         .role-defaults-fields .actions { margin-top: 1.4rem; }
         .role-defaults-fields .field:has(#roleBudget) { align-self: end; }
-        .allowlist-select {
-            min-height: 7.5rem;
+        .allowlist-picker {
             width: 100%;
             max-width: 100%;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 4px 6px;
-            font-size: 12px;
-            background: #fff;
+            min-width: 180px;
+        }
+        .role-defaults-fields .allowlist-picker {
+            min-width: 220px;
         }
         .field-hint {
             margin-top: 3px;
@@ -596,10 +594,20 @@
             background: #fff;
             max-width: 180px;
         }
-        table.users-grid select.allowlist-select {
-            min-height: 5.5rem;
-            max-width: 200px;
-            width: 180px;
+        table.users-grid .allowlist-picker {
+            min-width: 170px;
+            max-width: 240px;
+            width: 200px;
+        }
+        table.users-grid .allowlist-picker .name-picker-input {
+            min-width: 72px;
+            flex-basis: 72px;
+            font-size: 12px;
+            padding: 4px 2px !important;
+        }
+        table.users-grid .allowlist-picker .name-badge {
+            font-size: 11px;
+            padding: 2px 4px 2px 8px;
         }
         table.users-grid .cell-actions {
             display: flex;
@@ -636,8 +644,8 @@
             align-items: flex-start;
             gap: 4px;
         }
-        .cell-with-badge.cell-allowlist select {
-            width: 180px;
+        .cell-with-badge.cell-allowlist .allowlist-picker {
+            width: 200px;
             max-width: 100%;
         }
         .cell-with-badge select,
@@ -1112,7 +1120,7 @@
 
     <button type="button" id="createTeamFab" class="fab-labeled" hidden>+ Create group</button>
 
-    <script src="/static/components/admin.js?v=24"></script>
+    <script src="/static/components/admin.js?v=26"></script>
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {

@@ -36,6 +36,9 @@
   let appSettings = null;
   let selectedRoleDefaults = "student";
   let roleDraft = null;
+  let roleModePicker = null;
+  let roleLlmPicker = null;
+  const userAllowlistPickers = new Map();
 
   const loginGate = document.getElementById("loginGate");
   const denyGate = document.getElementById("denyGate");
@@ -245,100 +248,268 @@
     return cleaned.join(",");
   }
 
-  function selectedAllowlist(selectEl) {
-    if (!selectEl) return [];
-    return [...selectEl.selectedOptions].map((o) => o.value).filter(Boolean);
-  }
-
-  function setAllowlistSelection(selectEl, raw) {
-    if (!selectEl) return;
-    const selected = new Set(parseAllowlist(raw).map((v) => v.toLowerCase()));
-    const wantAny = selected.has("any");
-    [...selectEl.options].forEach((opt) => {
-      if (!opt.value) {
-        opt.selected = false;
-        return;
-      }
-      if (wantAny) opt.selected = opt.value === "any";
-      else opt.selected = selected.has(opt.value.toLowerCase());
-    });
-  }
-
-  function bindAnyExclusive(selectEl) {
-    if (!selectEl || selectEl.dataset.anyExclusive === "1") return;
-    selectEl.dataset.anyExclusive = "1";
-    let prev = new Set(selectedAllowlist(selectEl));
-    selectEl.addEventListener("change", () => {
-      const now = selectedAllowlist(selectEl);
-      const nowSet = new Set(now);
-      if (nowSet.has("any") && !prev.has("any")) {
-        setAllowlistSelection(selectEl, "any");
-      } else if (nowSet.has("any") && now.length > 1) {
-        setAllowlistSelection(
-          selectEl,
-          serializeAllowlist(now.filter((v) => v !== "any"))
-        );
-      }
-      prev = new Set(selectedAllowlist(selectEl));
-    });
-  }
-
-  function modeOptions(selectedRaw) {
-    const selected = new Set(parseAllowlist(selectedRaw).map((v) => v.toLowerCase()));
-    const wantAny = selected.has("any");
-    return MODES.map(([v, label]) => {
-      const isSel = wantAny ? v === "any" : selected.has(v.toLowerCase());
-      return `<option value="${v}" ${isSel ? "selected" : ""}>${label}</option>`;
-    }).join("");
-  }
-
   function roleOptions(selected) {
     return ROLES.map(
       ([v, label]) => `<option value="${v}" ${selected === v ? "selected" : ""}>${label}</option>`
     ).join("");
   }
 
-  function llmOptions(selectedRaw, includeBlank = false, blankLabel = "Role default") {
-    const selected = new Set(parseAllowlist(selectedRaw).map((v) => v.toLowerCase()));
-    const wantAny = selected.has("any");
-    const opts = [];
-    if (includeBlank) opts.push(`<option value="">${escapeHtml(blankLabel)}</option>`);
-    opts.push(`<option value="any" ${wantAny ? "selected" : ""}>Any (unbounded)</option>`);
+  function modeCatalog() {
+    return MODES.map(([id, label]) => ({ id, label }));
+  }
+
+  function llmCatalog(extraIds = []) {
+    const opts = [{ id: "any", label: "Any (unbounded)" }];
+    const seen = new Set(["any"]);
     llmChoices.forEach((c) => {
-      const isSel = !wantAny && selected.has(String(c.id).toLowerCase());
-      opts.push(
-        `<option value="${escapeAttr(c.id)}" ${isSel ? "selected" : ""}>${escapeHtml(c.label)}</option>`
-      );
+      const id = String(c.id || "").trim();
+      if (!id || seen.has(id.toLowerCase())) return;
+      seen.add(id.toLowerCase());
+      opts.push({ id, label: c.label || id });
     });
-    parseAllowlist(selectedRaw).forEach((id) => {
-      if (id === "any") return;
-      if (!llmChoices.some((c) => c.id === id)) {
-        opts.push(
-          `<option value="${escapeAttr(id)}" ${!wantAny && selected.has(id.toLowerCase()) ? "selected" : ""}>${escapeHtml(id)} (saved)</option>`
-        );
-      }
+    (extraIds || []).forEach((id) => {
+      const value = String(id || "").trim();
+      if (!value || value === "any" || seen.has(value.toLowerCase())) return;
+      seen.add(value.toLowerCase());
+      opts.push({ id: value, label: `${value} (saved)` });
     });
-    return opts.join("");
+    return opts;
   }
 
   function modeLabel(raw) {
     const parts = parseAllowlist(raw);
     if (!parts.length) return "—";
     if (parts.some((p) => p.toLowerCase() === "any")) return "Any (unbounded)";
-    return parts.map((id) => {
-      const hit = MODES.find(([v]) => v === id);
-      return hit ? hit[1] : id;
-    }).join(", ");
+    return parts
+      .map((id) => {
+        const hit = MODES.find(([v]) => v === id);
+        return hit ? hit[1] : id;
+      })
+      .join(", ");
   }
 
   function llmLabel(raw) {
     const parts = parseAllowlist(raw);
     if (!parts.length) return "Auto / role default";
     if (parts.some((p) => p.toLowerCase() === "any")) return "Any (unbounded)";
-    return parts.map((id) => {
-      const hit = llmChoices.find((c) => c.id === id);
-      return hit ? hit.label : id;
-    }).join(", ");
+    return parts
+      .map((id) => {
+        const hit = llmChoices.find((c) => c.id === id);
+        return hit ? hit.label : id;
+      })
+      .join(", ");
+  }
+
+  /**
+   * Chip + autocomplete allowlist picker (Mode / LLM).
+   * options: [{ id, label }], selected: raw csv or id[].
+   * Returns { getValues, getSerialized, setSerialized }.
+   */
+  function mountAllowlistPicker(root, { options = [], selected = "", placeholder = "Add…", portal = false } = {}) {
+    if (!root) return { getValues: () => [], getSerialized: () => "", setSerialized: () => {} };
+    const catalog = (options || [])
+      .map((o) => ({
+        id: String(o.id || "").trim(),
+        label: String(o.label || o.id || "").trim(),
+      }))
+      .filter((o) => o.id && o.label);
+    const byId = new Map(catalog.map((o) => [o.id.toLowerCase(), o]));
+    const selectedRows = [];
+    const seen = new Set();
+
+    function addValue(id, { silent = false } = {}) {
+      const key = String(id || "").trim();
+      if (!key) return false;
+      if (key.toLowerCase() === "any") {
+        selectedRows.splice(0, selectedRows.length, { id: "any", label: byId.get("any")?.label || "Any (unbounded)" });
+        seen.clear();
+        seen.add("any");
+        if (!silent) render();
+        return true;
+      }
+      if (seen.has("any")) {
+        selectedRows.splice(0, selectedRows.length);
+        seen.clear();
+      }
+      if (seen.has(key.toLowerCase())) return false;
+      const opt = byId.get(key.toLowerCase()) || { id: key, label: key };
+      seen.add(key.toLowerCase());
+      selectedRows.push(opt);
+      if (!silent) render();
+      return true;
+    }
+
+    parseAllowlist(selected).forEach((id) => addValue(id, { silent: true }));
+
+    root.classList.add("name-picker", "allowlist-picker");
+    root.innerHTML = `<div class="name-picker-badges" data-badges></div>`;
+    const badgesEl = root.querySelector("[data-badges]");
+    const suggestEl = document.createElement("ul");
+    suggestEl.className = "name-suggest";
+    suggestEl.hidden = true;
+    if (!portal) root.appendChild(suggestEl);
+    const input = document.createElement("input");
+    input.type = "search";
+    input.className = "name-picker-input";
+    input.placeholder = placeholder;
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("aria-autocomplete", "list");
+    badgesEl.appendChild(input);
+
+    let activeIndex = -1;
+    let filtered = [];
+
+    function getValues() {
+      return selectedRows.map((r) => r.id);
+    }
+
+    function getSerialized() {
+      return serializeAllowlist(getValues());
+    }
+
+    function setSerialized(raw) {
+      selectedRows.splice(0, selectedRows.length);
+      seen.clear();
+      parseAllowlist(raw).forEach((id) => addValue(id, { silent: true }));
+      render();
+    }
+
+    function placeSuggest() {
+      if (!portal) return;
+      const rect = root.getBoundingClientRect();
+      suggestEl.style.position = "fixed";
+      suggestEl.style.left = `${Math.round(rect.left)}px`;
+      suggestEl.style.top = `${Math.round(rect.bottom + 4)}px`;
+      suggestEl.style.width = `${Math.max(Math.round(rect.width), 200)}px`;
+      suggestEl.style.right = "auto";
+      suggestEl.style.zIndex = "1200";
+    }
+
+    function hideSuggest() {
+      suggestEl.hidden = true;
+      suggestEl.innerHTML = "";
+      activeIndex = -1;
+      filtered = [];
+      if (portal && suggestEl.parentNode) suggestEl.remove();
+    }
+
+    function removeValue(id) {
+      const idx = selectedRows.findIndex((r) => r.id.toLowerCase() === String(id).toLowerCase());
+      if (idx < 0) return;
+      selectedRows.splice(idx, 1);
+      seen.delete(String(id).toLowerCase());
+      render();
+    }
+
+    function render() {
+      badgesEl.querySelectorAll(".name-badge").forEach((el) => el.remove());
+      selectedRows.forEach((row) => {
+        const badge = document.createElement("span");
+        badge.className = "name-badge";
+        badge.innerHTML = `<span>${escapeHtml(row.label)}</span>`;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "name-badge-remove";
+        btn.setAttribute("aria-label", `Remove ${row.label}`);
+        btn.textContent = "×";
+        btn.addEventListener("click", () => {
+          removeValue(row.id);
+          input.focus();
+        });
+        badge.appendChild(btn);
+        badgesEl.insertBefore(badge, input);
+      });
+      input.placeholder = selectedRows.length ? "Add…" : placeholder;
+    }
+
+    function matchSuggestions(q) {
+      const query = String(q || "").trim().toLowerCase();
+      return catalog
+        .filter((o) => {
+          if (seen.has(o.id.toLowerCase())) return false;
+          if (!query) return true;
+          return `${o.label} ${o.id}`.toLowerCase().includes(query);
+        })
+        .slice(0, 10);
+    }
+
+    function paintActive() {
+      suggestEl.querySelectorAll("button").forEach((btn, i) => {
+        btn.setAttribute("aria-selected", i === activeIndex ? "true" : "false");
+      });
+    }
+
+    function showSuggest(q) {
+      filtered = matchSuggestions(q);
+      activeIndex = filtered.length ? 0 : -1;
+      if (!filtered.length) {
+        hideSuggest();
+        return;
+      }
+      if (portal && !suggestEl.parentNode) document.body.appendChild(suggestEl);
+      placeSuggest();
+      suggestEl.hidden = false;
+      suggestEl.innerHTML = "";
+      filtered.forEach((row, i) => {
+        const li = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.setAttribute("aria-selected", i === activeIndex ? "true" : "false");
+        btn.innerHTML = `<strong>${escapeHtml(row.label)}</strong>`;
+        btn.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          addValue(row.id);
+          input.value = "";
+          hideSuggest();
+          input.focus();
+        });
+        li.appendChild(btn);
+        suggestEl.appendChild(li);
+      });
+    }
+
+    input.addEventListener("input", () => showSuggest(input.value));
+    input.addEventListener("focus", () => showSuggest(input.value));
+    input.addEventListener("blur", () => setTimeout(hideSuggest, 120));
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" && filtered.length) {
+        e.preventDefault();
+        activeIndex = (activeIndex + 1) % filtered.length;
+        paintActive();
+        return;
+      }
+      if (e.key === "ArrowUp" && filtered.length) {
+        e.preventDefault();
+        activeIndex = (activeIndex - 1 + filtered.length) % filtered.length;
+        paintActive();
+        return;
+      }
+      if (e.key === "Escape") {
+        hideSuggest();
+        return;
+      }
+      if (e.key === "Backspace" && !input.value && selectedRows.length) {
+        removeValue(selectedRows[selectedRows.length - 1].id);
+        return;
+      }
+      if ((e.key === "Enter" || e.key === "Tab") && filtered.length && activeIndex >= 0) {
+        e.preventDefault();
+        addValue(filtered[activeIndex].id);
+        input.value = "";
+        hideSuggest();
+      }
+    });
+    if (portal) {
+      window.addEventListener("scroll", () => {
+        if (!suggestEl.hidden) placeSuggest();
+      }, true);
+      window.addEventListener("resize", () => {
+        if (!suggestEl.hidden) placeSuggest();
+      });
+    }
+
+    render();
+    return { getValues, getSerialized, setSerialized };
   }
 
   async function refreshUsersView(keepSelected = true) {
@@ -386,8 +557,8 @@
           <span class="hint" id="roleDefaultsHint">Applies to all users of this role without overrides.</span>
         </div>
         <div class="role-defaults-fields">
-          <div class="field"><label>Mode</label><select id="roleMode" class="allowlist-select" multiple size="6"></select><div class="field-hint">Multi-select · Any = unbounded</div></div>
-          <div class="field"><label>LLM</label><select id="roleLlm" class="allowlist-select" multiple size="6"></select><div class="field-hint">Multi-select · Any = unbounded</div></div>
+          <div class="field"><label>Mode</label><div id="roleMode" class="allowlist-picker"></div><div class="field-hint">Chip multi-select · Any = unbounded</div></div>
+          <div class="field"><label>LLM</label><div id="roleLlm" class="allowlist-picker"></div><div class="field-hint">Chip multi-select · Any = unbounded</div></div>
           <div class="field"><label>Budget</label><input id="roleBudget" type="number" min="0" /></div>
           <div class="actions"><button type="button" class="btn btn-primary" id="saveRoleDefaultsBtn">Save</button></div>
         </div>
@@ -398,13 +569,11 @@
 
   function captureRoleDraft() {
     if (!roleDraft) roleDraft = roleDefaultsFromSettings(appSettings);
-    const modeEl = document.getElementById("roleMode");
-    const llmEl = document.getElementById("roleLlm");
     const budgetEl = document.getElementById("roleBudget");
-    if (!modeEl || !llmEl || !budgetEl) return;
+    if (!budgetEl || !roleModePicker || !roleLlmPicker) return;
     roleDraft[selectedRoleDefaults] = {
-      mode: serializeAllowlist(selectedAllowlist(modeEl)),
-      llm: serializeAllowlist(selectedAllowlist(llmEl)),
+      mode: roleModePicker.getSerialized(),
+      llm: roleLlmPicker.getSerialized(),
       budget: Number(budgetEl.value),
     };
   }
@@ -418,12 +587,18 @@
     const budgetEl = document.getElementById("roleBudget");
     if (!modeEl || !llmEl || !budgetEl) return;
 
-    modeEl.innerHTML = modeOptions(draft.mode || (role === "admin" ? "" : "vector"));
-    llmEl.innerHTML = llmOptions(draft.llm || null, false);
-    setAllowlistSelection(modeEl, draft.mode || (role === "admin" ? "" : "vector"));
-    setAllowlistSelection(llmEl, draft.llm || "");
-    bindAnyExclusive(modeEl);
-    bindAnyExclusive(llmEl);
+    const modeSelected = draft.mode || (role === "admin" ? "" : "vector");
+    const llmSelected = draft.llm || "";
+    roleModePicker = mountAllowlistPicker(modeEl, {
+      options: modeCatalog(),
+      selected: modeSelected,
+      placeholder: "Add mode…",
+    });
+    roleLlmPicker = mountAllowlistPicker(llmEl, {
+      options: llmCatalog(parseAllowlist(llmSelected)),
+      selected: llmSelected,
+      placeholder: "Add LLM…",
+    });
     budgetEl.value = Number(draft.budget || 0);
 
     document.querySelectorAll(".role-toggle button").forEach((btn) => {
@@ -629,18 +804,14 @@
             </td>
             <td>
               <div class="cell-with-badge cell-allowlist">
-                <select class="u-mode allowlist-select" data-id="${u.id}" multiple size="4" title="Role default: ${escapeAttr(modeLabel(u.role_default_response_mode))}">
-                  ${modeOptions(modeVal)}
-                </select>
+                <div class="u-mode allowlist-picker" data-id="${u.id}" title="Role default: ${escapeAttr(modeLabel(u.role_default_response_mode))}"></div>
                 ${u.mode_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}
                 ${!u.mode_is_override ? `<div class="meta allowlist-inherit">Role: ${escapeHtml(modeLabel(u.role_default_response_mode))}</div>` : ""}
               </div>
             </td>
             <td>
               <div class="cell-with-badge cell-allowlist">
-                <select class="u-llm allowlist-select" data-id="${u.id}" multiple size="4" title="Role default: ${escapeAttr(llmLabel(u.role_default_llm_choice))}">
-                  ${llmOptions(llmVal, false)}
-                </select>
+                <div class="u-llm allowlist-picker" data-id="${u.id}" title="Role default: ${escapeAttr(llmLabel(u.role_default_llm_choice))}"></div>
                 ${u.llm_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}
                 ${!u.llm_is_override ? `<div class="meta allowlist-inherit">Role: ${escapeHtml(llmLabel(u.role_default_llm_choice))}</div>` : ""}
               </div>
@@ -681,21 +852,47 @@
     });
     syncUsersDeleteButton();
 
-    tableBody.querySelectorAll("select.allowlist-select").forEach((el) => bindAnyExclusive(el));
+    userAllowlistPickers.clear();
+    rows.forEach((u) => {
+      const modeRoot = tableBody.querySelector(`.u-mode[data-id="${u.id}"]`);
+      const llmRoot = tableBody.querySelector(`.u-llm[data-id="${u.id}"]`);
+      const modeVal = u.default_response_mode || "";
+      const llmVal = u.default_llm_choice || "";
+      if (modeRoot) {
+        userAllowlistPickers.set(
+          `${u.id}-mode`,
+          mountAllowlistPicker(modeRoot, {
+            options: modeCatalog(),
+            selected: modeVal,
+            placeholder: "Add mode…",
+            portal: true,
+          })
+        );
+      }
+      if (llmRoot) {
+        userAllowlistPickers.set(
+          `${u.id}-llm`,
+          mountAllowlistPicker(llmRoot, {
+            options: llmCatalog(parseAllowlist(llmVal)),
+            selected: llmVal,
+            placeholder: "Add LLM…",
+            portal: true,
+          })
+        );
+      }
+    });
 
     tableBody.querySelectorAll(".u-save").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const id = Number(btn.dataset.id);
         const status = document.getElementById("usersGridStatus");
         try {
-          const modeEl = tableBody.querySelector(`.u-mode[data-id="${id}"]`);
-          const llmEl = tableBody.querySelector(`.u-llm[data-id="${id}"]`);
           const budgetEl = tableBody.querySelector(`.u-budget[data-id="${id}"]`);
           const roleEl = tableBody.querySelector(`.u-role[data-id="${id}"]`);
           const current = users.find((x) => x.id === id);
           const budget = Number(budgetEl.value);
-          const modeAllow = serializeAllowlist(selectedAllowlist(modeEl));
-          const llmAllow = serializeAllowlist(selectedAllowlist(llmEl));
+          const modeAllow = userAllowlistPickers.get(`${id}-mode`)?.getSerialized() || "";
+          const llmAllow = userAllowlistPickers.get(`${id}-llm`)?.getSerialized() || "";
           const body = {
             role: roleEl.value,
             default_response_mode: modeAllow || null,
@@ -781,11 +978,9 @@
     detailTitle.textContent = "Users";
     detailBody.innerHTML = `<p class="status">Loading…</p>`;
     try {
-      await loadSettings();
       await loadConfigChoices();
       const groups = [...new Set(users.map((u) => u.group_name).filter(Boolean))].sort();
       detailBody.innerHTML = `
-        ${roleDefaultsMarkup()}
         <div class="users-toolbar">
           <input id="userFilter" placeholder="Filter username…" />
           <select id="groupFilter">
@@ -822,7 +1017,6 @@
           </table>
         </div>
       `;
-      bindRoleDefaultsPanel();
       document.getElementById("userFilter")?.addEventListener("input", paintUsersTable);
       document.getElementById("groupFilter")?.addEventListener("change", paintUsersTable);
       document.getElementById("roleFilter")?.addEventListener("change", paintUsersTable);
@@ -1049,15 +1243,15 @@
     wrap.className = "user-editor";
     wrap.innerHTML = `
       <h3 style="font-size:14px;margin-bottom:10px;">Create user</h3>
-      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Leave budget blank to inherit the role default. Empty Mode/LLM multi-selects also inherit.</p>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Leave budget blank to inherit the role default. Empty Mode/LLM chips also inherit.</p>
       <div class="grid-2">
         <div class="field"><label>Username</label><input id="cUsername" /></div>
         <div class="field"><label>Password</label><input id="cPassword" type="password" /></div>
         <div class="field"><label>Budget override (optional)</label><input id="cLimit" type="number" min="0" placeholder="Role default" /></div>
         <div class="field"><label>Group</label><input id="cGroup" placeholder="optional" /></div>
         <div class="field"><label>Role</label><select id="cRole">${roleOptions("student")}</select></div>
-        <div class="field"><label>Mode override</label><select id="cMode" class="allowlist-select" multiple size="5">${modeOptions(null)}</select><div class="field-hint">None selected = role default</div></div>
-        <div class="field"><label>LLM override</label><select id="cLlm" class="allowlist-select" multiple size="5">${llmOptions(null, false)}</select><div class="field-hint">None selected = role default</div></div>
+        <div class="field"><label>Mode override</label><div id="cMode" class="allowlist-picker"></div><div class="field-hint">None selected = role default</div></div>
+        <div class="field"><label>LLM override</label><div id="cLlm" class="allowlist-picker"></div><div class="field-hint">None selected = role default</div></div>
       </div>
       <div class="field"><label>Admin notes</label><textarea id="cNotes" rows="3"></textarea></div>
       <div class="actions">
@@ -1072,10 +1266,16 @@
     } else {
       detailBody.prepend(wrap);
     }
-    const cMode = document.getElementById("cMode");
-    const cLlm = document.getElementById("cLlm");
-    bindAnyExclusive(cMode);
-    bindAnyExclusive(cLlm);
+    const cModePicker = mountAllowlistPicker(document.getElementById("cMode"), {
+      options: modeCatalog(),
+      selected: "",
+      placeholder: "Add mode…",
+    });
+    const cLlmPicker = mountAllowlistPicker(document.getElementById("cLlm"), {
+      options: llmCatalog(),
+      selected: "",
+      placeholder: "Add LLM…",
+    });
     document.getElementById("cancelCreateBtn")?.addEventListener("click", () => {
       if (host.id === "userEditor") host.innerHTML = "";
       else wrap.remove();
@@ -1084,8 +1284,8 @@
       const status = document.getElementById("createStatus");
       try {
         const limitRaw = document.getElementById("cLimit").value;
-        const modeAllow = serializeAllowlist(selectedAllowlist(cMode));
-        const llmAllow = serializeAllowlist(selectedAllowlist(cLlm));
+        const modeAllow = cModePicker.getSerialized();
+        const llmAllow = cLlmPicker.getSerialized();
         const payload = {
           username: document.getElementById("cUsername").value,
           password: document.getElementById("cPassword").value,
