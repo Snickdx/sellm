@@ -44,6 +44,8 @@
     let analyser = null;
     let meterRaf = 0;
     let meterData = null;
+    let meterTracks = [];
+    let speechWanted = Boolean(onTranscript);
 
     root.innerHTML = `
       <div class="video-room compact" aria-label="Video recording">
@@ -141,6 +143,14 @@
       }
       analyser = null;
       meterData = null;
+      meterTracks.forEach((t) => {
+        try {
+          t.stop();
+        } catch (_) {
+          /* ignore */
+        }
+      });
+      meterTracks = [];
       if (meterFill) meterFill.style.width = "0%";
       if (meterTrack) meterTrack.setAttribute("aria-valuenow", "0");
       if (meterState) meterState.textContent = "Off";
@@ -173,15 +183,22 @@
     async function startMeter(mediaStream) {
       stopMeter();
       const audioTracks = mediaStream?.getAudioTracks?.() || [];
-      if (!audioTracks.length || typeof AudioContext === "undefined" && typeof webkitAudioContext === "undefined") {
+      if (
+        !audioTracks.length ||
+        (typeof AudioContext === "undefined" && typeof webkitAudioContext === "undefined")
+      ) {
         if (meterState) meterState.textContent = "Meter unavailable";
         return;
       }
       try {
+        // Clone tracks so Web Audio metering does not contend with
+        // SpeechRecognition / MediaRecorder on the live interview stream.
+        meterTracks = audioTracks.map((t) => t.clone());
+        const meterStream = new MediaStream(meterTracks);
         const Ctx = window.AudioContext || window.webkitAudioContext;
         audioCtx = new Ctx();
         if (audioCtx.state === "suspended") await audioCtx.resume().catch(() => undefined);
-        const source = audioCtx.createMediaStreamSource(mediaStream);
+        const source = audioCtx.createMediaStreamSource(meterStream);
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 1024;
         analyser.smoothingTimeConstant = 0.8;
@@ -189,6 +206,14 @@
         meterData = new Uint8Array(analyser.fftSize);
         tickMeter();
       } catch (_) {
+        meterTracks.forEach((t) => {
+          try {
+            t.stop();
+          } catch (__) {
+            /* ignore */
+          }
+        });
+        meterTracks = [];
         if (meterState) meterState.textContent = "Meter unavailable";
       }
     }
@@ -262,6 +287,7 @@
         if (kind === "audio") {
           localStorage.setItem(LS_MIC, deviceId);
           await startMeter(stream);
+          restartSpeech();
         } else {
           localStorage.setItem(LS_CAM, deviceId);
           if (video) {
@@ -279,15 +305,8 @@
     }
 
     async function stopTracks() {
+      stopSpeech();
       stopMeter();
-      if (recognition) {
-        try {
-          recognition.abort();
-        } catch (_) {
-          /* ignore */
-        }
-        recognition = null;
-      }
       if (stream) {
         stream.getTracks().forEach((t) => t.stop());
         stream = null;
@@ -348,14 +367,36 @@
       }
     }
 
+    function stopSpeech() {
+      if (!recognition) return;
+      const rec = recognition;
+      recognition = null;
+      try {
+        rec.onresult = null;
+        rec.onerror = null;
+        rec.onend = null;
+        rec.abort();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+
+    function restartSpeech() {
+      stopSpeech();
+      if (!cancelled && speechWanted) startSpeech();
+    }
+
     function startSpeech() {
       const Ctor = getSpeechRecognitionCtor();
-      if (!Ctor || cancelled) {
+      if (!Ctor || cancelled || !speechWanted) {
         setMeta(
-          Ctor ? "Mic ready — watch the level meter" : "Mic ready · speech API unavailable",
+          !Ctor
+            ? "Mic ready · speech API unavailable"
+            : "Mic ready — watch the level meter",
         );
         return;
       }
+      stopSpeech();
       recognition = new Ctor();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -371,20 +412,35 @@
         }
         if (interim) onTranscript?.(interim, false);
       };
-      recognition.onerror = () => setMeta("Mic ready — watch the level meter");
+      recognition.onerror = (event) => {
+        const code = String(event?.error || "");
+        if (code === "not-allowed" || code === "service-not-allowed") {
+          setMeta("Speech blocked — allow mic in the browser");
+          stopSpeech();
+          return;
+        }
+        if (code === "audio-capture") {
+          setMeta("Speech lost mic — try Refresh devices");
+          return;
+        }
+        // no-speech / aborted / network: onend will restart
+        setMeta(code === "network" ? "Speech reconnecting…" : "Listening…");
+      };
       recognition.onend = () => {
-        if (!cancelled && recognition) {
+        if (cancelled || !speechWanted || !recognition) return;
+        window.setTimeout(() => {
+          if (cancelled || !speechWanted || !recognition) return;
           try {
             recognition.start();
             setMeta("Listening…");
           } catch (_) {
-            setMeta("Mic ready — watch the level meter");
+            setMeta("Mic ready — tap Troubleshoot if speech stays quiet");
           }
-        }
+        }, 120);
       };
       try {
         recognition.start();
-        setMeta("Listening… speak to test the meter");
+        setMeta("Listening…");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Speech recognition unavailable");
         setMeta("Mic ready — watch the level meter");
@@ -428,7 +484,6 @@
         }
         if (empty) empty.hidden = true;
 
-        await startMeter(stream);
         await refreshDeviceLists();
 
         mime = pickMimeType();
@@ -446,7 +501,9 @@
           setError(err instanceof Error ? err.message : "Could not mark recording started");
         }
 
+        // Start speech before metering so STT claims the mic first.
         startSpeech();
+        await startMeter(stream);
       } catch (err) {
         setError(
           err instanceof Error
@@ -490,9 +547,11 @@
 
     function teardownMedia({ upload = true } = {}) {
       cancelled = true;
+      speechWanted = false;
       if (navigator.mediaDevices?.removeEventListener) {
         navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange);
       }
+      stopSpeech();
       stopMeter();
       const sid = activeSessionId;
       const rec = recorder;
@@ -502,14 +561,6 @@
       recorder = null;
       stream = null;
       chunks = [];
-      if (recognition) {
-        try {
-          recognition.abort();
-        } catch (_) {
-          /* ignore */
-        }
-        recognition = null;
-      }
       const uploadChunks = () => {
         if (!upload || !ch.length) return;
         const blob = new Blob(ch, { type: m });
