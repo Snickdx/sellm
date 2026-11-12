@@ -124,6 +124,8 @@ class LoginResponse(BaseModel):
     username: str
     is_admin: Optional[bool] = False
     role: Optional[str] = None  # admin | tester | student
+    can_select_mode: Optional[bool] = None
+    can_select_model: Optional[bool] = None
     can_select_mode_model: Optional[bool] = True
     group_name: Optional[str] = None
     default_response_mode: Optional[str] = None

@@ -78,7 +78,9 @@ class Team(SQLModel, table=True):
     name: str
     scenario_slug: Optional[str] = None
     scenario_version: Optional[str] = None
-    # Real names for the exit interview (set in Admin → Teams).
+    # Class-list students assigned as exit-interview participants (ClassStudent.id).
+    roster_member_ids: Optional[list[str]] = Field(default=None, sa_column=Column(JSON))
+    # Derived display names from the class list (kept for exit-session compatibility).
     participant_names: Optional[list[str]] = Field(default=None, sa_column=Column(JSON))
     invite_code: str = Field(index=True, unique=True)
     created_at: datetime = Field(default_factory=_utc_now, index=True)

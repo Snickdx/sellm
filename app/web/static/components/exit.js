@@ -580,9 +580,9 @@
 
     const teamSwitcher =
       state.teams.length > 1
-        ? `<label class="hint" style="display:block;padding:10px 14px 0;margin:0">
-            Group
-            <select id="exitTeamSelect" aria-label="Group" style="display:block;margin-top:4px;width:100%;max-width:280px">
+        ? `<label class="interview-hub-group">
+            <span>Group</span>
+            <select id="exitTeamSelect" aria-label="Group">
               ${state.teams
                 .map(
                   (t) =>
@@ -671,8 +671,10 @@
     root.innerHTML = `
       <div class="interview-hub ${screenClass}">
         <section class="interview-hub-list" aria-label="Past interviews">
-          <div class="interview-hub-list-header">Past interviews</div>
-          ${teamSwitcher}
+          <div class="interview-hub-list-header">
+            <span class="interview-hub-list-title">Past interviews</span>
+            ${teamSwitcher}
+          </div>
           ${listHtml}
         </section>
         <section class="interview-hub-detail" aria-label="Interview details">${detailHtml}</section>

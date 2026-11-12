@@ -132,3 +132,8 @@ def ensure_course_columns(engine: Engine) -> None:
             conn.exec_driver_sql("ALTER TABLE teams ADD COLUMN participant_names JSON")
     except Exception:
         pass
+    try:
+        with engine.begin() as conn:
+            conn.exec_driver_sql("ALTER TABLE teams ADD COLUMN roster_member_ids JSON")
+    except Exception:
+        pass

@@ -221,10 +221,75 @@
     appSettings = await api("/api/admin/settings");
   }
 
-  function modeOptions(selected) {
-    return MODES.map(
-      ([v, label]) => `<option value="${v}" ${selected === v ? "selected" : ""}>${label}</option>`
-    ).join("");
+  function parseAllowlist(raw) {
+    if (raw == null || raw === "") return [];
+    return String(raw)
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }
+
+  function serializeAllowlist(values) {
+    const cleaned = [];
+    const seen = new Set();
+    (values || []).forEach((v) => {
+      const value = String(v || "").trim();
+      if (!value) return;
+      const key = value.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      cleaned.push(value);
+    });
+    if (!cleaned.length) return "";
+    if (cleaned.some((v) => v.toLowerCase() === "any")) return "any";
+    return cleaned.join(",");
+  }
+
+  function selectedAllowlist(selectEl) {
+    if (!selectEl) return [];
+    return [...selectEl.selectedOptions].map((o) => o.value).filter(Boolean);
+  }
+
+  function setAllowlistSelection(selectEl, raw) {
+    if (!selectEl) return;
+    const selected = new Set(parseAllowlist(raw).map((v) => v.toLowerCase()));
+    const wantAny = selected.has("any");
+    [...selectEl.options].forEach((opt) => {
+      if (!opt.value) {
+        opt.selected = false;
+        return;
+      }
+      if (wantAny) opt.selected = opt.value === "any";
+      else opt.selected = selected.has(opt.value.toLowerCase());
+    });
+  }
+
+  function bindAnyExclusive(selectEl) {
+    if (!selectEl || selectEl.dataset.anyExclusive === "1") return;
+    selectEl.dataset.anyExclusive = "1";
+    let prev = new Set(selectedAllowlist(selectEl));
+    selectEl.addEventListener("change", () => {
+      const now = selectedAllowlist(selectEl);
+      const nowSet = new Set(now);
+      if (nowSet.has("any") && !prev.has("any")) {
+        setAllowlistSelection(selectEl, "any");
+      } else if (nowSet.has("any") && now.length > 1) {
+        setAllowlistSelection(
+          selectEl,
+          serializeAllowlist(now.filter((v) => v !== "any"))
+        );
+      }
+      prev = new Set(selectedAllowlist(selectEl));
+    });
+  }
+
+  function modeOptions(selectedRaw) {
+    const selected = new Set(parseAllowlist(selectedRaw).map((v) => v.toLowerCase()));
+    const wantAny = selected.has("any");
+    return MODES.map(([v, label]) => {
+      const isSel = wantAny ? v === "any" : selected.has(v.toLowerCase());
+      return `<option value="${v}" ${isSel ? "selected" : ""}>${label}</option>`;
+    }).join("");
   }
 
   function roleOptions(selected) {
@@ -233,29 +298,47 @@
     ).join("");
   }
 
-  function llmOptions(selected, includeBlank = true, blankLabel = "Role default") {
+  function llmOptions(selectedRaw, includeBlank = false, blankLabel = "Role default") {
+    const selected = new Set(parseAllowlist(selectedRaw).map((v) => v.toLowerCase()));
+    const wantAny = selected.has("any");
     const opts = [];
     if (includeBlank) opts.push(`<option value="">${escapeHtml(blankLabel)}</option>`);
+    opts.push(`<option value="any" ${wantAny ? "selected" : ""}>Any (unbounded)</option>`);
     llmChoices.forEach((c) => {
+      const isSel = !wantAny && selected.has(String(c.id).toLowerCase());
       opts.push(
-        `<option value="${escapeAttr(c.id)}" ${selected === c.id ? "selected" : ""}>${escapeHtml(c.label)}</option>`
+        `<option value="${escapeAttr(c.id)}" ${isSel ? "selected" : ""}>${escapeHtml(c.label)}</option>`
       );
     });
-    if (selected && !llmChoices.some((c) => c.id === selected)) {
-      opts.push(`<option value="${escapeAttr(selected)}" selected>${escapeHtml(selected)} (saved)</option>`);
-    }
+    parseAllowlist(selectedRaw).forEach((id) => {
+      if (id === "any") return;
+      if (!llmChoices.some((c) => c.id === id)) {
+        opts.push(
+          `<option value="${escapeAttr(id)}" ${!wantAny && selected.has(id.toLowerCase()) ? "selected" : ""}>${escapeHtml(id)} (saved)</option>`
+        );
+      }
+    });
     return opts.join("");
   }
 
-  function modeLabel(id) {
-    const hit = MODES.find(([v]) => v === id);
-    return hit ? hit[1] : id || "—";
+  function modeLabel(raw) {
+    const parts = parseAllowlist(raw);
+    if (!parts.length) return "—";
+    if (parts.some((p) => p.toLowerCase() === "any")) return "Any (unbounded)";
+    return parts.map((id) => {
+      const hit = MODES.find(([v]) => v === id);
+      return hit ? hit[1] : id;
+    }).join(", ");
   }
 
-  function llmLabel(id) {
-    if (!id) return "Auto / role default";
-    const hit = llmChoices.find((c) => c.id === id);
-    return hit ? hit.label : id;
+  function llmLabel(raw) {
+    const parts = parseAllowlist(raw);
+    if (!parts.length) return "Auto / role default";
+    if (parts.some((p) => p.toLowerCase() === "any")) return "Any (unbounded)";
+    return parts.map((id) => {
+      const hit = llmChoices.find((c) => c.id === id);
+      return hit ? hit.label : id;
+    }).join(", ");
   }
 
   async function refreshUsersView(keepSelected = true) {
@@ -303,8 +386,8 @@
           <span class="hint" id="roleDefaultsHint">Applies to all users of this role without overrides.</span>
         </div>
         <div class="role-defaults-fields">
-          <div class="field"><label>Mode</label><select id="roleMode"></select></div>
-          <div class="field"><label>LLM</label><select id="roleLlm"></select></div>
+          <div class="field"><label>Mode</label><select id="roleMode" class="allowlist-select" multiple size="6"></select><div class="field-hint">Multi-select · Any = unbounded</div></div>
+          <div class="field"><label>LLM</label><select id="roleLlm" class="allowlist-select" multiple size="6"></select><div class="field-hint">Multi-select · Any = unbounded</div></div>
           <div class="field"><label>Budget</label><input id="roleBudget" type="number" min="0" /></div>
           <div class="actions"><button type="button" class="btn btn-primary" id="saveRoleDefaultsBtn">Save</button></div>
         </div>
@@ -320,8 +403,8 @@
     const budgetEl = document.getElementById("roleBudget");
     if (!modeEl || !llmEl || !budgetEl) return;
     roleDraft[selectedRoleDefaults] = {
-      mode: modeEl.value,
-      llm: llmEl.value,
+      mode: serializeAllowlist(selectedAllowlist(modeEl)),
+      llm: serializeAllowlist(selectedAllowlist(llmEl)),
       budget: Number(budgetEl.value),
     };
   }
@@ -335,22 +418,24 @@
     const budgetEl = document.getElementById("roleBudget");
     if (!modeEl || !llmEl || !budgetEl) return;
 
-    if (role === "admin") {
-      modeEl.innerHTML = `<option value="">Same as tester</option>${modeOptions(draft.mode || null)}`;
-      llmEl.innerHTML = `<option value="">Same as tester</option>${llmOptions(draft.llm || null, false)}`;
-    } else {
-      modeEl.innerHTML = modeOptions(draft.mode || "vector");
-      llmEl.innerHTML = `<option value="">Auto</option>${llmOptions(draft.llm || null, false)}`;
-    }
-    modeEl.value = draft.mode || "";
-    llmEl.value = draft.llm || "";
+    modeEl.innerHTML = modeOptions(draft.mode || (role === "admin" ? "" : "vector"));
+    llmEl.innerHTML = llmOptions(draft.llm || null, false);
+    setAllowlistSelection(modeEl, draft.mode || (role === "admin" ? "" : "vector"));
+    setAllowlistSelection(llmEl, draft.llm || "");
+    bindAnyExclusive(modeEl);
+    bindAnyExclusive(llmEl);
     budgetEl.value = Number(draft.budget || 0);
 
     document.querySelectorAll(".role-toggle button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.role === role);
     });
     const hint = document.getElementById("roleDefaultsHint");
-    if (hint) hint.textContent = `Applies to all ${role}s without overrides.`;
+    if (hint) {
+      hint.textContent =
+        role === "admin"
+          ? "Applies to admins without overrides. Empty Mode/LLM = same as tester."
+          : `Applies to all ${role}s without overrides. Multi-select allowed combinations.`;
+    }
   }
 
   function bindRoleDefaultsPanel() {
@@ -543,20 +628,21 @@
               <select class="u-role" data-id="${u.id}">${roleOptions(role)}</select>
             </td>
             <td>
-              <div class="cell-with-badge">
-                <select class="u-mode" data-id="${u.id}">
-                  <option value="">Role (${escapeHtml(modeLabel(u.role_default_response_mode))})</option>
+              <div class="cell-with-badge cell-allowlist">
+                <select class="u-mode allowlist-select" data-id="${u.id}" multiple size="4" title="Role default: ${escapeAttr(modeLabel(u.role_default_response_mode))}">
                   ${modeOptions(modeVal)}
                 </select>
                 ${u.mode_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}
+                ${!u.mode_is_override ? `<div class="meta allowlist-inherit">Role: ${escapeHtml(modeLabel(u.role_default_response_mode))}</div>` : ""}
               </div>
             </td>
             <td>
-              <div class="cell-with-badge">
-                <select class="u-llm" data-id="${u.id}">
-                  ${llmOptions(llmVal, true, `Role (${llmLabel(u.role_default_llm_choice)})`)}
+              <div class="cell-with-badge cell-allowlist">
+                <select class="u-llm allowlist-select" data-id="${u.id}" multiple size="4" title="Role default: ${escapeAttr(llmLabel(u.role_default_llm_choice))}">
+                  ${llmOptions(llmVal, false)}
                 </select>
                 ${u.llm_is_override ? '<span class="badge override">override</span>' : '<span class="badge inherit">role</span>'}
+                ${!u.llm_is_override ? `<div class="meta allowlist-inherit">Role: ${escapeHtml(llmLabel(u.role_default_llm_choice))}</div>` : ""}
               </div>
             </td>
             <td>
@@ -595,6 +681,8 @@
     });
     syncUsersDeleteButton();
 
+    tableBody.querySelectorAll("select.allowlist-select").forEach((el) => bindAnyExclusive(el));
+
     tableBody.querySelectorAll(".u-save").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const id = Number(btn.dataset.id);
@@ -606,12 +694,14 @@
           const roleEl = tableBody.querySelector(`.u-role[data-id="${id}"]`);
           const current = users.find((x) => x.id === id);
           const budget = Number(budgetEl.value);
+          const modeAllow = serializeAllowlist(selectedAllowlist(modeEl));
+          const llmAllow = serializeAllowlist(selectedAllowlist(llmEl));
           const body = {
             role: roleEl.value,
-            default_response_mode: modeEl.value || null,
-            clear_default_response_mode: !modeEl.value,
-            default_llm_choice: llmEl.value || null,
-            clear_default_llm_choice: !llmEl.value,
+            default_response_mode: modeAllow || null,
+            clear_default_response_mode: !modeAllow,
+            default_llm_choice: llmAllow || null,
+            clear_default_llm_choice: !llmAllow,
           };
           if (current && budget === Number(current.role_token_limit)) {
             body.reset_budget_to_role = true;
@@ -959,15 +1049,15 @@
     wrap.className = "user-editor";
     wrap.innerHTML = `
       <h3 style="font-size:14px;margin-bottom:10px;">Create user</h3>
-      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Leave budget blank to inherit the role default. Mode/LLM blank also inherit.</p>
+      <p style="font-size:12px;color:#64748b;margin-bottom:10px;">Leave budget blank to inherit the role default. Empty Mode/LLM multi-selects also inherit.</p>
       <div class="grid-2">
         <div class="field"><label>Username</label><input id="cUsername" /></div>
         <div class="field"><label>Password</label><input id="cPassword" type="password" /></div>
         <div class="field"><label>Budget override (optional)</label><input id="cLimit" type="number" min="0" placeholder="Role default" /></div>
         <div class="field"><label>Group</label><input id="cGroup" placeholder="optional" /></div>
         <div class="field"><label>Role</label><select id="cRole">${roleOptions("student")}</select></div>
-        <div class="field"><label>Mode override</label><select id="cMode"><option value="">Role default</option>${modeOptions(null)}</select></div>
-        <div class="field"><label>LLM override</label><select id="cLlm">${llmOptions(null, true)}</select></div>
+        <div class="field"><label>Mode override</label><select id="cMode" class="allowlist-select" multiple size="5">${modeOptions(null)}</select><div class="field-hint">None selected = role default</div></div>
+        <div class="field"><label>LLM override</label><select id="cLlm" class="allowlist-select" multiple size="5">${llmOptions(null, false)}</select><div class="field-hint">None selected = role default</div></div>
       </div>
       <div class="field"><label>Admin notes</label><textarea id="cNotes" rows="3"></textarea></div>
       <div class="actions">
@@ -982,6 +1072,10 @@
     } else {
       detailBody.prepend(wrap);
     }
+    const cMode = document.getElementById("cMode");
+    const cLlm = document.getElementById("cLlm");
+    bindAnyExclusive(cMode);
+    bindAnyExclusive(cLlm);
     document.getElementById("cancelCreateBtn")?.addEventListener("click", () => {
       if (host.id === "userEditor") host.innerHTML = "";
       else wrap.remove();
@@ -990,14 +1084,16 @@
       const status = document.getElementById("createStatus");
       try {
         const limitRaw = document.getElementById("cLimit").value;
+        const modeAllow = serializeAllowlist(selectedAllowlist(cMode));
+        const llmAllow = serializeAllowlist(selectedAllowlist(cLlm));
         const payload = {
           username: document.getElementById("cUsername").value,
           password: document.getElementById("cPassword").value,
           group_name: document.getElementById("cGroup").value || null,
           admin_notes: document.getElementById("cNotes").value || null,
           role: document.getElementById("cRole").value,
-          default_response_mode: document.getElementById("cMode").value || null,
-          default_llm_choice: document.getElementById("cLlm").value || null,
+          default_response_mode: modeAllow || null,
+          default_llm_choice: llmAllow || null,
         };
         if (limitRaw !== "") {
           payload.token_limit = Number(limitRaw);
@@ -1430,6 +1526,13 @@
     });
   }
 
+  function generateTempPassword(length = 12) {
+    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
+    return [...bytes].map((b) => alphabet[b % alphabet.length]).join("");
+  }
+
   function paintTeamDetail(team, students, scenarios, rosterCatalog) {
     if (!team) {
       detailTitle.textContent = "Group setup";
@@ -1437,15 +1540,16 @@
       return;
     }
     detailTitle.textContent = team.name || "Group setup";
+    let studentAccounts = [...(students || [])];
     const members = (team.members || []).map((m) => m.username);
-    const studentNames = new Set((students || []).map((u) => u.username));
+    const studentNames = new Set(studentAccounts.map((u) => u.username));
     const selectedLogin =
       members.find((name) => studentNames.has(name)) || members[0] || "";
-    const loginOptions =
-      (students || [])
+    const initialLoginOptions =
+      studentAccounts
         .map((u) => {
           const sel = u.username === selectedLogin ? "selected" : "";
-          return `<option value="${escapeAttr(u.username)}" ${sel}>${escapeHtml(u.username)}</option>`;
+          return `<option value="${escapeAttr(u.username)}" data-id="${escapeAttr(String(u.id))}" ${sel}>${escapeHtml(u.username)}</option>`;
         })
         .join("") || `<option value="">No student accounts</option>`;
     const repoUrl = team.repository?.github_url || "";
@@ -1462,7 +1566,11 @@
           <div id="editTeamMembers"></div>
         </div>
         <div class="field field-span"><label>Student login</label>
-          <select id="editTeamLogin">${loginOptions}</select>
+          <div class="team-login-row">
+            <select id="editTeamLogin">${initialLoginOptions}</select>
+            <button type="button" class="btn btn-secondary" id="resetTeamLoginPwBtn">Reset password</button>
+            <button type="button" class="btn btn-secondary" id="createTeamLoginBtn">Create login</button>
+          </div>
         </div>
       </div>
       <div class="actions" style="margin-top:12px;">
@@ -1476,29 +1584,88 @@
       selected: team.roster_members || [],
       catalog: rosterCatalog || [],
     });
+    const loginSelect = document.getElementById("editTeamLogin");
+    const refreshLoginOptions = (preferUsername) => {
+      if (!loginSelect) return;
+      const current = preferUsername || loginSelect.value || selectedLogin;
+      loginSelect.innerHTML =
+        studentAccounts
+          .map((u) => {
+            const sel = u.username === current ? "selected" : "";
+            return `<option value="${escapeAttr(u.username)}" data-id="${escapeAttr(String(u.id))}" ${sel}>${escapeHtml(u.username)}</option>`;
+          })
+          .join("") || `<option value="">No student accounts</option>`;
+      if (preferUsername) loginSelect.value = preferUsername;
+    };
     document.getElementById("saveTeamDetailsBtn")?.addEventListener("click", async () => {
       const ms = document.getElementById("teamMemberStatus");
       try {
-        const username = document.getElementById("editTeamLogin")?.value.trim();
+        const username = loginSelect?.value.trim();
         if (!username) {
           setStatus(ms, "Pick one student login.", "err");
           return;
         }
+        const rosterIds = memberPicker.getMemberIds();
         await api(`/api/admin/teams/${encodeURIComponent(team.id)}`, {
           method: "PATCH",
           body: JSON.stringify({
             name: document.getElementById("editTeamName")?.value.trim(),
             scenario_slug: document.getElementById("editTeamScenario")?.value.trim() || null,
             github_url: document.getElementById("editTeamRepo")?.value.trim() || null,
-            roster_member_ids: memberPicker.getMemberIds(),
+            roster_member_ids: rosterIds,
           }),
         });
         await api(`/api/admin/teams/${encodeURIComponent(team.id)}/members`, {
           method: "PUT",
           body: JSON.stringify({ usernames: [username] }),
         });
-        setStatus(ms, "Group details saved.", "ok");
+        setStatus(ms, `Group details saved · ${rosterIds.length} member${rosterIds.length === 1 ? "" : "s"}.`, "ok");
+        selectedTeamId = team.id;
         await renderTeams();
+      } catch (e) {
+        setStatus(ms, e.message, "err");
+      }
+    });
+    document.getElementById("resetTeamLoginPwBtn")?.addEventListener("click", async () => {
+      const ms = document.getElementById("teamMemberStatus");
+      const username = loginSelect?.value.trim();
+      const user = studentAccounts.find((u) => u.username === username);
+      if (!user?.id) {
+        setStatus(ms, "Pick a student login first.", "err");
+        return;
+      }
+      await resetUserPassword(user.id, ms);
+    });
+    document.getElementById("createTeamLoginBtn")?.addEventListener("click", async () => {
+      const ms = document.getElementById("teamMemberStatus");
+      const suggested =
+        (document.getElementById("editTeamName")?.value || team.name || "group")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "")
+          .slice(0, 16) || "student";
+      const username = window.prompt("New student login username:", suggested);
+      if (!username || !username.trim()) return;
+      const password = generateTempPassword();
+      try {
+        const created = await api("/api/admin/users", {
+          method: "POST",
+          body: JSON.stringify({
+            username: username.trim(),
+            password,
+            role: "student",
+            group_name: document.getElementById("editTeamName")?.value.trim() || team.name || null,
+          }),
+        });
+        studentAccounts = [...studentAccounts.filter((u) => u.id !== created.id), created].sort((a, b) =>
+          String(a.username).localeCompare(String(b.username))
+        );
+        refreshLoginOptions(created.username);
+        setStatus(
+          ms,
+          `Created login ${created.username}. Password (shown once): ${password}. Click Save group details to assign it to this team.`,
+          "ok",
+        );
       } catch (e) {
         setStatus(ms, e.message, "err");
       }

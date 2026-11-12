@@ -99,6 +99,8 @@
   let isAdmin = false;
   let userRole = "student";
   let canSelectModeModel = false;
+  let canSelectMode = false;
+  let canSelectModel = false;
   let userApiKeys = {};
   let quotaState = {
     token_limit: null,
@@ -136,6 +138,8 @@
       setAuth(null, null);
       isAdmin = false;
       userRole = "student";
+      canSelectMode = false;
+      canSelectModel = false;
       canSelectModeModel = false;
       updateAdminLink();
       updateModeModelVisibility();
@@ -147,9 +151,14 @@
     if (!data || typeof data !== "object") return;
     isAdmin = Boolean(data.is_admin);
     userRole = data.role || (isAdmin ? "admin" : "student");
-    canSelectModeModel = data.can_select_mode_model != null
-      ? Boolean(data.can_select_mode_model)
-      : (userRole === "admin" || userRole === "tester");
+    const elevated = userRole === "admin" || userRole === "tester";
+    canSelectMode = data.can_select_mode != null
+      ? Boolean(data.can_select_mode)
+      : (data.can_select_mode_model != null ? Boolean(data.can_select_mode_model) : elevated);
+    canSelectModel = data.can_select_model != null
+      ? Boolean(data.can_select_model)
+      : (data.can_select_mode_model != null ? Boolean(data.can_select_mode_model) : elevated);
+    canSelectModeModel = canSelectMode || canSelectModel;
   }
 
   function updateAdminLink() {
@@ -168,8 +177,8 @@
 
   function updateModeModelVisibility() {
     const modeField = document.getElementById("responseModeField");
-    if (modeField) modeField.classList.toggle("hidden", !canSelectModeModel);
-    if (!canSelectModeModel && llmModelRow) llmModelRow.classList.add("hidden");
+    if (modeField) modeField.classList.toggle("hidden", !canSelectMode);
+    if (!canSelectModel && llmModelRow) llmModelRow.classList.add("hidden");
   }
 
   // ── DOM refs ────────────────────────────────────────────────
@@ -207,7 +216,7 @@
     }
     if (data.default_llm_choice) {
       selectedLlmChoice = data.default_llm_choice;
-      if (canSelectModeModel) {
+      if (canSelectModel) {
         try {
           localStorage.setItem(LLM_CHOICE_STORAGE_KEY, data.default_llm_choice);
         } catch (_) {
@@ -891,7 +900,13 @@
       const response = await fetch("/api/config", { headers: authHeaders() });
       if (!response.ok) return;
       const config = await response.json();
-      if (config.role != null || config.can_select_mode_model != null || config.is_admin != null) {
+      if (
+        config.role != null
+        || config.can_select_mode != null
+        || config.can_select_model != null
+        || config.can_select_mode_model != null
+        || config.is_admin != null
+      ) {
         applyRoleState(config);
         updateAdminLink();
       }
@@ -903,10 +918,14 @@
       if (reflectionRow) {
         reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
       }
+      applyAllowedModes(config);
       if (config.default_response_mode && responseMode) {
         const mode = config.default_response_mode;
-        if ([...responseMode.options].some((o) => o.value === mode)) {
+        if ([...responseMode.options].some((o) => o.value === mode && !o.disabled && !o.hidden)) {
           responseMode.value = mode;
+        } else {
+          const first = [...responseMode.options].find((o) => o.value && !o.disabled && !o.hidden);
+          if (first) responseMode.value = first.value;
         }
       }
       if (config.default_llm_choice) selectedLlmChoice = config.default_llm_choice;
@@ -947,10 +966,21 @@
     }
   }
 
+  function applyAllowedModes(config) {
+    if (!responseMode) return;
+    const allowed = Array.isArray(config.allowed_modes) ? config.allowed_modes.map((m) => String(m).toLowerCase()) : null;
+    [...responseMode.options].forEach((opt) => {
+      if (!opt.value) return;
+      const ok = allowed == null || allowed.includes(opt.value.toLowerCase());
+      opt.hidden = !ok;
+      opt.disabled = !ok;
+    });
+  }
+
   function populateLlmModelSelect(config) {
     if (!llmModelSelect || !llmModelRow) return;
     const choices = Array.isArray(config.llm_choices) ? config.llm_choices : [];
-    const enabled = canSelectModeModel && Boolean(config.llm_model_switcher_enabled);
+    const enabled = canSelectModel && Boolean(config.llm_model_switcher_enabled);
     llmModelRow.classList.toggle("hidden", !enabled);
     if (!enabled) {
       selectedLlmChoice = config.llm_default_choice || config.default_llm_choice || selectedLlmChoice || null;

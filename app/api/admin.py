@@ -109,12 +109,21 @@ def _user_summary(store, user, settings=None, claimed_groups: Optional[Dict[int,
     if claimed_groups is not None and user.id is not None:
         claimed = claimed_groups.get(int(user.id))
     group_name = claimed or getattr(user, "group_name", None)
+    effective_mode = user_mode or role_defs.get("default_response_mode")
+    effective_llm = user_llm or role_defs.get("default_llm_choice")
+    is_elevated = role in (ROLE_ADMIN, ROLE_TESTER)
+    mode_parts = _parse_allowlist(effective_mode)
+    llm_parts = _parse_allowlist(effective_llm)
+    mode_any = any(p.lower() == "any" for p in mode_parts) or (effective_mode or "").strip().lower() == "any"
+    llm_any = any(p.lower() == "any" for p in llm_parts) or (effective_llm or "").strip().lower() == "any"
+    mode_multi = mode_any or len([p for p in mode_parts if p.lower() != "any"]) > 1
+    llm_multi = llm_any or len([p for p in llm_parts if p.lower() != "any"]) > 1
     return AdminUserSummary(
         id=user.id,
         username=user.username,
         is_admin=role == ROLE_ADMIN,
         role=role,
-        can_select_mode_model=role in (ROLE_ADMIN, ROLE_TESTER),
+        can_select_mode_model=is_elevated or mode_multi or llm_multi,
         group_name=group_name,
         admin_notes=getattr(user, "admin_notes", None),
         token_limit=int(getattr(user, "token_limit", 0) or 0),
@@ -128,8 +137,8 @@ def _user_summary(store, user, settings=None, claimed_groups: Optional[Dict[int,
         role_default_response_mode=role_defs.get("default_response_mode"),
         role_default_llm_choice=role_defs.get("default_llm_choice"),
         role_token_limit=int(role_defs.get("token_limit") or 0),
-        effective_response_mode=user_mode or role_defs.get("default_response_mode"),
-        effective_llm_choice=user_llm or role_defs.get("default_llm_choice"),
+        effective_response_mode=effective_mode,
+        effective_llm_choice=effective_llm,
         conversation_count=store.count_conversations_for_user(user.id),
         created_at=user.created_at.isoformat() if user.created_at else "",
     )
@@ -162,18 +171,53 @@ def _settings_payload(settings) -> AdminAppSettings:
     )
 
 
-def _validate_mode(mode: Optional[str]) -> Optional[str]:
-    if mode is None:
-        return None
-    cleaned = (mode or "").strip().lower()
+def _parse_allowlist(raw: Optional[str]) -> List[str]:
+    if raw is None:
+        return []
+    return [p.strip() for p in str(raw).split(",") if p.strip()]
+
+
+def _serialize_allowlist(items: List[str]) -> Optional[str]:
+    cleaned: List[str] = []
+    seen = set()
+    for item in items:
+        value = str(item or "").strip()
+        if not value:
+            continue
+        key = value.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        cleaned.append(value)
     if not cleaned:
         return None
-    if cleaned not in VALID_RESPONSE_MODES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid response mode '{mode}'. Expected one of: {', '.join(sorted(VALID_RESPONSE_MODES))}",
-        )
-    return cleaned
+    if any(v.lower() == "any" for v in cleaned):
+        return "any"
+    return ",".join(cleaned)
+
+
+def _validate_mode(mode: Optional[str]) -> Optional[str]:
+    """Accept a single mode or comma-separated allowlist (including 'any')."""
+    if mode is None:
+        return None
+    parts = _parse_allowlist(mode)
+    if not parts:
+        return None
+    if any(p.lower() == "any" for p in parts):
+        return "any"
+    validated: List[str] = []
+    for part in parts:
+        cleaned = part.strip().lower()
+        if cleaned not in VALID_RESPONSE_MODES:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Invalid response mode '{part}'. Expected one of: "
+                    f"{', '.join(sorted(VALID_RESPONSE_MODES))} (or comma-separated allowlist / any)"
+                ),
+            )
+        validated.append(cleaned)
+    return _serialize_allowlist(validated)
 
 
 @router.get("/users", response_model=List[AdminUserSummary])

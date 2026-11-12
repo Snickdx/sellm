@@ -396,11 +396,6 @@ def _user_role(user: Optional[User]) -> str:
     return normalize_role(getattr(user, "role", None), is_admin=bool(getattr(user, "is_admin", False)))
 
 
-def _can_select_mode_model(user: Optional[User]) -> bool:
-    """Students cannot pick mode/model; testers and admins can."""
-    return _user_role(user) in (ROLE_ADMIN, ROLE_TESTER)
-
-
 def _can_use_reflection(user: Optional[User]) -> bool:
     """Reflection / tweak tools are for testers and admins only."""
     return bool(user) and _user_role(user) in (ROLE_ADMIN, ROLE_TESTER)
@@ -420,11 +415,25 @@ def _require_reflection_access(request: Request) -> User:
     return user
 
 
+def _parse_allowlist(raw: Optional[str]) -> List[str]:
+    if raw is None:
+        return []
+    return [p.strip() for p in str(raw).split(",") if p.strip()]
+
+
+def _allowlist_state(raw: Optional[str]) -> tuple[List[str], bool]:
+    """Return (concrete_items, is_unbounded)."""
+    parts = _parse_allowlist(raw)
+    if any(p.lower() == "any" for p in parts):
+        return [], True
+    return parts, False
+
+
 def _effective_defaults(user: Optional[User]) -> dict:
     """Resolve response mode / LLM choice defaults.
 
     Per-user override → role default → env fallback.
-    Students cannot pick mode/model in chat, but admins may set per-user overrides.
+    Mode/LLM values may be comma-separated allowlists; 'any' means unbounded.
     """
     settings = conversation_store.get_app_settings()
     role = _user_role(user) if user else ROLE_TESTER
@@ -439,9 +448,25 @@ def _effective_defaults(user: Optional[User]) -> dict:
     user_llm = (getattr(user, "default_llm_choice", None) or "").strip() or None if user else None
     role_mode = role_defs.get("default_response_mode") or app_mode
     role_llm = role_defs.get("default_llm_choice") or app_llm
+    effective_mode_raw = user_mode or role_mode
+    raw_llm = user_llm or role_llm
+    mode_items, mode_any = _allowlist_state(effective_mode_raw)
+    llm_items, llm_any = _allowlist_state(raw_llm)
+    is_elevated = role in (ROLE_ADMIN, ROLE_TESTER)
+    can_select_mode = is_elevated or mode_any or len(mode_items) > 1
+    can_select_model = is_elevated or llm_any or len(llm_items) > 1
+    # Elevated / any → no filter. Otherwise restrict to the allowlist.
+    allowed_modes = None if (is_elevated or mode_any) else [m.lower() for m in mode_items]
+    allowed_llms = None if (is_elevated or llm_any) else list(llm_items)
+    primary_mode = "vector" if mode_any else ((mode_items[0].lower() if mode_items else "vector"))
+    default_llm = default_choice_id() if (llm_any or not llm_items) else llm_items[0]
     return {
-        "default_response_mode": user_mode or role_mode,
-        "default_llm_choice": user_llm or role_llm or default_choice_id(),
+        "default_response_mode": primary_mode,
+        "default_llm_choice": default_llm,
+        "configured_response_mode": effective_mode_raw,
+        "configured_llm_choice": raw_llm,
+        "allowed_modes": allowed_modes,
+        "allowed_llms": allowed_llms,
         "app_default_response_mode": app_mode,
         "app_default_llm_choice": app_llm,
         "student_default_response_mode": student_mode,
@@ -451,8 +476,15 @@ def _effective_defaults(user: Optional[User]) -> dict:
         "user_default_response_mode": user_mode,
         "user_default_llm_choice": user_llm,
         "role": role,
-        "can_select_mode_model": role in (ROLE_ADMIN, ROLE_TESTER),
+        "can_select_mode": can_select_mode,
+        "can_select_model": can_select_model,
+        "can_select_mode_model": can_select_mode or can_select_model,
     }
+
+
+def _can_select_mode_model(user: Optional[User]) -> bool:
+    """True when the user may pick mode and/or model (elevated role or Any unbounded)."""
+    return bool(_effective_defaults(user).get("can_select_mode_model"))
 
 def _rag_for_mode(mode: str):
     if mode == "neo4j":
@@ -500,11 +532,18 @@ def _available_llm_choice_ids(user: Optional[User]) -> set:
 
 def _resolve_choice_for_user(user: Optional[User], llm_choice: Optional[str]) -> str:
     effective = _effective_defaults(user)
-    choice = (llm_choice or "").strip() or (effective.get("default_llm_choice") or "")
+    choice = (llm_choice or "").strip()
+    if choice.lower() == "any":
+        choice = ""
+    choice = choice or (effective.get("default_llm_choice") or "")
+    if (choice or "").lower() == "any":
+        choice = default_choice_id()
     available = _available_llm_choice_ids(user)
     if choice and choice in available:
         return choice
     fallback = effective.get("default_llm_choice") or default_choice_id()
+    if (fallback or "").lower() == "any":
+        fallback = default_choice_id()
     if fallback in available:
         return fallback
     return default_choice_id()
@@ -818,6 +857,8 @@ def login(request: LoginRequest, req: Request):
         username=user.username,
         is_admin=role == ROLE_ADMIN,
         role=role,
+        can_select_mode=bool(defaults.get("can_select_mode")),
+        can_select_model=bool(defaults.get("can_select_model")),
         can_select_mode_model=bool(defaults["can_select_mode_model"]),
         group_name=getattr(user, "group_name", None),
         default_response_mode=defaults["default_response_mode"],
@@ -849,10 +890,14 @@ def me(request: Request):
         "username": user.username,
         "is_admin": role == ROLE_ADMIN,
         "role": role,
+        "can_select_mode": bool(defaults.get("can_select_mode")),
+        "can_select_model": bool(defaults.get("can_select_model")),
         "can_select_mode_model": bool(defaults["can_select_mode_model"]),
         "group_name": getattr(user, "group_name", None),
         "default_response_mode": defaults["default_response_mode"],
         "default_llm_choice": defaults["default_llm_choice"],
+        "allowed_modes": defaults.get("allowed_modes"),
+        "allowed_llms": defaults.get("allowed_llms"),
         "app_default_response_mode": defaults["app_default_response_mode"],
         "app_default_llm_choice": defaults["app_default_llm_choice"],
         "student_default_response_mode": defaults.get("student_default_response_mode"),
@@ -979,14 +1024,15 @@ def chat(request: ChatRequest, req: Request):
         if billing == "byok" and not _user_has_byok(user) and not ollama_reachable():
             raise HTTPException(status_code=429, detail=BYOK_REQUIRED_MSG)
 
-        # Students cannot choose mode/model — always use admin student defaults
+        # Students cannot choose mode/model unless Any (unbounded) is set
         defaults = _effective_defaults(user)
         forced_mode = None
         forced_llm = None
-        if not defaults.get("can_select_mode_model"):
+        if not defaults.get("can_select_mode"):
             forced_mode = defaults.get("default_response_mode") or "vector"
-            forced_llm = defaults.get("default_llm_choice")
             request.response_mode = forced_mode
+        if not defaults.get("can_select_model"):
+            forced_llm = defaults.get("default_llm_choice")
             request.llm_choice = forced_llm
 
         conversation_id = request.conversation_id
@@ -1009,10 +1055,22 @@ def chat(request: ChatRequest, req: Request):
         stored_messages = conversation_store.get_messages(conversation_id, limit=hist_limit)
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
         mode = (request.response_mode or forced_mode or "vector").lower()
+        if mode == "any":
+            mode = "vector"
+        allowed_modes = defaults.get("allowed_modes")
+        if allowed_modes is not None and mode not in {m.lower() for m in allowed_modes}:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Mode '{mode}' is not allowed for this account",
+            )
         user_provider = _user_llm_provider(user, request.llm_choice)
         if billing == "byok" and not user_provider and ollama_reachable():
             user_provider = "ollama"
         llm_choice = _resolve_choice_for_user(user, request.llm_choice)
+        allowed_llms = defaults.get("allowed_llms")
+        if allowed_llms is not None and llm_choice not in set(allowed_llms):
+            # Fall back to first allowed model when request is outside the allowlist
+            llm_choice = allowed_llms[0] if allowed_llms else llm_choice
         # After quota exhaustion, prefer the user's configured cloud provider when no model picked
         if billing == "byok" and user_provider and user_provider != "ollama" and not (request.llm_choice or "").strip():
             for choice in list_llm_choices(user_provider=user_provider):
@@ -1037,7 +1095,7 @@ def chat(request: ChatRequest, req: Request):
         scope_kw = {"scenario_slug": scope_slug, "persona_key": scope_persona}
 
         if mode == "compare":
-            if not _can_select_mode_model(user):
+            if not defaults.get("can_select_mode"):
                 raise HTTPException(status_code=403, detail="Compare mode is limited to testers and admins")
             _require_stakeholder_llm(user)
             sections: List[tuple[str, str]] = []
@@ -1427,7 +1485,15 @@ def config(request: Request):
         or len([c for c in choices if c["provider"] != "template"]) > 0
     )
     defaults = _effective_defaults(user)
-    can_select = bool(defaults.get("can_select_mode_model"))
+    can_select_mode = bool(defaults.get("can_select_mode"))
+    can_select_model = bool(defaults.get("can_select_model"))
+    can_select = can_select_mode or can_select_model
+    allowed_modes = defaults.get("allowed_modes")
+    allowed_llms = defaults.get("allowed_llms")
+    if allowed_llms is not None:
+        allowed_set = set(allowed_llms)
+        choices = [c for c in choices if c.get("id") in allowed_set]
+    picker_mode = defaults.get("default_response_mode") or "vector"
     # Non-sensitive flags only — never return DB URLs, Neo4j credentials, or .env paths.
     return {
         "excel_configured": bool(excel_file),
@@ -1437,13 +1503,17 @@ def config(request: Request):
         "llm_backend_env": llm_backend,
         "llm_model_env": llm_model,
         "llm_default_choice": defaults.get("default_llm_choice") or default_choice_id(),
-        "default_response_mode": defaults.get("default_response_mode") or "vector",
+        "default_response_mode": picker_mode,
+        "allowed_modes": allowed_modes,
+        "allowed_llms": allowed_llms,
         "app_default_response_mode": defaults.get("app_default_response_mode"),
         "app_default_llm_choice": defaults.get("app_default_llm_choice"),
         "student_default_response_mode": defaults.get("student_default_response_mode"),
         "student_default_llm_choice": defaults.get("student_default_llm_choice"),
-        "llm_choices": choices if can_select else [],
-        "llm_model_switcher_enabled": can_select and switcher_on and len(choices) > 1,
+        "llm_choices": choices if can_select_model else [],
+        "llm_model_switcher_enabled": can_select_model and switcher_on and len(choices) > 1,
+        "can_select_mode": can_select_mode,
+        "can_select_model": can_select_model,
         "can_select_mode_model": can_select,
         "role": defaults.get("role") or _user_role(user),
         "llm_providers": {

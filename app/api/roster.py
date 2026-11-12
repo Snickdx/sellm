@@ -308,10 +308,13 @@ def claim_group(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    member_names = [_display_name(m) for m in sorted(members, key=lambda r: (_display_name(r).casefold()))]
+    ordered = sorted(members, key=lambda r: (_display_name(r).casefold()))
+    member_names = [_display_name(m) for m in ordered]
+    member_ids_ordered = [m.id for m in ordered]
     team = Team(
         name=group_name,
         scenario_slug="library",
+        roster_member_ids=member_ids_ordered,
         participant_names=member_names,
         invite_code=_unique_invite(db),
     )
@@ -324,7 +327,7 @@ def claim_group(
         team_id=team.id,
         account_user_id=int(user.id),
         account_username=username,
-        member_ids=[m.id for m in members],
+        member_ids=member_ids_ordered,
         member_names=member_names,
     )
     db.add(claim)
@@ -557,6 +560,7 @@ def update_my_group_members(
     claim.member_ids = member_ids
     claim.member_names = member_names
     db.add(claim)
+    team.roster_member_ids = member_ids
     team.participant_names = member_names
     db.add(team)
     db.add(

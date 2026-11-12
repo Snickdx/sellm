@@ -7,12 +7,15 @@ import secrets
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
+from sqlalchemy.orm.attributes import flag_modified
 from sqlmodel import Session, select
 
 from app.db import get_db
 from app.deps import AuthUser, ensure_team_access, get_current_user, require_instructor
 from app.models.exit import (
     AuditEvent,
+    ClassStudent,
+    GroupClaim,
     RepoIndexStatus,
     RepositorySubmission,
     Team,
@@ -33,7 +36,9 @@ class TeamCreateRequest(BaseModel):
     # Cohort username that owns/shares this team login (required for admin create).
     owner_username: str | None = None
     member_usernames: list[str] = Field(default_factory=list)
-    # Real names used when students start the exit interview.
+    # Class-list student ids (preferred). Names are derived from the roster.
+    roster_member_ids: list[str] = Field(default_factory=list)
+    # Legacy free-text names — ignored when roster_member_ids is provided.
     participant_names: list[str] = Field(default_factory=list)
     github_url: str | None = Field(default=None, max_length=500)
     branch: str | None = Field(default=None, max_length=200)
@@ -43,6 +48,8 @@ class TeamUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     scenario_slug: str | None = None
     scenario_version: str | None = None
+    roster_member_ids: list[str] | None = None
+    # Legacy free-text names — ignored when roster_member_ids is provided.
     participant_names: list[str] | None = None
     github_url: str | None = Field(default=None, max_length=500)
     branch: str | None = Field(default=None, max_length=200)
@@ -60,17 +67,25 @@ class TeamMemberOut(BaseModel):
     role: str
 
 
+class RosterMemberOut(BaseModel):
+    id: str
+    display_name: str
+    email: str = ""
+
+
 class TeamOut(BaseModel):
     id: str
     name: str
     scenario_slug: str | None
     scenario_version: str | None
+    roster_member_ids: list[str] = Field(default_factory=list)
     participant_names: list[str] = Field(default_factory=list)
     created_at: str | None
 
 
 class TeamDetailOut(TeamOut):
     members: list[TeamMemberOut]
+    roster_members: list[RosterMemberOut] = Field(default_factory=list)
     repository: dict | None = None
 
 
@@ -106,6 +121,134 @@ def _normalize_names(names: list[str] | None) -> list[str]:
     return cleaned
 
 
+def _display_name(row: ClassStudent) -> str:
+    return f"{(row.first_name or '').strip()} {(row.last_name or '').strip()}".strip() or row.email
+
+
+def _normalize_roster_ids(ids: list[str] | None) -> list[str]:
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw in ids or []:
+        mid = str(raw or "").strip()
+        if not mid or mid in seen:
+            continue
+        seen.add(mid)
+        cleaned.append(mid)
+    return cleaned
+
+
+def _resolve_roster_members(db: Session, ids: list[str]) -> list[ClassStudent]:
+    member_ids = _normalize_roster_ids(ids)
+    if not member_ids:
+        return []
+    rows = list(db.exec(select(ClassStudent).where(ClassStudent.id.in_(member_ids))).all())  # type: ignore[attr-defined]
+    by_id = {row.id: row for row in rows}
+    missing = [mid for mid in member_ids if mid not in by_id]
+    if missing:
+        raise HTTPException(status_code=400, detail="One or more class-list students were not found")
+    return [by_id[mid] for mid in member_ids]
+
+
+def _apply_roster_members(db: Session, team: Team, members: list[ClassStudent]) -> None:
+    """Persist class-list members on the team and keep any linked GroupClaim in sync."""
+    ordered = sorted(members, key=lambda row: _display_name(row).casefold())
+    member_ids = [row.id for row in ordered]
+    member_names = [_display_name(row) for row in ordered]
+    team.roster_member_ids = member_ids or None
+    team.participant_names = member_names or None
+    flag_modified(team, "roster_member_ids")
+    flag_modified(team, "participant_names")
+    db.add(team)
+
+    claim = db.exec(select(GroupClaim).where(GroupClaim.team_id == team.id)).first()
+    if claim is None:
+        return
+
+    old_ids = set(_normalize_roster_ids(list(claim.member_ids or [])))
+    new_ids = set(member_ids)
+
+    for mid in old_ids - new_ids:
+        row = db.get(ClassStudent, mid)
+        if row is None:
+            continue
+        if row.group_claim_id == claim.id:
+            row.status = "available"
+            row.group_claim_id = None
+            db.add(row)
+
+    for mid in new_ids - old_ids:
+        row = db.get(ClassStudent, mid)
+        if row is None:
+            continue
+        other = (row.group_claim_id or "").strip()
+        if other and other != claim.id:
+            raise HTTPException(
+                status_code=409,
+                detail=f"{_display_name(row)} is already in another group",
+            )
+        row.status = "claimed"
+        row.group_claim_id = claim.id
+        db.add(row)
+
+    claim.member_ids = member_ids
+    claim.member_names = member_names
+    flag_modified(claim, "member_ids")
+    flag_modified(claim, "member_names")
+    db.add(claim)
+
+
+def _roster_ids_for_team(db: Session, team: Team) -> list[str]:
+    stored = _normalize_roster_ids(list(team.roster_member_ids or []))
+    if stored:
+        return stored
+    claim = db.exec(select(GroupClaim).where(GroupClaim.team_id == team.id)).first()
+    if claim is not None:
+        return _normalize_roster_ids(list(claim.member_ids or []))
+    return []
+
+
+def _roster_members_out(db: Session, team: Team) -> list[RosterMemberOut]:
+    ids = _roster_ids_for_team(db, team)
+    if ids:
+        rows = list(db.exec(select(ClassStudent).where(ClassStudent.id.in_(ids))).all())  # type: ignore[attr-defined]
+        by_id = {row.id: row for row in rows}
+        out: list[RosterMemberOut] = []
+        for mid in ids:
+            row = by_id.get(mid)
+            if row is None:
+                continue
+            out.append(
+                RosterMemberOut(
+                    id=row.id,
+                    display_name=_display_name(row),
+                    email=(row.email or "").strip(),
+                )
+            )
+        return out
+
+    # Legacy teams: match free-text participant_names back to the class list.
+    names = _normalize_names(list(team.participant_names or []))
+    if not names:
+        return []
+    wanted = {name.casefold(): name for name in names}
+    matched: dict[str, ClassStudent] = {}
+    for row in db.exec(select(ClassStudent)).all():
+        key = _display_name(row).casefold()
+        if key in wanted and key not in matched:
+            matched[key] = row
+    return [
+        RosterMemberOut(
+            id=matched[name.casefold()].id,
+            display_name=_display_name(matched[name.casefold()]),
+            email=(matched[name.casefold()].email or "").strip(),
+        )
+        if name.casefold() in matched
+        else RosterMemberOut(id="", display_name=name, email="")
+        for name in names
+        if name.casefold() in matched
+    ]
+
+
 def _repo_out(row: RepositorySubmission | None) -> dict | None:
     if row is None:
         return None
@@ -130,6 +273,7 @@ def _team_out(team: Team) -> TeamOut:
         name=team.name,
         scenario_slug=team.scenario_slug,
         scenario_version=team.scenario_version,
+        roster_member_ids=list(team.roster_member_ids or []),
         participant_names=list(team.participant_names or []),
         created_at=team.created_at.isoformat() if team.created_at else None,
     )
@@ -160,9 +304,15 @@ def _team_detail(db: Session, team: Team) -> TeamDetailOut:
         for m in members_rows
     ]
     base = _team_out(team)
+    roster_members = _roster_members_out(db, team)
+    if not base.roster_member_ids and roster_members:
+        base.roster_member_ids = [m.id for m in roster_members if m.id]
+    if not base.participant_names and roster_members:
+        base.participant_names = [m.display_name for m in roster_members]
     return TeamDetailOut(
         **base.model_dump(),
         members=members,
+        roster_members=roster_members,
         repository=_repo_out(_latest_repo(db, team.id)),
     )
 
@@ -206,7 +356,7 @@ def create_team_admin(
     instructor: AuthUser = Depends(require_instructor),
     db: Session = Depends(get_db),
 ) -> TeamDetailOut:
-    """Admin creates a team: cohort owner, scenario, repo, and interview member names."""
+    """Admin creates a team: cohort owner, scenario, repo, and class-list members."""
     owner_name = (body.owner_username or "").strip()
     if not owner_name:
         raise HTTPException(
@@ -215,16 +365,21 @@ def create_team_admin(
         )
     owner = _resolve_username(db, owner_name)
 
-    names = _normalize_names(body.participant_names)
     team = Team(
         name=body.name.strip(),
         scenario_slug=body.scenario_slug,
         scenario_version=body.scenario_version,
-        participant_names=names or None,
         invite_code=_unique_invite(db),
     )
     db.add(team)
     db.flush()
+    if body.roster_member_ids:
+        _apply_roster_members(db, team, _resolve_roster_members(db, body.roster_member_ids))
+    else:
+        names = _normalize_names(body.participant_names)
+        team.participant_names = names or None
+        flag_modified(team, "participant_names")
+        db.add(team)
 
     existing: set[int] = set()
     _add_member(db, team.id, int(owner.id), existing)
@@ -268,7 +423,7 @@ def update_team_admin(
     instructor: AuthUser = Depends(require_instructor),
     db: Session = Depends(get_db),
 ) -> TeamDetailOut:
-    """Admin updates group details: name, scenario, member names, repo URL."""
+    """Admin updates group details: name, scenario, class-list members, repo URL."""
     team = db.get(Team, team_id)
     if team is None:
         raise HTTPException(status_code=404, detail="Team not found")
@@ -279,8 +434,14 @@ def update_team_admin(
         team.scenario_slug = body.scenario_slug.strip() or None
     if body.scenario_version is not None:
         team.scenario_version = body.scenario_version
-    if body.participant_names is not None:
+    if body.roster_member_ids is not None:
+        _apply_roster_members(db, team, _resolve_roster_members(db, body.roster_member_ids))
+    elif body.participant_names is not None:
         team.participant_names = _normalize_names(body.participant_names) or None
+        team.roster_member_ids = None
+        flag_modified(team, "participant_names")
+        flag_modified(team, "roster_member_ids")
+        db.add(team)
 
     repo_row: RepositorySubmission | None = None
     if (body.github_url or "").strip():
@@ -294,6 +455,7 @@ def update_team_admin(
         if body.analyze_now and os.getenv("TESTING") == "1":
             analyze_submission(db, repo_row.id)
 
+    db.add(team)
     db.add(
         AuditEvent(
             actor_id=instructor.id,

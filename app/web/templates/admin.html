@@ -506,13 +506,30 @@
         }
         .role-defaults-fields {
             display: grid;
-            grid-template-columns: minmax(140px, 1.1fr) minmax(160px, 1.4fr) minmax(110px, 0.8fr) auto;
+            grid-template-columns: minmax(160px, 1.2fr) minmax(180px, 1.5fr) minmax(110px, 0.8fr) auto;
             gap: 8px 10px;
-            align-items: end;
+            align-items: start;
         }
         .role-defaults-fields .field { margin-bottom: 0; }
         .role-defaults-fields .field label { margin-bottom: 2px; }
-        .role-defaults-fields .actions { margin-top: 0; }
+        .role-defaults-fields .actions { margin-top: 1.4rem; }
+        .role-defaults-fields .field:has(#roleBudget) { align-self: end; }
+        .allowlist-select {
+            min-height: 7.5rem;
+            width: 100%;
+            max-width: 100%;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 4px 6px;
+            font-size: 12px;
+            background: #fff;
+        }
+        .field-hint {
+            margin-top: 3px;
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.3;
+        }
         .users-toolbar {
             display: flex;
             flex-wrap: wrap;
@@ -544,7 +561,7 @@
             padding: 8px 10px;
             border-bottom: 1px solid #e2e8f0;
             text-align: left;
-            vertical-align: middle;
+            vertical-align: top;
         }
         table.users-grid th {
             font-size: 11px;
@@ -577,7 +594,12 @@
             padding: 4px 6px;
             font-size: 12px;
             background: #fff;
-            max-width: 150px;
+            max-width: 180px;
+        }
+        table.users-grid select.allowlist-select {
+            min-height: 5.5rem;
+            max-width: 200px;
+            width: 180px;
         }
         table.users-grid .cell-actions {
             display: flex;
@@ -608,6 +630,16 @@
             flex-wrap: nowrap;
             max-width: 100%;
         }
+        .cell-with-badge.cell-allowlist {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+        .cell-with-badge.cell-allowlist select {
+            width: 180px;
+            max-width: 100%;
+        }
         .cell-with-badge select,
         .cell-with-badge input[type="number"] {
             flex: 1 1 auto;
@@ -619,6 +651,12 @@
             margin-left: 0;
             flex-shrink: 0;
             white-space: nowrap;
+        }
+        .allowlist-inherit {
+            font-size: 11px;
+            color: #64748b;
+            max-width: 200px;
+            line-height: 1.3;
         }
         .cell-stack {
             display: flex;
@@ -726,6 +764,17 @@
         }
         .team-detail-grid .field { margin-bottom: 0; }
         .team-detail-grid .field-span { grid-column: 1 / -1; }
+        .team-login-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .team-login-row select {
+            flex: 1 1 180px;
+            min-width: 140px;
+            max-width: 280px;
+        }
         .name-picker {
             position: relative;
             border: 1px solid #d1d5db;
