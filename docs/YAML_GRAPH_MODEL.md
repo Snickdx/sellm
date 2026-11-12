@@ -1,85 +1,90 @@
-# YAML scenario graph model (Neo4j)
+# Scenario domain graph + vector model (Neo4j / Chroma)
 
-Generalized graph used by **neo4j** / **hybrid** modes when a YAML scenario + persona is selected. Excel RAG nodes remain separate; reindex replaces only `Yaml*` labels.
+Generalized domain model used by **neo4j** / **hybrid** / **vector** modes when a scenario package + persona is selected. Excel RAG nodes remain separate; reindex replaces only nodes marked `ScenarioPack` (and clears legacy `Yaml*` labels if present).
 
-## Translation workflow (scenario facts → Neo4j)
+Stored names intentionally avoid `Yaml*` / `yaml:` prefixes — labels and sheet metadata align with the traditional Excel model.
+
+## Translation workflow (package facts → stores)
 
 ```text
-ScenarioPackage (YAML)
+ScenarioPackage
   ├─ personas / known_fact_ids
   ├─ knowledge facts (category, acceptance_criteria, source_refs, decision_id)
-  └─ gaps.decisions (instructor provenance)
+  └─ gaps.decisions
         │
         ▼
-app.scenarios.neo4j_graph.build_scenario_graph_plan()
-  ├─ map category / id prefix → domain kind + secondary label
-  │    functional|REQ → YamlRequirement
-  │    constraint|BR  → YamlConstraint
-  │    ASM            → YamlAssumption (kind may still be constraint)
-  │    workflow|WF    → YamlWorkflow
-  │    contextual     → YamlContext
-  │    non_functional → YamlNonFunctionalRequirement
-  ├─ hub nodes: YamlCategory, YamlFactFamily
-  ├─ YamlAcceptanceCriterion from acceptance_criteria[]
-  └─ keep package edges: HAS_PERSONA, KNOWS, HAS_DECISION, CITED_FROM, …
+app.scenarios.neo4j_graph.fact_kind_and_label()
+  functional|REQ → Requirement
+  constraint|BR  → Constraint
+  ASM            → Constraint (assumption family)
+  workflow|WF    → Task
+  contextual     → RequirementNode
+  non_functional → QualityScenario / Qual_Scenario
         │
-        ▼
-RequirementsRAGNeo4j.upsert_scenario_graph()
-  └─ wipe Yaml* subgraph → MERGE plan nodes/edges → embed YamlFact.text
+        ├─► Neo4j: ScenarioPack + typed label, domain hubs/edges, embeddings
+        └─► Chroma: scenario_facts docs with Excel sheet/kind metadata
 ```
 
-## Node types
+## Neo4j node types
 
-| Label | Key | Purpose |
+| Label(s) | Key | Purpose |
 | --- | --- | --- |
-| `YamlScenario` | `slug` + `version` | Package root (title, brief, status) |
-| `YamlPersona` | `key` + scenario | Chat stakeholder; carries `system_role` / capability list props |
-| `YamlFact` | `node_id` (`yaml:{slug}:{fact_id}`) | Student-visible knowledge (embedded for vector search) |
-| `YamlRequirement` / `YamlConstraint` / `YamlWorkflow` / `YamlAssumption` / `YamlContext` / `YamlNonFunctionalRequirement` / `YamlKnowledge` | same node as `YamlFact` | Excel-like **secondary** type labels (no collision with Excel `Requirement` sheet nodes) |
-| `YamlCategory` | `name` + `scenario_slug` | Hub for `IN_CATEGORY` traversal |
-| `YamlFactFamily` | `name` + `scenario_slug` | Hub for id-family traversal (`REQ` / `BR` / `ASM` / `WF`) |
-| `YamlAcceptanceCriterion` | `criterion_id` + scenario | Materialized from `acceptance_criteria[]` |
-| `YamlSystemRole` | `name` | Shared vocabulary: `platform_admin`, `operator`, `approver`, `end_user`, `hybrid` |
-| `YamlCapability` | `name` | Shared admin capability verbs (`publish_listings`, …) |
-| `YamlDecision` | `decision_id` + scenario | Instructor gap decision that produced facts |
-| `YamlSourceCue` | `cue_id` + `file` + scenario | Transcript provenance for confirmed/clarified facts |
+| `ScenarioPack`:`Project` | `node_id` = `scenario:{slug}:project` | Package root (title, brief, status) |
+| `ScenarioPack`:`Stakeholder` | `key` + scenario | Chat stakeholder |
+| `ScenarioPack`:`Requirement` / `Constraint` / `Task` / `QualityScenario` / `RequirementNode` | `node_id` = `scenario:{slug}:{fact_id}` | Typed knowledge (embedded) |
+| `ScenarioPack`:`Category` | `name` + `scenario_slug` | Hub for `IN_CATEGORY` |
+| `ScenarioPack`:`FactFamily` | `name` + `scenario_slug` | Hub for REQ/BR/ASM/WF |
+| `ScenarioPack`:`AcceptanceCriterion` | `criterion_id` + scenario | From `acceptance_criteria[]` |
+| `ScenarioPack`:`Role` | `name` | System-role vocabulary |
+| `ScenarioPack`:`Capability` | `name` | Admin capability verbs |
+| `ScenarioPack`:`Decision` | `decision_id` + scenario | Instructor gap decision |
+| `ScenarioPack`:`SourceCue` | `cue_id` + `file` + scenario | Transcript provenance |
 
-Instructor-only `gaps.yaml` open questions and `evaluation.yaml` are **not** indexed.
+Instructor-only open questions and `evaluation.yaml` are **not** indexed.
 
 ## Relationships
 
 | Type | From → To | Meaning |
 | --- | --- | --- |
-| `HAS_PERSONA` | Scenario → Persona | Persona belongs to package |
-| `HAS_FACT` | Scenario → Fact | Fact belongs to package |
-| `HAS_DECISION` | Scenario → Decision | Decision recorded for package |
-| `KNOWS` | Persona → Fact | Persona may disclose this fact (Excel `OWNED_BY`-ish) |
-| `HAS_ROLE` | Persona → SystemRole | In-system authority class |
-| `CAN` | Persona → Capability | Concrete admin verb |
-| `IN_CATEGORY` | Fact → Category | Domain grouping for graph enrichment |
-| `IN_FAMILY` | Fact → FactFamily | REQ/BR/ASM/WF family grouping |
-| `HAS_CRITERION` | Fact → AcceptanceCriterion | Testable acceptance criterion |
-| `FROM_DECISION` | Fact → Decision | Fact provenance via gap decision |
-| `PRODUCED` | Decision → Fact | Inverse of `FROM_DECISION` |
-| `CITED_FROM` | Fact → SourceCue | Transcript cue citation |
+| `HAS_PERSONA` | Project → Stakeholder | Persona belongs to package |
+| `HAS_FACT` | Project → knowledge node | Fact belongs to package |
+| `HAS_DECISION` | Project → Decision | Decision recorded for package |
+| `KNOWS` | Stakeholder → knowledge | Persona may disclose this fact |
+| `HAS_ROLE` | Stakeholder → Role | In-system authority class |
+| `CAN` | Stakeholder → Capability | Concrete admin verb |
+| `IN_CATEGORY` | knowledge → Category | Domain grouping |
+| `IN_FAMILY` | knowledge → FactFamily | REQ/BR/ASM/WF grouping |
+| `HAS_CRITERION` | knowledge → AcceptanceCriterion | Testable criterion |
+| `FROM_DECISION` / `PRODUCED` | Fact ↔ Decision | Provenance |
+| `CITED_FROM` | knowledge → SourceCue | Transcript citation |
+
+## Vector store (Chroma `scenario_facts`)
+
+Each `(persona, fact)` document uses the same kind/sheet mapping:
+
+| Metadata | Example |
+| --- | --- |
+| `source` | `scenario` |
+| `sheet` | `Requirement`, `Constraint`, `Task`, `Qual_Scenario`, … |
+| `sheet_type` / `kind` | `requirement`, `constraint`, `workflow`, … |
+| `family` | `REQ`, `BR`, `ASM`, `WF` |
+| `node_id` | `scenario:{slug}:{fact_id}` |
+| doc id | `scenario:{slug}:{version}:{persona}:{fact_id}` |
+
+Document text includes project, stakeholder, sheet/kind, statement, and acceptance criteria — not `yaml` tokens.
 
 ## Gaps vs traditional Excel Neo4j model
 
-Excel loads typed sheets (`Project`, `Feature`, `Requirement`, `Constraint`, `Goal`, `Risk`, …) plus an explicit `Relationships` sheet (`HAS_CONSTRAINT`, `SATISFIES`, `OWNED_BY`, …). YAML stores the same training knowledge as flat facts. After translation:
-
-| Excel model | What YAML scenarios provide | Status after rework |
+| Excel model | What scenario packages provide | Status |
 | --- | --- | --- |
-| `Requirement` / `Constraint` typed rows | `KnowledgeFact.category` + id prefix (`REQ`/`BR`/`ASM`/`WF`) | **Mapped** → secondary `YamlRequirement` / `YamlConstraint` / … |
-| Acceptance criteria on requirement rows | `acceptance_criteria[]` | **Mapped** → `YamlAcceptanceCriterion` + `HAS_CRITERION` |
-| Stakeholder ownership (`OWNED_BY`) | Persona `known_fact_ids` / `known_by` | **Partial** → `KNOWS` (persona→fact) |
-| Explicit `Relationships` sheet | No first-class fact↔fact links in YAML | **Partial** → inferred via `IN_CATEGORY` / `IN_FAMILY` hubs |
-| `Feature` + `SATISFIES` | Functional statements only; no Feature entity | **Gap** |
-| `Goal` / `Risk` / `Budget` / `Milestone` / `Task` | Not modeled as entities | **Gap** |
-| `Client` / `Role` sheets | `YamlPersona.system_role` + capabilities | **Partial** |
+| `Requirement` / `Constraint` typed rows | `KnowledgeFact.category` + id prefix | **Mapped** |
+| Acceptance criteria on rows | `acceptance_criteria[]` | **Mapped** |
+| Stakeholder ownership (`OWNED_BY`) | Persona `KNOWS` | **Partial** |
+| Explicit `Relationships` sheet | No authored fact↔fact links | **Partial** (category/family hubs) |
+| `Feature` + `SATISFIES` | No Feature entity | **Gap** |
+| `Goal` / `Risk` / `Budget` / `Milestone` | Not modeled | **Gap** |
 
-Retrieval consequence: Excel neo4j mode can follow authored edges like `HAS_CONSTRAINT`. YAML neo4j mode now enriches hits with same-category / same-family facts and acceptance criteria, but still cannot invent Feature/Goal/Risk topology that the packages do not contain.
-
-## Visual map (node types + relationships)
+## Visual map
 
 ```mermaid
 flowchart LR
@@ -90,16 +95,16 @@ flowchart LR
     classDef provenance fill:#fdf2f8,stroke:#db2777,color:#111827,stroke-width:1px;
     classDef domain fill:#f8fafc,stroke:#475569,color:#111827,stroke-width:1px;
 
-    SC["YamlScenario"]:::pkg
-    PE["YamlPersona"]:::actor
-    FA["YamlFact + YamlRequirement/Constraint/…"]:::knowledge
-    CAT["YamlCategory"]:::domain
-    FAM["YamlFactFamily"]:::domain
-    AC["YamlAcceptanceCriterion"]:::domain
-    SR["YamlSystemRole"]:::governance
-    CP["YamlCapability"]:::governance
-    DE["YamlDecision"]:::provenance
-    CU["YamlSourceCue"]:::provenance
+    SC["Project"]:::pkg
+    PE["Stakeholder"]:::actor
+    FA["Requirement / Constraint / Task / …"]:::knowledge
+    CAT["Category"]:::domain
+    FAM["FactFamily"]:::domain
+    AC["AcceptanceCriterion"]:::domain
+    SR["Role"]:::governance
+    CP["Capability"]:::governance
+    DE["Decision"]:::provenance
+    CU["SourceCue"]:::provenance
 
     SC -- HAS_PERSONA --> PE
     SC -- HAS_FACT --> FA

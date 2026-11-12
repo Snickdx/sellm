@@ -249,18 +249,22 @@ class RequirementsRAGNeo4j:
             print(f"⚠ Neo4j vector index unavailable (will use capped fallback): {exc}")
 
     def upsert_scenario_graph(self, packages, *, content_hash: Optional[str] = None) -> int:
-        """Translate YAML scenario facts into a Neo4j domain graph.
+        """Translate scenario package facts into a Neo4j domain graph.
 
         Workflow:
         1. Build a deterministic graph plan (`app.scenarios.neo4j_graph`)
-        2. Map flat KnowledgeFacts onto Excel-like typed labels
-           (Requirement / Constraint / Workflow / …)
-        3. Write package + provenance + domain edges (IN_CATEGORY, IN_FAMILY,
-           HAS_CRITERION, KNOWS, …) without touching Excel RAG nodes
+        2. Map flat KnowledgeFacts onto Excel-aligned typed labels
+           (Requirement / Constraint / Task / …) under ``ScenarioPack``
+        3. Write package + provenance + domain edges without touching Excel-only nodes
 
-        Returns total relationship count created for YAML scenarios.
+        Returns total relationship count created for scenario packages.
         """
-        from app.scenarios.neo4j_graph import build_scenario_graph_plan, iter_embed_texts
+        from app.scenarios.neo4j_graph import (
+            LEGACY_SCENARIO_LABELS,
+            SCENARIO_PACK_LABEL,
+            build_scenario_graph_plan,
+            iter_embed_texts,
+        )
 
         digest = content_hash or hashlib.sha256(
             "|".join(
@@ -275,19 +279,9 @@ class RequirementsRAGNeo4j:
         plans = [build_scenario_graph_plan(package) for package in packages]
         edges = 0
         with self.driver.session() as session:
-            # Wipe prior YAML scenario subgraph only (leave Excel RAG nodes alone).
-            for label in (
-                "YamlAcceptanceCriterion",
-                "YamlSourceCue",
-                "YamlDecision",
-                "YamlCapability",
-                "YamlSystemRole",
-                "YamlCategory",
-                "YamlFactFamily",
-                "YamlFact",
-                "YamlPersona",
-                "YamlScenario",
-            ):
+            # Wipe scenario-pack subgraph only (leave Excel-only nodes alone).
+            session.run(f"MATCH (n:{SCENARIO_PACK_LABEL}) DETACH DELETE n")
+            for label in LEGACY_SCENARIO_LABELS:
                 session.run(f"MATCH (n:{label}) DETACH DELETE n")
 
             for plan in plans:
@@ -336,23 +330,23 @@ class RequirementsRAGNeo4j:
                     )
                     edges += 1
 
-        self._ensure_yaml_vector_index()
+        self._ensure_scenario_vector_index()
         self._scenario_graph_hash = digest
         fact_total = sum(p.stats.get("facts", 0) for p in plans)
         print(
-            f"✓ Indexed {edges} YAML scenario graph relationships "
+            f"✓ Indexed {edges} scenario graph relationships "
             f"({fact_total} typed facts) into Neo4j"
         )
         return edges
 
-    def _ensure_yaml_vector_index(self) -> None:
-        """Vector index for YamlFact embeddings (scenario / neo4j mode)."""
+    def _ensure_scenario_vector_index(self) -> None:
+        """Vector index for scenario-pack embeddings (neo4j mode)."""
         try:
             with self.driver.session() as session:
                 session.run(
                     """
-                    CREATE VECTOR INDEX yaml_fact_embeddings IF NOT EXISTS
-                    FOR (n:YamlFact)
+                    CREATE VECTOR INDEX scenario_pack_embeddings IF NOT EXISTS
+                    FOR (n:ScenarioPack)
                     ON n.embedding
                     OPTIONS {
                       indexConfig: {
@@ -362,9 +356,9 @@ class RequirementsRAGNeo4j:
                     }
                     """
                 )
-            print("✓ Neo4j vector index yaml_fact_embeddings ready")
+            print("✓ Neo4j vector index scenario_pack_embeddings ready")
         except Exception as exc:  # noqa: BLE001
-            print(f"⚠ Neo4j yaml_fact vector index unavailable: {exc}")
+            print(f"⚠ Neo4j scenario_pack vector index unavailable: {exc}")
 
     def search(
         self,
@@ -376,7 +370,7 @@ class RequirementsRAGNeo4j:
     ) -> List[Dict]:
         """
         Hybrid search: vector similarity + graph traversal.
-        When scenario_slug + persona_key are set, search YamlFact nodes that persona KNOWS.
+        When scenario_slug + persona_key are set, search ScenarioPack facts that persona KNOWS.
         """
         query_embedding = self.embedding_model.encode([query]).tolist()[0]
 
@@ -418,11 +412,15 @@ class RequirementsRAGNeo4j:
         persona_key: str,
         n_results: int,
     ) -> List[Dict]:
-        """Vector search over YamlFact nodes known by a persona."""
+        """Vector search over ScenarioPack knowledge nodes known by a stakeholder."""
         with self.driver.session() as session:
             result = session.run(
                 """
-                MATCH (p:YamlPersona {key: $persona_key, scenario_slug: $scenario_slug})-[:KNOWS]->(n:YamlFact)
+                MATCH (p:ScenarioPack:Stakeholder {
+                    key: $persona_key,
+                    scenario_slug: $scenario_slug
+                })-[:KNOWS]->(n:ScenarioPack)
+                WHERE n.embedding IS NOT NULL
                 RETURN n
                 """,
                 persona_key=persona_key,
@@ -447,15 +445,15 @@ class RequirementsRAGNeo4j:
                         "document": node.get("text", ""),
                         "metadata": {
                             "node_id": node.get("node_id"),
-                            "sheet": node.get("sheet", "Knowledge"),
-                            "sheet_type": node.get("sheet_type") or node.get("kind") or "requirements",
+                            "sheet": node.get("sheet", "Requirement"),
+                            "sheet_type": node.get("sheet_type") or node.get("kind") or "requirement",
                             "category": node.get("category"),
                             "kind": node.get("kind"),
                             "family": node.get("family"),
                             "scenario_slug": node.get("scenario_slug"),
                             "fact_id": node.get("fact_id"),
                             "persona_key": persona_key,
-                            "source": "yaml",
+                            "source": "scenario",
                         },
                         "distance": 1 - similarity,
                     }
@@ -471,11 +469,7 @@ class RequirementsRAGNeo4j:
                         """
                         CALL db.index.vector.queryNodes('excel_embeddings', $k, $embedding)
                         YIELD node, score
-                        WHERE NOT node:YamlFact AND NOT node:YamlPersona AND NOT node:YamlScenario
-                          AND NOT node:YamlSystemRole AND NOT node:YamlCapability
-                          AND NOT node:YamlDecision AND NOT node:YamlSourceCue
-                          AND NOT node:YamlCategory AND NOT node:YamlFactFamily
-                          AND NOT node:YamlAcceptanceCriterion
+                        WHERE NOT node:ScenarioPack
                         RETURN node AS n, score
                         LIMIT $k
                         """,
@@ -511,18 +505,12 @@ class RequirementsRAGNeo4j:
                     print(f"⚠ Neo4j vector query failed, using capped fallback: {exc}")
                     self._vector_index_ready = False
 
-            yaml_exclude = (
-                "NOT n:YamlFact AND NOT n:YamlPersona AND NOT n:YamlScenario "
-                "AND NOT n:YamlSystemRole AND NOT n:YamlCapability "
-                "AND NOT n:YamlDecision AND NOT n:YamlSourceCue "
-                "AND NOT n:YamlCategory AND NOT n:YamlFactFamily "
-                "AND NOT n:YamlAcceptanceCriterion"
-            )
-            label_filter = f"WHERE {yaml_exclude} AND n.embedding IS NOT NULL"
+            pack_exclude = "NOT n:ScenarioPack"
+            label_filter = f"WHERE {pack_exclude} AND n.embedding IS NOT NULL"
             if detected_sheets:
                 labels = [self._get_sheet_type(sheet) for sheet in detected_sheets]
                 or_labels = " OR ".join(f"n:{label}" for label in labels)
-                label_filter = f"WHERE ({or_labels}) AND {yaml_exclude} AND n.embedding IS NOT NULL"
+                label_filter = f"WHERE ({or_labels}) AND {pack_exclude} AND n.embedding IS NOT NULL"
 
             query = f"""
             MATCH (n)
@@ -593,13 +581,13 @@ class RequirementsRAGNeo4j:
                     if len(related) >= limit:
                         return
 
-            # Domain-style YAML expansion (closer to Excel relationship enrichment).
+            # Domain-style scenario expansion (closer to Excel relationship enrichment).
             _consume(
                 session.run(
                     """
-                    MATCH (n:YamlFact {node_id: $node_id})-[:IN_CATEGORY]->(:YamlCategory)
-                          <-[:IN_CATEGORY]-(related:YamlFact)
-                    WHERE related.node_id <> $node_id
+                    MATCH (n:ScenarioPack {node_id: $node_id})-[:IN_CATEGORY]->(:Category)
+                          <-[:IN_CATEGORY]-(related:ScenarioPack)
+                    WHERE related.node_id <> $node_id AND related.embedding IS NOT NULL
                     RETURN related
                     LIMIT $limit
                     """,
@@ -612,9 +600,9 @@ class RequirementsRAGNeo4j:
                 _consume(
                     session.run(
                         """
-                        MATCH (n:YamlFact {node_id: $node_id})-[:IN_FAMILY]->(:YamlFactFamily)
-                              <-[:IN_FAMILY]-(related:YamlFact)
-                        WHERE related.node_id <> $node_id
+                        MATCH (n:ScenarioPack {node_id: $node_id})-[:IN_FAMILY]->(:FactFamily)
+                              <-[:IN_FAMILY]-(related:ScenarioPack)
+                        WHERE related.node_id <> $node_id AND related.embedding IS NOT NULL
                         RETURN related
                         LIMIT $limit
                         """,
@@ -627,7 +615,7 @@ class RequirementsRAGNeo4j:
                 _consume(
                     session.run(
                         """
-                        MATCH (n:YamlFact {node_id: $node_id})-[:HAS_CRITERION]->(related:YamlAcceptanceCriterion)
+                        MATCH (n:ScenarioPack {node_id: $node_id})-[:HAS_CRITERION]->(related:AcceptanceCriterion)
                         RETURN related
                         LIMIT $limit
                         """,
@@ -639,17 +627,12 @@ class RequirementsRAGNeo4j:
             if related:
                 return related[:limit]
 
-            # Excel Relationships sheet / generic one-hop neighbors.
+            # Excel Relationships sheet / generic one-hop neighbors (non-pack nodes).
             _consume(
                 session.run(
                     """
                     MATCH (n {node_id: $node_id})-[r]-(related)
-                    WHERE NOT related:YamlPersona
-                      AND NOT related:YamlScenario
-                      AND NOT related:YamlSystemRole
-                      AND NOT related:YamlCapability
-                      AND NOT related:YamlCategory
-                      AND NOT related:YamlFactFamily
+                    WHERE NOT related:ScenarioPack
                     RETURN related, type(r) as rel_type
                     LIMIT $limit
                     """,

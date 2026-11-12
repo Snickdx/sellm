@@ -194,7 +194,7 @@ class RequirementsRAG:
         *,
         content_hash: Optional[str] = None,
     ) -> None:
-        """Replace/add persona-scoped YAML facts in the scenario_facts collection."""
+        """Replace/add persona-scoped scenario facts in the scenario_facts collection."""
         if not documents:
             return
         digest = content_hash or hashlib.sha256(
@@ -203,7 +203,7 @@ class RequirementsRAG:
         if self._scenario_index_hash == digest:
             print("✓ Scenario vector index unchanged — skipping reindex")
             return
-        # Clear previous YAML index so retired facts disappear
+        # Clear previous scenario index so retired facts disappear
         try:
             existing = self.scenario_collection.get()
             old_ids = existing.get("ids") or []
@@ -212,7 +212,7 @@ class RequirementsRAG:
         except Exception as e:
             print(f"⚠ Could not clear scenario_facts collection: {e}")
 
-        print(f"Indexing {len(documents)} YAML scenario persona facts into Chroma...")
+        print(f"Indexing {len(documents)} scenario persona facts into Chroma...")
         embeddings = self.embedding_model.encode(documents, show_progress_bar=True, batch_size=64)
         batch_size = 100
         for i in range(0, len(documents), batch_size):
@@ -234,7 +234,7 @@ class RequirementsRAG:
         persona_key: str,
         n_results: int = 5,
     ) -> List[Dict]:
-        """Vector search restricted to one scenario persona's YAML facts."""
+        """Vector search restricted to one scenario persona's facts."""
         query_embedding = self.embedding_model.encode([query]).tolist()[0]
         where_filter = {
             "$and": [
@@ -279,7 +279,7 @@ class RequirementsRAG:
         scenario_slug: str | None = None,
         persona_key: str | None = None,
     ) -> List[Dict]:
-        """Search Excel requirements, or persona-scoped YAML facts when both filters are set."""
+        """Search Excel requirements, or persona-scoped scenario facts when both filters are set."""
         if scenario_slug and persona_key:
             return self.search_scenario(
                 query,

@@ -1,4 +1,4 @@
-"""Index YAML scenario persona facts into Chroma (vector) and Neo4j (graph)."""
+"""Index scenario persona facts into Chroma (vector) and Neo4j (graph)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from app.scenarios.filter import facts_for_persona
 from app.scenarios.models import ScenarioPackage
+from app.scenarios.neo4j_graph import fact_family, fact_kind_and_label, fact_node_id
 from app.scenarios.registry import scenario_registry
 
 
@@ -18,43 +19,57 @@ def _persona_system_role(persona) -> str:
 
 
 def _fact_document(package: ScenarioPackage, persona, fact) -> tuple[str, dict[str, Any], str]:
+    """Build one vector doc with Excel-aligned sheet/type metadata (no yaml names)."""
     statement = fact.statement.strip()
-    category = fact.category or "knowledge"
+    kind, _label, sheet = fact_kind_and_label(fact)
+    family = fact_family(fact)
     persona_id = persona.id
     system_role = _persona_system_role(persona)
     caps = list(getattr(persona, "admin_capabilities", None) or [])
     text_parts = [
-        f"Scenario: {package.meta.title}",
-        f"Persona: {persona_id}",
-        f"Display name: {persona.display_name}",
+        f"Project: {package.meta.title}",
+        f"Stakeholder: {persona.display_name}",
+        f"Stakeholder key: {persona_id}",
         f"Role: {persona.role}",
     ]
     if system_role:
         text_parts.append(f"System role: {system_role}")
     if caps:
-        text_parts.append(f"Admin capabilities: {', '.join(caps)}")
+        text_parts.append(f"Capabilities: {', '.join(caps)}")
     text_parts.extend(
         [
-            f"Category: {category}",
+            f"Sheet: {sheet}",
+            f"Kind: {kind}",
+            f"Family: {family}",
+            f"Category: {fact.category or kind}",
             f"Statement: {statement}",
         ]
     )
+    for idx, criterion in enumerate(fact.acceptance_criteria or [], start=1):
+        text_c = str(criterion).strip()
+        if text_c:
+            text_parts.append(f"Acceptance criterion {idx}: {text_c}")
     text = "\n".join(text_parts)
     meta = {
-        "source": "yaml",
-        "sheet": "Knowledge",
-        "sheet_type": "requirements",
+        "source": "scenario",
+        "sheet": sheet,
+        "sheet_type": kind,
+        "kind": kind,
+        "family": family,
+        "category": fact.category or kind,
         "scenario_slug": package.meta.slug,
         "scenario_version": package.meta.version,
         "persona_key": persona_id,
         "fact_id": fact.id,
+        "node_id": fact_node_id(package.meta.slug, fact.id),
         "disclosure": fact.disclosure.value if hasattr(fact.disclosure, "value") else str(fact.disclosure),
-        "category": category,
         "system_role": system_role,
-        "keywords": category.replace("_", ","),
+        "keywords": ",".join(filter(None, [kind, family, (fact.category or "").replace("_", ",")])),
         "row": 0,
     }
-    doc_id = f"yaml:{package.meta.slug}:{package.meta.version}:{persona_id}:{fact.id}"
+    doc_id = (
+        f"scenario:{package.meta.slug}:{package.meta.version}:{persona_id}:{fact.id}"
+    )
     return text, meta, doc_id
 
 
@@ -107,7 +122,7 @@ def index_packages_to_vector(rag, packages: Optional[list[ScenarioPackage]] = No
 
 
 def index_packages_to_neo4j(rag_neo4j, packages: Optional[list[ScenarioPackage]] = None) -> int:
-    """Upsert persona/fact graph for YAML scenarios. Returns fact-edge count."""
+    """Upsert persona/fact graph for scenario packages. Returns edge count."""
     if rag_neo4j is None or not hasattr(rag_neo4j, "upsert_scenario_graph"):
         return 0
     packages = packages or list(scenario_registry._latest.values())
@@ -125,10 +140,10 @@ def index_all_scenarios(*, vector_rag=None, neo4j_rag=None) -> dict[str, int]:
 
 
 def reload_and_index_scenarios(*, engine=None, vector_rag=None, neo4j_rag=None) -> dict[str, Any]:
-    """Reload YAML packages from disk, optionally re-seed DB, then refresh vector + graph indexes.
+    """Reload packages from disk, optionally re-seed DB, then refresh vector + graph indexes.
 
-    Direct/yaml preprompt modes read the in-memory registry + persona pack adapter, so a
-    reload is required before those modes see YAML edits without an app restart.
+    Direct/scenario preprompt modes read the in-memory registry + persona pack adapter, so a
+    reload is required before those modes see package edits without an app restart.
     """
     from app.seed import seed_scenarios
 
