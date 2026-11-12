@@ -37,8 +37,44 @@ def test_fact_kind_mapping_by_category_and_prefix():
         origin=FactOrigin.instructor,
         disclosure=Disclosure.when_relevant,
     )
+    feat = KnowledgeFact(
+        id="LIB-FEAT-001",
+        statement="Room booking requests.",
+        category="feature",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_relevant,
+    )
+    goal = KnowledgeFact(
+        id="LIB-GOAL-001",
+        statement="Reduce booking conflicts.",
+        category="goal",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_relevant,
+    )
+    asm = KnowledgeFact(
+        id="LIB-ASM-001",
+        statement="Rooms have unique ids.",
+        category="assumption",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_relevant,
+    )
+    iface = KnowledgeFact(
+        id="LIB-IF-001",
+        statement="Calendar export API.",
+        category="interface",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_relevant,
+    )
     assert fact_kind_and_label(req) == ("requirement", "Requirement", "Requirement")
     assert fact_kind_and_label(br) == ("constraint", "Constraint", "Constraint")
+    assert fact_kind_and_label(feat) == ("feature", "Feature", "Feature")
+    assert fact_kind_and_label(goal) == ("goal", "Goal", "Goal")
+    assert fact_kind_and_label(asm) == ("assumption", "Assumption", "Assumption")
+    assert fact_kind_and_label(iface) == ("interface", "ExternalInterface", "Requirement")
 
 
 def test_library_plan_uses_domain_labels_not_yaml():
@@ -93,3 +129,80 @@ def test_excel_parity_gaps_documented():
     assert "mapped" in statuses
     assert "partial" in statuses
     assert any("Feature" in g["excel"] for g in EXCEL_PARITY_GAPS)
+
+
+def test_trace_links_emit_satisfies_derives_depends():
+    from app.scenarios.models import (
+        Persona,
+        ScenarioMeta,
+        ScenarioPackage,
+        ScenarioStatus,
+        SystemRole,
+    )
+
+    feat = KnowledgeFact(
+        id="DEMO-FEAT-001",
+        statement="Booking requests.",
+        category="feature",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_relevant,
+    )
+    goal = KnowledgeFact(
+        id="DEMO-GOAL-001",
+        statement="Fewer conflicts.",
+        category="goal",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_relevant,
+    )
+    dep = KnowledgeFact(
+        id="DEMO-DEP-001",
+        statement="Depends on campus SSO.",
+        category="dependency",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_relevant,
+    )
+    req = KnowledgeFact(
+        id="DEMO-REQ-001",
+        statement="Lecturers can request a room.",
+        category="functional",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_relevant,
+        satisfies_ids=["DEMO-FEAT-001"],
+        derives_from_ids=["DEMO-GOAL-001"],
+        depends_on_ids=["DEMO-DEP-001"],
+    )
+    persona = Persona(
+        id="alice",
+        display_name="Alice",
+        role="Coordinator",
+        system_role=SystemRole.operator,
+        known_fact_ids=["DEMO-REQ-001", "DEMO-FEAT-001", "DEMO-GOAL-001", "DEMO-DEP-001"],
+    )
+    package = ScenarioPackage(
+        meta=ScenarioMeta(
+            slug="demo",
+            title="Demo",
+            version="0.0.1",
+            status=ScenarioStatus.draft,
+            brief="Demo package",
+        ),
+        personas=[persona],
+        facts=[req, feat, goal, dep],
+    )
+    plan = build_scenario_graph_plan(package)
+    rel_types = {e.rel_type for e in plan.edges}
+    assert {"SATISFIES", "DERIVES_FROM", "DEPENDS_ON"} <= rel_types
+    labels = {label for n in plan.nodes for label in n.labels}
+    assert {"Feature", "Goal", "Dependency", "Requirement"} <= labels
+    sat = [
+        e
+        for e in plan.edges
+        if e.rel_type == "SATISFIES"
+        and e.from_key.get("node_id") == "scenario:demo:DEMO-REQ-001"
+        and e.to_key.get("node_id") == "scenario:demo:DEMO-FEAT-001"
+    ]
+    assert len(sat) == 1

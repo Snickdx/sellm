@@ -4,22 +4,39 @@ Generalized domain model used by **neo4j** / **hybrid** / **vector** modes when 
 
 Stored names intentionally avoid `Yaml*` / `yaml:` prefixes — labels and sheet metadata align with the traditional Excel model.
 
+Authoring taxonomy and SRS coverage rules: `.agents/skills/scenario-author/references/ieee-srs-coverage.md`.
+
 ## Translation workflow (package facts → stores)
 
 ```text
 ScenarioPackage
   ├─ personas / known_fact_ids
-  ├─ knowledge facts (category, acceptance_criteria, source_refs, decision_id)
+  ├─ knowledge facts (category, acceptance_criteria, source_refs,
+  │                   satisfies_ids / derives_from_ids / depends_on_ids)
   └─ gaps.decisions
         │
         ▼
 app.scenarios.neo4j_graph.fact_kind_and_label()
-  functional|REQ → Requirement
-  constraint|BR  → Constraint
-  ASM            → Constraint (assumption family)
-  workflow|WF    → Task
-  contextual     → RequirementNode
-  non_functional → QualityScenario / Qual_Scenario
+  functional|REQ     → Requirement
+  feature|FEAT       → Feature
+  goal|GOAL          → Goal
+  constraint|BR      → Constraint
+  assumption|ASM     → Assumption
+  dependency|DEP     → Dependency
+  limitation|LIM     → Limitation
+  workflow|WF        → Task
+  use_case|UC        → UseCase
+  interface|IF       → ExternalInterface
+  data|DATA          → DataEntity
+  performance|PERF   → PerformanceRequirement
+  usability|USE      → UsabilityRequirement
+  quality|NFR|SEC    → QualityAttribute
+  design_constraint  → DesignConstraint
+  standard|STD       → Standard
+  verification|VER   → VerificationMethod
+  glossary|GLOSS     → GlossaryTerm
+  reference|REF      → Reference
+  contextual         → RequirementNode
         │
         ├─► Neo4j: ScenarioPack + typed label, domain hubs/edges, embeddings
         └─► Chroma: scenario_facts docs with Excel sheet/kind metadata
@@ -31,9 +48,9 @@ app.scenarios.neo4j_graph.fact_kind_and_label()
 | --- | --- | --- |
 | `ScenarioPack`:`Project` | `node_id` = `scenario:{slug}:project` | Package root (title, brief, status) |
 | `ScenarioPack`:`Stakeholder` | `key` + scenario | Chat stakeholder |
-| `ScenarioPack`:`Requirement` / `Constraint` / `Task` / `QualityScenario` / `RequirementNode` | `node_id` = `scenario:{slug}:{fact_id}` | Typed knowledge (embedded) |
+| `ScenarioPack`:`Requirement` / `Feature` / `Goal` / `Constraint` / `Assumption` / `Dependency` / `Limitation` / `Task` / `UseCase` / `ExternalInterface` / `DataEntity` / `QualityAttribute` / `PerformanceRequirement` / `UsabilityRequirement` / `DesignConstraint` / `Standard` / `VerificationMethod` / `GlossaryTerm` / `Reference` / `RequirementNode` | `node_id` = `scenario:{slug}:{fact_id}` | Typed knowledge (embedded) |
 | `ScenarioPack`:`Category` | `name` + `scenario_slug` | Hub for `IN_CATEGORY` |
-| `ScenarioPack`:`FactFamily` | `name` + `scenario_slug` | Hub for REQ/BR/ASM/WF |
+| `ScenarioPack`:`FactFamily` | `name` + `scenario_slug` | Hub for REQ/FEAT/GOAL/BR/ASM/… |
 | `ScenarioPack`:`AcceptanceCriterion` | `criterion_id` + scenario | From `acceptance_criteria[]` |
 | `ScenarioPack`:`Role` | `name` | System-role vocabulary |
 | `ScenarioPack`:`Capability` | `name` | Admin capability verbs |
@@ -53,8 +70,11 @@ Instructor-only open questions and `evaluation.yaml` are **not** indexed.
 | `HAS_ROLE` | Stakeholder → Role | In-system authority class |
 | `CAN` | Stakeholder → Capability | Concrete admin verb |
 | `IN_CATEGORY` | knowledge → Category | Domain grouping |
-| `IN_FAMILY` | knowledge → FactFamily | REQ/BR/ASM/WF grouping |
+| `IN_FAMILY` | knowledge → FactFamily | REQ/FEAT/GOAL/… grouping |
 | `HAS_CRITERION` | knowledge → AcceptanceCriterion | Testable criterion |
+| `SATISFIES` | Requirement/NFR → Feature | From `satisfies_ids` |
+| `DERIVES_FROM` | Requirement → Goal (etc.) | From `derives_from_ids` |
+| `DEPENDS_ON` | knowledge → knowledge | From `depends_on_ids` |
 | `FROM_DECISION` / `PRODUCED` | Fact ↔ Decision | Provenance |
 | `CITED_FROM` | knowledge → SourceCue | Transcript citation |
 
@@ -65,9 +85,9 @@ Each `(persona, fact)` document uses the same kind/sheet mapping:
 | Metadata | Example |
 | --- | --- |
 | `source` | `scenario` |
-| `sheet` | `Requirement`, `Constraint`, `Task`, `Qual_Scenario`, … |
-| `sheet_type` / `kind` | `requirement`, `constraint`, `workflow`, … |
-| `family` | `REQ`, `BR`, `ASM`, `WF` |
+| `sheet` | `Requirement`, `Feature`, `Constraint`, `Assumption`, `Qual_Scenario`, … |
+| `sheet_type` / `kind` | `requirement`, `feature`, `constraint`, `assumption`, … |
+| `family` | `REQ`, `FEAT`, `GOAL`, `BR`, `ASM`, … |
 | `node_id` | `scenario:{slug}:{fact_id}` |
 | doc id | `scenario:{slug}:{version}:{persona}:{fact_id}` |
 
@@ -80,45 +100,37 @@ Document text includes project, stakeholder, sheet/kind, statement, and acceptan
 | `Requirement` / `Constraint` typed rows | `KnowledgeFact.category` + id prefix | **Mapped** |
 | Acceptance criteria on rows | `acceptance_criteria[]` | **Mapped** |
 | Stakeholder ownership (`OWNED_BY`) | Persona `KNOWS` | **Partial** |
-| Explicit `Relationships` sheet | No authored fact↔fact links | **Partial** (category/family hubs) |
-| `Feature` + `SATISFIES` | No Feature entity | **Gap** |
-| `Goal` / `Risk` / `Budget` / `Milestone` | Not modeled | **Gap** |
+| Explicit `Relationships` sheet | `SATISFIES` / `DERIVES_FROM` / `DEPENDS_ON` + hubs | **Partial** |
+| `Feature` + `SATISFIES` | Optional `FEAT-*` + `satisfies_ids` | **Mapped** |
+| `Goal` sheet | Optional `GOAL-*` | **Mapped** |
+| `Risk` / `Budget` / `Milestone` | Not modeled | **Gap** |
 
-## Missing nodes for IEEE / ISO/IEC/IEEE 29148 SRS coverage
+## IEEE / ISO/IEC/IEEE 29148 SRS coverage
 
-Relative to a typical SRS (29148 §9.6 / classic IEEE 830-style outline), the current graph covers **stakeholders**, **typed requirements/constraints**, **workflows (as Task)**, **acceptance criteria**, and **provenance**. These node types are still missing (or collapsed into generic facts) if the graph is meant to represent SRS portions:
+Relative to a typical SRS (29148 §9.6 / classic IEEE 830-style outline). Runtime labels exist when authors use the taxonomy in `ieee-srs-coverage.md`; thin packages may still omit records.
 
 | IEEE SRS portion (29148) | Suggested node(s) | Status now |
 | --- | --- | --- |
-| Purpose / Scope | `Purpose`, `Scope` (or structured props on `Project`) | **Missing** — only free-text `Project.brief` |
-| Definitions / acronyms | `GlossaryTerm` | **Missing** |
-| References | `Reference` (docs/standards) | **Missing** — `SourceCue` is interview provenance, not SRS refs |
-| Product perspective / context | `ExternalSystem`, `ContextBoundary` | **Missing** |
-| Product functions | `Feature` (or `ProductFunction`) | **Missing** |
+| Purpose / Scope | props on `Project` (`brief`) | **Partial** — free-text brief; author via scenario-author |
+| Definitions / acronyms | `GlossaryTerm` | **Mapped** when `GLOSS-*` authored |
+| References | `Reference` | **Mapped** when `REF-*` authored (`SourceCue` remains interview provenance) |
+| Product perspective / context | `ExternalInterface` / contextual facts | **Partial** |
+| Product functions | `Feature` | **Mapped** when `FEAT-*` authored |
 | User characteristics | `UserClass` | **Partial** — `Stakeholder` / `Role` only |
-| Limitations | `Limitation` | **Missing** — folded into `Constraint` if present at all |
-| Assumptions and dependencies | `Assumption`, `Dependency` | **Missing** — ASM facts become `Constraint`, not first-class |
-| Apportioning (deferred/allocated) | `RequirementAllocation` or status on req | **Missing** |
-| External interfaces | `UserInterface`, `HardwareInterface`, `SoftwareInterface`, `CommInterface` | **Missing** |
-| Functions (detailed FR) | `FunctionalRequirement` (distinct from Feature) | **Partial** — all FRs are plain `Requirement` |
-| Usability / performance | `UsabilityRequirement`, `PerformanceRequirement` | **Missing** — only generic `QualityScenario` for some NFRs |
-| Logical database requirements | `DataEntity`, `DataRequirement` | **Missing** |
-| Design constraints / standards compliance | `DesignConstraint`, `Standard` | **Partial** — single `Constraint` bucket |
-| Software system attributes | `QualityAttribute` (reliability, security, …) | **Partial** — `QualityScenario` only |
-| Verification | `VerificationMethod` (test/demo/analysis/inspection) | **Missing** — criteria exist, methods do not |
-| Supporting info / use cases | `UseCase`, `OperationalScenario` | **Missing** — workflows are `Task`, not use cases |
-| Traceability matrix edges | `SATISFIES`, `DERIVES_FROM`, `VERIFIED_BY`, `DEPENDS_ON` | **Missing** — hubs only (`IN_CATEGORY` / `IN_FAMILY`) |
+| Limitations | `Limitation` | **Mapped** when `LIM-*` / `limitation` |
+| Assumptions and dependencies | `Assumption`, `Dependency` | **Mapped** when `ASM`/`DEP` + categories |
+| Apportioning (deferred/allocated) | status / gaps | **Partial** — via gaps + fact status |
+| External interfaces | `ExternalInterface` | **Mapped** when `IF-*` authored |
+| Functions (detailed FR) | `Requirement` (+ `SATISFIES` → Feature) | **Mapped** |
+| Usability / performance | `UsabilityRequirement`, `PerformanceRequirement` | **Mapped** when authored |
+| Logical database requirements | `DataEntity` | **Mapped** when `DATA-*` authored |
+| Design constraints / standards | `DesignConstraint`, `Standard` | **Mapped** when authored |
+| Software system attributes | `QualityAttribute` | **Mapped** when `NFR`/`SEC`/quality authored |
+| Verification | `VerificationMethod` | **Mapped** when `VER-*` authored (`VERIFIED_BY` edge not yet emitted) |
+| Supporting info / use cases | `UseCase` (+ `Task` for workflows) | **Mapped** when `UC-*` authored |
+| Traceability matrix edges | `SATISFIES`, `DERIVES_FROM`, `DEPENDS_ON` | **Mapped** from fact link fields (`VERIFIED_BY` still missing) |
 
-Highest-value additions to approximate an SRS subgraph:
-
-1. `Feature` + `SATISFIES` (Feature → Requirement)
-2. `Goal` + `DERIVES_FROM` (Requirement → Goal)
-3. `Assumption` / `Dependency` (split from Constraint)
-4. `ExternalInterface` (user/hardware/software/communications)
-5. `DataEntity` / logical data requirements
-6. `UseCase` (linked to Stakeholder + Requirement)
-7. `VerificationMethod` + `VERIFIED_BY`
-8. `GlossaryTerm` + `Reference` for intro/supporting sections
+Authoring skill closes package gaps; reindex materializes the graph. Prefer remapping existing facts before inventing new ones.
 
 ## Visual map
 
@@ -136,7 +148,9 @@ flowchart LR
 
     SC((Project)):::pkg
     PE((Stakeholder)):::actor
-    FA((Knowledge<br/>Requirement<br/>Constraint<br/>Task)):::knowledge
+    FA((Knowledge<br/>Requirement<br/>Feature<br/>Goal<br/>…)):::knowledge
+    FE((Feature)):::knowledge
+    GO((Goal)):::knowledge
     CAT((Category)):::domain
     FAM((FactFamily)):::domain
     AC((Acceptance<br/>Criterion)):::domain
@@ -154,6 +168,9 @@ flowchart LR
     FA -->|IN_CATEGORY| CAT
     FA -->|IN_FAMILY| FAM
     FA -->|HAS_CRITERION| AC
+    FA -->|SATISFIES| FE
+    FA -->|DERIVES_FROM| GO
+    FA -->|DEPENDS_ON| FA
     FA -->|FROM_DECISION| DE
     DE -->|PRODUCED| FA
     FA -->|CITED_FROM| CU

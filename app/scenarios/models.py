@@ -66,6 +66,10 @@ class KnowledgeFact(BaseModel):
     known_by: list[str] = Field(default_factory=list)
     disclosure: Disclosure = Disclosure.when_relevant
     acceptance_criteria: list[str] = Field(default_factory=list)
+    # Optional SRS-style trace links (target fact ids in the same package).
+    satisfies_ids: list[str] = Field(default_factory=list)
+    derives_from_ids: list[str] = Field(default_factory=list)
+    depends_on_ids: list[str] = Field(default_factory=list)
     decision_id: str | None = None
     approved_by: str | None = None
     approved_at: str | None = None

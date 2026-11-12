@@ -7,7 +7,8 @@ Use when an existing `scenarios/<slug>/` package is approved or drafted but **th
 1. Enrich context students can elicit without fabricating transcript quotes.
 2. Correct understated **system-admin / operator** authority.
 3. Fill critical holes via instructor-approved `assumed` / `clarified` facts.
-4. Preserve provenance: never re-label unsupported content as `confirmed`.
+4. Close **IEEE / 29148 SRS-shaped** holes (Features, Goals, Assumptions, Interfaces, Data, Use cases, Quality, Verification) using [ieee-srs-coverage.md](ieee-srs-coverage.md).
+5. Preserve provenance: never re-label unsupported content as `confirmed`.
 
 ## Procedure
 
@@ -35,9 +36,13 @@ Prioritize:
 
 1. Mis-modeled system authority (critical)
 2. Missing approve/publish/override/audit powers (critical)
-3. Exception paths and state transitions (important)
-4. Cross-role visibility / privacy (important)
-5. NFR polish and optional colour (optional)
+3. Missing Goals / Features / FR→Feature `satisfies_ids` (critical for SRS-shaped packages)
+4. Exception paths and state transitions (important)
+5. Interfaces, data entities, dependencies (important)
+6. `ASM-*` still tagged `constraint` instead of `assumption` (important)
+7. Cross-role visibility / privacy / security NFRs (important)
+8. Use-case shaping of workflows; verification methods (optional → important if instructor asks)
+9. NFR polish and optional colour (optional)
 
 ### C. Instructor batches (≤ 5)
 
@@ -50,10 +55,12 @@ After each batch, persist decisions in `gaps.yaml` before the next batch.
 For each accepted decision:
 
 1. Add or revise knowledge records (`clarified` / `assumed`, `origin: instructor`, decision provenance on assumptions).
-2. Enrich persona `role`, `system_role`, `admin_capabilities`, priorities, `known_fact_ids`, referral rules.
-3. Extend workflows with exception/override steps when approved.
-4. Adjust `evaluation.yaml` oracle expectations if admin-aware elicitation is now in scope.
-5. Update `scenario.yaml` brief/`source_notes`; **bump `version`**; set `status: draft` until re-approval unless instructor keeps approval.
+2. Prefer dedicated categories/prefixes from ieee-srs-coverage (`FEAT`, `GOAL`, `ASM`+`assumption`, `DEP`, `IF`, `DATA`, `UC`, quality/verification).
+3. Wire trace links: `satisfies_ids`, `derives_from_ids`, `depends_on_ids` when both ends exist.
+4. Enrich persona `role`, `system_role`, `admin_capabilities`, priorities, `known_fact_ids` (include new GOAL/FEAT/IF/DATA ids), referral rules.
+5. Extend workflows / use cases with exception/override steps when approved.
+6. Adjust `evaluation.yaml` oracle expectations if admin-aware or SRS-shaped elicitation is now in scope.
+7. Update `scenario.yaml` brief/`source_notes` (purpose, scope, primary users); **bump `version`**; set `status: draft` until re-approval unless instructor keeps approval.
 
 Do **not**:
 

@@ -2,7 +2,9 @@
 
 Illustrative only — not a claim about any real interview.
 
-## Confirmed requirement
+For IEEE SRS-oriented categories and prefixes, see [ieee-srs-coverage.md](ieee-srs-coverage.md).
+
+## Confirmed requirement (linked to a feature)
 
 ```yaml
 id: LIB-REQ-001
@@ -20,14 +22,42 @@ known_by: [library_coordinator]
 disclosure: when_relevant
 acceptance_criteria:
   - A lecturer can submit a valid workshop booking request.
+satisfies_ids: [LIB-FEAT-001]
+derives_from_ids: [LIB-GOAL-001]
 ```
 
-## Assumed (instructor-approved synthetic)
+## Feature (product function)
+
+```yaml
+id: LIB-FEAT-001
+statement: Workshop booking request and confirmation for lecturers.
+category: feature
+status: clarified
+origin: instructor
+decision_id: DEC-LIB-FEAT-001
+known_by: [library_coordinator, lecturer]
+disclosure: when_relevant
+```
+
+## Goal
+
+```yaml
+id: LIB-GOAL-001
+statement: Reduce email-based booking chaos and prevent double-booked workshop rooms.
+category: goal
+status: clarified
+origin: instructor
+decision_id: DEC-LIB-GOAL-001
+known_by: [library_coordinator, administrator]
+disclosure: when_relevant
+```
+
+## Assumption (instructor-approved synthetic)
 
 ```yaml
 id: LIB-ASM-001
 statement: Maximum workshop capacity defaults to 30 unless overridden.
-category: constraint
+category: assumption
 status: assumed
 origin: instructor
 decision_id: DEC-LIB-002
@@ -36,6 +66,107 @@ approved_at: "2026-11-02T12:00:00Z"
 rationale: Needed for conflict checks; not stated in transcript.
 known_by: [library_coordinator, administrator]
 disclosure: when_asked
+```
+
+Prefer `category: assumption` for `ASM-*` (not `constraint`). Use `constraint` / `BR-*` for enforceable business rules.
+
+## Dependency
+
+```yaml
+id: LIB-DEP-001
+statement: Room capacity and calendar data remain authoritative in the existing room calendar until replaced.
+category: dependency
+status: assumed
+origin: instructor
+decision_id: DEC-LIB-DEP-001
+approved_by: instructor@example.com
+approved_at: "2026-11-02T12:00:00Z"
+rationale: Integration boundary not fully specified in transcript.
+known_by: [library_coordinator]
+disclosure: when_asked
+```
+
+## External interface
+
+```yaml
+id: LIB-IF-001
+statement: Lecturers submit booking requests through a web form (course code, headcount, date, topics).
+category: interface
+status: confirmed
+origin: transcript
+source_refs:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0003
+    start: "00:00:17.500"
+    end: "00:00:26.000"
+    speaker: coordinator
+known_by: [library_coordinator, lecturer]
+disclosure: when_relevant
+```
+
+## Data entity
+
+```yaml
+id: LIB-DATA-001
+statement: A booking request stores course code, expected headcount, preferred date, and resource topics.
+category: data
+status: confirmed
+origin: transcript
+source_refs:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0004
+    start: "00:00:26.500"
+    end: "00:00:35.000"
+    speaker: coordinator
+known_by: [library_coordinator]
+disclosure: when_relevant
+```
+
+## Use case
+
+```yaml
+id: LIB-UC-001
+statement: >-
+  Lecturer submits a booking request; coordinator reviews conflicts and capacity;
+  system issues a confirmation the lecturer can show students.
+category: use_case
+status: clarified
+origin: instructor
+decision_id: DEC-LIB-UC-001
+known_by: [library_coordinator, lecturer]
+disclosure: when_relevant
+satisfies_ids: [LIB-FEAT-001]
+```
+
+## Quality / security
+
+```yaml
+id: LIB-SEC-001
+statement: Applicant or lecturer personal data used in booking confirmations must be stored securely.
+category: security
+status: clarified
+origin: instructor
+decision_id: DEC-LIB-SEC-001
+known_by: [administrator]
+disclosure: when_asked
+satisfies_ids: [LIB-FEAT-001]
+```
+
+## Verification method
+
+```yaml
+id: LIB-VER-001
+statement: Double-booking prevention is verified by demonstration with two overlapping requests.
+category: verification
+status: assumed
+origin: instructor
+decision_id: DEC-LIB-VER-001
+approved_by: instructor@example.com
+approved_at: "2026-11-02T12:00:00Z"
+rationale: Verification approach not stated in transcript; needed for SRS-shaped depth.
+known_by: [library_coordinator]
+disclosure: when_asked
+depends_on_ids: [LIB-REQ-003]
 ```
 
 ## Status vs origin
@@ -67,6 +198,8 @@ priorities:
   - Prefer earlier requests when slots conflict, with override for larger cohorts
 communication_style: Practical, concise, flags uncertainty about cancellation deadlines
 known_fact_ids:
+  - LIB-GOAL-001
+  - LIB-FEAT-001
   - LIB-REQ-001
   - LIB-REQ-002
   - LIB-BR-001

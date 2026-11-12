@@ -21,34 +21,73 @@ SCENARIO_PACK_LABEL = "ScenarioPack"
 # Category / id-prefix → domain kind + Neo4j/Excel-aligned label + vector sheet name.
 CATEGORY_TO_KIND: dict[str, tuple[str, str, str]] = {
     "functional": ("requirement", "Requirement", "Requirement"),
-    "non_functional": ("non_functional", "QualityScenario", "Qual_Scenario"),
-    "nonfunctional": ("non_functional", "QualityScenario", "Qual_Scenario"),
+    "feature": ("feature", "Feature", "Feature"),
+    "goal": ("goal", "Goal", "Goal"),
+    "non_functional": ("non_functional", "QualityAttribute", "Qual_Scenario"),
+    "nonfunctional": ("non_functional", "QualityAttribute", "Qual_Scenario"),
+    "quality": ("quality", "QualityAttribute", "Qual_Scenario"),
+    "performance": ("performance", "PerformanceRequirement", "Qual_Scenario"),
+    "usability": ("usability", "UsabilityRequirement", "Qual_Scenario"),
+    "security": ("security", "QualityAttribute", "Qual_Scenario"),
     "constraint": ("constraint", "Constraint", "Constraint"),
+    "limitation": ("limitation", "Limitation", "Constraint"),
+    "assumption": ("assumption", "Assumption", "Assumption"),
+    "dependency": ("dependency", "Dependency", "Dependency"),
+    "design_constraint": ("design_constraint", "DesignConstraint", "Constraint"),
+    "standard": ("standard", "Standard", "Constraint"),
     "workflow": ("workflow", "Task", "Task"),
+    "use_case": ("use_case", "UseCase", "Qual_Scenario"),
+    "interface": ("interface", "ExternalInterface", "Requirement"),
+    "data": ("data", "DataEntity", "Requirement"),
+    "verification": ("verification", "VerificationMethod", "Requirement"),
+    "glossary": ("glossary", "GlossaryTerm", "RequirementNode"),
+    "reference": ("reference", "Reference", "RequirementNode"),
     "contextual": ("context", "RequirementNode", "RequirementNode"),
 }
 
 PREFIX_TO_KIND: dict[str, tuple[str, str, str]] = {
     "REQ": ("requirement", "Requirement", "Requirement"),
+    "FEAT": ("feature", "Feature", "Feature"),
+    "GOAL": ("goal", "Goal", "Goal"),
     "BR": ("constraint", "Constraint", "Constraint"),
-    "ASM": ("assumption", "Constraint", "Constraint"),
+    "LIM": ("limitation", "Limitation", "Constraint"),
+    "ASM": ("assumption", "Assumption", "Assumption"),
+    "DEP": ("dependency", "Dependency", "Dependency"),
+    "DES": ("design_constraint", "DesignConstraint", "Constraint"),
+    "STD": ("standard", "Standard", "Constraint"),
     "WF": ("workflow", "Task", "Task"),
+    "UC": ("use_case", "UseCase", "Qual_Scenario"),
+    "IF": ("interface", "ExternalInterface", "Requirement"),
+    "DATA": ("data", "DataEntity", "Requirement"),
+    "PERF": ("performance", "PerformanceRequirement", "Qual_Scenario"),
+    "USE": ("usability", "UsabilityRequirement", "Qual_Scenario"),
+    "SEC": ("security", "QualityAttribute", "Qual_Scenario"),
+    "NFR": ("quality", "QualityAttribute", "Qual_Scenario"),
+    "VER": ("verification", "VerificationMethod", "Requirement"),
+    "GLOSS": ("glossary", "GlossaryTerm", "RequirementNode"),
+    "REF": ("reference", "Reference", "RequirementNode"),
+    "CTX": ("context", "RequirementNode", "RequirementNode"),
 }
 
 EXCEL_PARITY_GAPS: list[dict[str, str]] = [
     {
         "excel": "Feature nodes + SATISFIES links",
-        "scenario_provides": "Functional facts only (no Feature entity)",
-        "status": "gap",
+        "scenario_provides": "Optional FEAT-* facts + satisfies_ids on requirements",
+        "status": "mapped",
     },
     {
-        "excel": "Goal / Risk / Budget / Milestone sheets",
+        "excel": "Goal sheet",
+        "scenario_provides": "Optional GOAL-* facts (category goal)",
+        "status": "mapped",
+    },
+    {
+        "excel": "Risk / Budget / Milestone sheets",
         "scenario_provides": "Not modeled as first-class entities",
         "status": "gap",
     },
     {
         "excel": "Explicit Relationships sheet (OWNED_BY, HAS_CONSTRAINT, …)",
-        "scenario_provides": "Persona KNOWS + inferred IN_CATEGORY / HAS_CRITERION / IN_FAMILY",
+        "scenario_provides": "KNOWS + IN_CATEGORY / IN_FAMILY / HAS_CRITERION + SATISFIES / DERIVES_FROM / DEPENDS_ON",
         "status": "partial",
     },
     {
@@ -156,6 +195,33 @@ def _pack_labels(*labels: str) -> list[str]:
         if label and label not in out:
             out.append(label)
     return out
+
+
+def _trace_edges(
+    *,
+    slug: str,
+    from_label: str,
+    from_node_id: str,
+    target_ids: list[str],
+    rel_type: str,
+    visible_facts: dict[str, KnowledgeFact],
+) -> list[GraphEdge]:
+    edges: list[GraphEdge] = []
+    for target_id in target_ids or []:
+        target = visible_facts.get(target_id)
+        if target is None:
+            continue
+        _, to_label, _ = fact_kind_and_label(target)
+        edges.append(
+            GraphEdge(
+                rel_type=rel_type,
+                from_labels=_pack_labels(from_label),
+                from_key={"node_id": from_node_id},
+                to_labels=_pack_labels(to_label),
+                to_key={"node_id": fact_node_id(slug, target_id)},
+            )
+        )
+    return edges
 
 
 def build_scenario_graph_plan(package: ScenarioPackage) -> ScenarioGraphPlan:
@@ -362,6 +428,37 @@ def build_scenario_graph_plan(package: ScenarioPackage) -> ScenarioGraphPlan:
                     to_key={"node_id": node_id},
                 )
             )
+
+        plan.edges.extend(
+            _trace_edges(
+                slug=slug,
+                from_label=label,
+                from_node_id=node_id,
+                target_ids=list(getattr(fact, "satisfies_ids", None) or []),
+                rel_type="SATISFIES",
+                visible_facts=visible_facts,
+            )
+        )
+        plan.edges.extend(
+            _trace_edges(
+                slug=slug,
+                from_label=label,
+                from_node_id=node_id,
+                target_ids=list(getattr(fact, "derives_from_ids", None) or []),
+                rel_type="DERIVES_FROM",
+                visible_facts=visible_facts,
+            )
+        )
+        plan.edges.extend(
+            _trace_edges(
+                slug=slug,
+                from_label=label,
+                from_node_id=node_id,
+                target_ids=list(getattr(fact, "depends_on_ids", None) or []),
+                rel_type="DEPENDS_ON",
+                visible_facts=visible_facts,
+            )
+        )
 
         for ref in fact.source_refs or []:
             cue_id = getattr(ref, "cue_id", None) or ""
