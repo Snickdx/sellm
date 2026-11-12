@@ -350,12 +350,13 @@
   function onTranscript(text, isFinal) {
     if (isFinal && isNextCommand(text)) {
       state.answer = state.sttBase;
+      syncAnswerField({ fromStt: true });
       void onVoiceNext();
       return;
     }
     if (!isFinal && isNextCommand(text)) {
       state.answer = state.sttBase;
-      syncAnswerField();
+      syncAnswerField({ fromStt: true });
       return;
     }
     if (isFinal) {
@@ -364,13 +365,16 @@
     } else {
       state.answer = `${state.sttBase} ${text}`.trim();
     }
-    syncAnswerField();
+    syncAnswerField({ fromStt: true });
   }
 
-  function syncAnswerField() {
+  function syncAnswerField({ fromStt = false } = {}) {
     const ta = $("exitAnswer");
-    if (ta && document.activeElement !== ta) ta.value = state.answer;
-    if (ta) ta.disabled = state.busy;
+    if (ta) {
+      // Speech must fill the field even while focused; typing updates sttBase on input.
+      if (fromStt || document.activeElement !== ta) ta.value = state.answer;
+      ta.disabled = state.busy;
+    }
     const btn = $("exitAnswerForm")?.querySelector('button[type="submit"]');
     if (btn) btn.disabled = state.busy || !state.answer.trim();
     const skip = $("exitSkipQ");
