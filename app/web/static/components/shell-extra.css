@@ -767,6 +767,99 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   letter-spacing: 0.04em;
 }
 .video-room-meta { margin: 0; font-size: 11px; }
+.voice-meter {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 6px;
+  align-items: center;
+}
+.voice-meter-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+.voice-meter-track {
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+  border: 1px solid #dbe3ef;
+}
+.voice-meter-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: #94a3b8;
+  transition: width 0.05s linear, background-color 0.15s ease;
+}
+.voice-meter-fill[data-level="quiet"] { background: #38bdf8; }
+.voice-meter-fill[data-level="good"] { background: #22c55e; }
+.voice-meter-fill[data-level="hot"] { background: #f59e0b; }
+.voice-meter-state {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+.voice-meter-state[data-level="good"] { color: #15803d; }
+.voice-meter-state[data-level="hot"] { color: #b45309; }
+.voice-meter-state[data-level="silent"] { color: #94a3b8; }
+.voice-devices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.voice-device-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+.voice-device-field select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 6px 28px 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M3 4.5L6 8l3-3.5'/%3E%3C/svg%3E") no-repeat right 8px center;
+  color: #0f172a;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+.voice-device-field select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.voice-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.voice-tool-btn {
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+}
+.voice-trouble {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+.voice-trouble .hint { margin: 0; font-size: 11px; }
 
 .landing-shell {
   min-height: 100%;
