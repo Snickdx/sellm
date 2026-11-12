@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import secrets
+import string
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -18,6 +20,7 @@ from app.api.schemas import (
     AdminUserCreateRequest,
     AdminUserDeleteRequest,
     AdminUserDeleteResult,
+    AdminUserPasswordResetResult,
     AdminUserSummary,
     AdminUserUpdateRequest,
     ChatMessage,
@@ -42,6 +45,7 @@ from app.storage.conversation_store import (
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 VALID_RESPONSE_MODES = {
+    "any",
     "vector",
     "neo4j",
     "hybrid",
@@ -238,6 +242,13 @@ async def get_user(user_id: int, request: Request):
     return _user_summary(store, user, claimed_groups=_claimed_group_names())
 
 
+def _generate_password(length: int = 12) -> str:
+    alphabet = string.ascii_letters + string.digits
+    for ch in "O0lI1":
+        alphabet = alphabet.replace(ch, "")
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
 @router.patch("/users/{user_id}", response_model=AdminUserSummary)
 async def update_user(user_id: int, body: AdminUserUpdateRequest, request: Request):
     admin = _require_admin(request)
@@ -284,6 +295,26 @@ async def update_user(user_id: int, body: AdminUserUpdateRequest, request: Reque
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
     return _user_summary(store, updated, claimed_groups=_claimed_group_names())
+
+
+@router.post("/users/{user_id}/reset-password", response_model=AdminUserPasswordResetResult)
+async def reset_user_password(user_id: int, request: Request):
+    """Generate a new password for a user account (shown once)."""
+    _require_admin(request)
+    store = _store(request)
+    existing = store.get_user_by_id(user_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="User not found")
+    password = _generate_password()
+    updated = store.update_user(user_id, password=password)
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return AdminUserPasswordResetResult(
+        user_id=int(user_id),
+        username=updated.username,
+        password=password,
+        message="Save this password now. It is shown only once.",
+    )
 
 
 def _cleanup_exit_membership(user_id: int, actor_id: int | None = None) -> None:

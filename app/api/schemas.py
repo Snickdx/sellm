@@ -226,6 +226,13 @@ class AdminUserDeleteResult(BaseModel):
     failed: List[dict] = []
 
 
+class AdminUserPasswordResetResult(BaseModel):
+    user_id: int
+    username: str
+    password: str
+    message: str
+
+
 class AdminConversationSummary(BaseModel):
     id: str
     title: str
