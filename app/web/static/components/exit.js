@@ -60,6 +60,7 @@
   };
   let advancing = false;
   let finishing = false;
+  let cancelling = false;
   let bound = false;
 
   function $(id) {
@@ -160,15 +161,20 @@
     return qs.slice().sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
   }
 
-  function destroyVoice() {
+  function destroyVoice({ discard = false } = {}) {
     if (state.voice) {
       try {
-        state.voice.destroy();
+        if (discard && typeof state.voice.discard === "function") state.voice.discard();
+        else state.voice.destroy();
       } catch (_) {
         /* ignore */
       }
       state.voice = null;
     }
+  }
+
+  function isCancellableLive(session) {
+    return Boolean(session && !isScored(session.status));
   }
 
   async function refreshHub(preferId) {
@@ -479,7 +485,7 @@
     try {
       await global.SellmApi.deleteExitSession(id);
       if (state.session?.id === id) {
-        destroyVoice();
+        destroyVoice({ discard: true });
         state.session = null;
         state.report = null;
         state.probePrompt = null;
@@ -494,6 +500,57 @@
     } catch (err) {
       setError(err instanceof Error ? err.message : "Delete failed");
     } finally {
+      clearBusyAndRender();
+    }
+  }
+
+  /**
+   * Abandon an in-progress live interview: stop mic/camera without keeping the
+   * recording, delete the session, return to the interviews hub.
+   */
+  async function onCancelInterview({ confirm = true } = {}) {
+    const session = state.session;
+    if (!session || cancelling) return false;
+    if (!isCancellableLive(session)) {
+      goToHub({
+        selectedPastId: session.id,
+        hubScreen: isMobileExit() ? "list" : "detail",
+      });
+      return true;
+    }
+    if (
+      confirm &&
+      !window.confirm(
+        "Cancel this interview? Progress and the recording will be discarded.",
+      )
+    ) {
+      return false;
+    }
+    cancelling = true;
+    setBusy(true);
+    setError(null);
+    const id = session.id;
+    try {
+      destroyVoice({ discard: true });
+      await global.SellmApi.deleteExitSession(id);
+      state.session = null;
+      state.report = null;
+      state.probePrompt = null;
+      state.answer = "";
+      state.sttBase = "";
+      state.selectedPastId = null;
+      state.pastDetail = null;
+      state.hubReport = null;
+      state.hubReportReady = false;
+      state.hubScreen = "list";
+      state.tab = "hub";
+      await refreshHub(null);
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not cancel interview");
+      return false;
+    } finally {
+      cancelling = false;
       clearBusyAndRender();
     }
   }
@@ -555,10 +612,7 @@
     back.dataset.bound = "1";
     back.addEventListener("click", () => {
       if (state.tab === "live" && state.session) {
-        goToHub({
-          selectedPastId: state.session.id,
-          hubScreen: isMobileExit() ? "list" : "detail",
-        });
+        leaveLiveToHub();
         return;
       }
       state.hubScreen = "list";
@@ -738,6 +792,17 @@
     render();
   }
 
+  function leaveLiveToHub() {
+    if (state.tab === "live" && isCancellableLive(state.session)) {
+      void onCancelInterview({ confirm: true });
+      return;
+    }
+    goToHub({
+      selectedPastId: state.session?.id || state.selectedPastId,
+      hubScreen: isMobileExit() ? "list" : state.session || state.selectedPastId ? "detail" : "list",
+    });
+  }
+
   function renderReview() {
     const root = $("exitMain");
     const session = state.session;
@@ -887,6 +952,7 @@
           </div>
           <div class="live-actions">
             <button type="button" class="ghost" id="exitBackHub">← Interviews</button>
+            <button type="button" class="ghost danger" id="exitCancelBtn" ${state.busy ? "disabled" : ""}>Cancel interview</button>
             <button type="button" class="live-end-btn" id="exitEndBtn" ${state.busy ? "disabled" : ""}>
               ${
                 state.busy || session.status === "processing"
@@ -986,12 +1052,8 @@
       </section>`;
 
     root.dataset.voiceSession = needVoice ? session.id : "";
-    $("exitBackHub")?.addEventListener("click", () => {
-      goToHub({
-        selectedPastId: session.id,
-        hubScreen: isMobileExit() ? "list" : "detail",
-      });
-    });
+    $("exitBackHub")?.addEventListener("click", () => leaveLiveToHub());
+    $("exitCancelBtn")?.addEventListener("click", () => void onCancelInterview({ confirm: true }));
     $("exitEndBtn")?.addEventListener("click", () => void onEndInterview());
     $("exitPrevQ")?.addEventListener("click", () => {
       state.viewIndex = Math.max(0, state.viewIndex - 1);

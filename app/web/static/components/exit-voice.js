@@ -488,7 +488,7 @@
       navigator.mediaDevices.addEventListener("devicechange", onDeviceChange);
     }
 
-    function destroy() {
+    function teardownMedia({ upload = true } = {}) {
       cancelled = true;
       if (navigator.mediaDevices?.removeEventListener) {
         navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange);
@@ -511,7 +511,7 @@
         recognition = null;
       }
       const uploadChunks = () => {
-        if (!ch.length) return;
+        if (!upload || !ch.length) return;
         const blob = new Blob(ch, { type: m });
         if (blob.size > 0) {
           void global.SellmApi.uploadVoiceRecording(sid, blob).catch(() => undefined);
@@ -532,13 +532,22 @@
         uploadChunks();
         st?.getTracks().forEach((t) => t.stop());
       }
+      if (video) video.srcObject = null;
       root.innerHTML = "";
+    }
+
+    function destroy() {
+      teardownMedia({ upload: true });
+    }
+
+    function discard() {
+      teardownMedia({ upload: false });
     }
 
     void global.SellmApi.fetchVoiceStatus(activeSessionId).catch(() => undefined);
     void acquireAndRecord();
 
-    return { stopAndUpload, destroy };
+    return { stopAndUpload, destroy, discard };
   }
 
   global.SellmExitVoice = { createVoiceRoom };
