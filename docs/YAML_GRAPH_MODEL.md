@@ -84,6 +84,42 @@ Document text includes project, stakeholder, sheet/kind, statement, and acceptan
 | `Feature` + `SATISFIES` | No Feature entity | **Gap** |
 | `Goal` / `Risk` / `Budget` / `Milestone` | Not modeled | **Gap** |
 
+## Missing nodes for IEEE / ISO/IEC/IEEE 29148 SRS coverage
+
+Relative to a typical SRS (29148 §9.6 / classic IEEE 830-style outline), the current graph covers **stakeholders**, **typed requirements/constraints**, **workflows (as Task)**, **acceptance criteria**, and **provenance**. These node types are still missing (or collapsed into generic facts) if the graph is meant to represent SRS portions:
+
+| IEEE SRS portion (29148) | Suggested node(s) | Status now |
+| --- | --- | --- |
+| Purpose / Scope | `Purpose`, `Scope` (or structured props on `Project`) | **Missing** — only free-text `Project.brief` |
+| Definitions / acronyms | `GlossaryTerm` | **Missing** |
+| References | `Reference` (docs/standards) | **Missing** — `SourceCue` is interview provenance, not SRS refs |
+| Product perspective / context | `ExternalSystem`, `ContextBoundary` | **Missing** |
+| Product functions | `Feature` (or `ProductFunction`) | **Missing** |
+| User characteristics | `UserClass` | **Partial** — `Stakeholder` / `Role` only |
+| Limitations | `Limitation` | **Missing** — folded into `Constraint` if present at all |
+| Assumptions and dependencies | `Assumption`, `Dependency` | **Missing** — ASM facts become `Constraint`, not first-class |
+| Apportioning (deferred/allocated) | `RequirementAllocation` or status on req | **Missing** |
+| External interfaces | `UserInterface`, `HardwareInterface`, `SoftwareInterface`, `CommInterface` | **Missing** |
+| Functions (detailed FR) | `FunctionalRequirement` (distinct from Feature) | **Partial** — all FRs are plain `Requirement` |
+| Usability / performance | `UsabilityRequirement`, `PerformanceRequirement` | **Missing** — only generic `QualityScenario` for some NFRs |
+| Logical database requirements | `DataEntity`, `DataRequirement` | **Missing** |
+| Design constraints / standards compliance | `DesignConstraint`, `Standard` | **Partial** — single `Constraint` bucket |
+| Software system attributes | `QualityAttribute` (reliability, security, …) | **Partial** — `QualityScenario` only |
+| Verification | `VerificationMethod` (test/demo/analysis/inspection) | **Missing** — criteria exist, methods do not |
+| Supporting info / use cases | `UseCase`, `OperationalScenario` | **Missing** — workflows are `Task`, not use cases |
+| Traceability matrix edges | `SATISFIES`, `DERIVES_FROM`, `VERIFIED_BY`, `DEPENDS_ON` | **Missing** — hubs only (`IN_CATEGORY` / `IN_FAMILY`) |
+
+Highest-value additions to approximate an SRS subgraph:
+
+1. `Feature` + `SATISFIES` (Feature → Requirement)
+2. `Goal` + `DERIVES_FROM` (Requirement → Goal)
+3. `Assumption` / `Dependency` (split from Constraint)
+4. `ExternalInterface` (user/hardware/software/communications)
+5. `DataEntity` / logical data requirements
+6. `UseCase` (linked to Stakeholder + Requirement)
+7. `VerificationMethod` + `VERIFIED_BY`
+8. `GlossaryTerm` + `Reference` for intro/supporting sections
+
 ## Visual map
 
 Circular nodes, straight directed edges:
