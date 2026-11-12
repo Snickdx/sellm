@@ -1215,12 +1215,20 @@ def chat(request: ChatRequest, req: Request):
                 raise ValueError("YAML mode requires a YAML scenario and persona (not Excel)")
             import asyncio
 
+            # Use the same BYOK / app-key / Ollama choice as other chat modes.
+            # Without credentials, persona chat falls back to the offline heuristic.
+            backend, model_name = parse_choice_id(llm_choice)
+            override = _get_user_provider_override(user, backend or "")
             reply = asyncio.run(
                 generate_validated_reply(
                     package=scope_package,
                     persona_key=scope_persona,
                     history=history,
                     student_message=request.message,
+                    llm_provider=backend,
+                    llm_api_key=override.get("api_key_override"),
+                    llm_base_url=override.get("base_url_override"),
+                    llm_model=model_name,
                 )
             )
             mode_label = f"yaml:{scope_slug}:{scope_persona}"
@@ -1251,6 +1259,7 @@ def chat(request: ChatRequest, req: Request):
                 "uncertainties": reply.uncertainties,
                 "handoff_suggestion": reply.handoff_suggestion,
                 "model_version": reply.model_version,
+                "requested_llm_choice": llm_choice,
             }
             return _chat_out(
                 response=reply.answer,
@@ -1260,6 +1269,7 @@ def chat(request: ChatRequest, req: Request):
                 llm_used={
                     "provider": (reply.usage or {}).get("provider", "scenario"),
                     "model": reply.model_version,
+                    "choice": llm_choice,
                 },
                 debug=yaml_debug if request.debug else None,
                 **_chat_quota_fields(user, yaml_billing if provider in ("heuristic", "guard") else billing),
