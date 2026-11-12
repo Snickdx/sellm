@@ -95,10 +95,12 @@ def main() -> int:
             fail(f"{label} missing manifest link")
         else:
             ok(f"{label} links manifest.json")
-        if "serviceWorker" not in html:
-            fail(f"{label} missing service worker registration")
+        if "serviceWorker" not in html or "unregister" not in html:
+            fail(f"{label} missing service worker unregister/cleanup")
         else:
-            ok(f"{label} registers service worker")
+            ok(f"{label} unregisters service worker")
+        if "serviceWorker.register" in html or 'register("/sw.js")' in html:
+            fail(f"{label} still registers service worker")
         if "manifest.webmanifest" in html:
             fail(f"{label} references manifest.webmanifest")
 

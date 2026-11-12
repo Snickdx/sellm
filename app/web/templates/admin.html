@@ -1120,11 +1120,16 @@
 
     <button type="button" id="createTeamFab" class="fab-labeled" hidden>+ Create group</button>
 
-    <script src="/static/components/admin.js?v=26"></script>
+    <script src="/static/components/admin.js?v=27"></script>
     <script>
       if ("serviceWorker" in navigator) {
-        window.addEventListener("load", function () {
-          navigator.serviceWorker.register("/sw.js").catch(function () {});
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (r) { r.unregister(); });
+        });
+      }
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (k) { caches.delete(k); });
         });
       }
     </script>
