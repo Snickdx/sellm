@@ -57,7 +57,19 @@
     pendingSession: null,
     consentChecked: false,
     voice: null,
+    sttEnabled: (() => {
+      try {
+        const raw = localStorage.getItem("sellm.exit.sttEnabled");
+        if (raw === null || raw === "") return true;
+        return raw !== "0" && raw !== "false";
+      } catch (_) {
+        return true;
+      }
+    })(),
+    sttActivity: { enabled: true, available: true, phase: "off", preview: "" },
   };
+  state.sttActivity.enabled = state.sttEnabled;
+  state.sttActivity.phase = state.sttEnabled ? "starting" : "off";
   let advancing = false;
   let finishing = false;
   let cancelling = false;
@@ -73,6 +85,10 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function escapeAttr(s) {
+    return escapeHtml(s);
   }
 
   function formatWhen(iso) {
@@ -361,6 +377,49 @@
     if (skip) skip.disabled = state.busy;
     const end = $("exitEndBtn");
     if (end) end.disabled = state.busy;
+    const cancel = $("exitCancelBtn");
+    if (cancel) cancel.disabled = state.busy;
+    syncSttAnswerChrome();
+  }
+
+  function syncSttAnswerChrome(activity) {
+    if (activity) state.sttActivity = activity;
+    const a = state.sttActivity || {};
+    const status = $("exitSttStatus");
+    const preview = $("exitSttPreview");
+    const ta = $("exitAnswer");
+    if (status) {
+      const phase = a.phase || (a.enabled ? "listening" : "off");
+      status.hidden = false;
+      status.dataset.phase = phase;
+      const labels = {
+        off: "Typing mode — speech to text off",
+        unavailable: "Speech to text unavailable in this browser",
+        starting: "Starting speech to text…",
+        listening: "Listening for speech…",
+        hearing: "Hearing you…",
+        transcribing: "Transcribing…",
+        blocked: "Speech blocked — check mic permission",
+        error: "Speech error — try Troubleshoot",
+      };
+      const label = status.querySelector("[data-label]");
+      if (label) label.textContent = labels[phase] || phase;
+    }
+    if (preview) {
+      const show =
+        Boolean(a.preview) && (a.phase === "hearing" || a.phase === "transcribing");
+      preview.hidden = !show;
+      preview.textContent = show ? a.preview : "";
+    }
+    if (ta && !wrappingLive()) {
+      ta.placeholder = a.enabled
+        ? ta.dataset.speakPlaceholder || ta.placeholder
+        : "Type your answer… (speech to text is off)";
+    }
+  }
+
+  function wrappingLive() {
+    return Boolean(state.session && isWrapping(state.session.status));
   }
 
   async function onVoiceNext() {
@@ -1016,11 +1075,27 @@
             ${
               canAnswer
                 ? `<form class="chat-compose live-answer" id="exitAnswerForm">
+                    <div class="stt-answer-status" id="exitSttStatus" data-phase="${escapeAttr(
+                      state.sttActivity?.phase || (state.sttEnabled ? "listening" : "off"),
+                    )}">
+                      <span class="voice-stt-dot" aria-hidden="true"></span>
+                      <span data-label>${
+                        state.sttEnabled ? "Listening for speech…" : "Typing mode — speech to text off"
+                      }</span>
+                    </div>
+                    <p class="stt-answer-preview" id="exitSttPreview" hidden></p>
                     <textarea id="exitAnswer" rows="5" ${state.busy ? "disabled" : ""}
-                      placeholder="${escapeHtml(
+                      data-speak-placeholder="${escapeAttr(
                         session.current_participant_name
                           ? `Speak or type as ${session.current_participant_name}… (or Skip for alternative)`
                           : "Speak or type your answer… (or Skip for alternative)",
+                      )}"
+                      placeholder="${escapeHtml(
+                        state.sttEnabled
+                          ? session.current_participant_name
+                            ? `Speak or type as ${session.current_participant_name}… (or Skip for alternative)`
+                            : "Speak or type your answer… (or Skip for alternative)"
+                          : "Type your answer… (speech to text is off)",
                       )}"
                     >${escapeHtml(state.answer)}</textarea>
                     <div class="live-answer-actions">
@@ -1082,13 +1157,30 @@
     if (needVoice && mount) {
       if (preservedVoice) {
         mount.appendChild(preservedVoice);
+        syncSttAnswerChrome(state.sttActivity);
       } else if (!state.voice) {
         state.voice = global.SellmExitVoice.createVoiceRoom({
           root: mount,
           sessionId: session.id,
           autoStart: true,
+          speechEnabled: state.sttEnabled !== false,
           onTranscript: wrappingUp ? null : onTranscript,
+          onSpeechModeChange: (enabled) => {
+            state.sttEnabled = Boolean(enabled);
+            syncSttAnswerChrome({
+              ...(state.sttActivity || {}),
+              enabled: Boolean(enabled),
+              phase: enabled ? "listening" : "off",
+              preview: "",
+            });
+          },
+          onSttActivity: (activity) => {
+            state.sttEnabled = Boolean(activity?.enabled);
+            syncSttAnswerChrome(activity);
+          },
         });
+      } else {
+        syncSttAnswerChrome(state.sttActivity);
       }
     }
   }

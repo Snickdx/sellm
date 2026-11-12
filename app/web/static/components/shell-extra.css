@@ -569,6 +569,53 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   flex-direction: column;
   gap: 10px;
 }
+.stt-answer-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid #dbe3ef;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+.stt-answer-status[data-phase="listening"],
+.stt-answer-status[data-phase="starting"] {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.stt-answer-status[data-phase="hearing"],
+.stt-answer-status[data-phase="transcribing"] {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+.stt-answer-status[data-phase="off"] {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
+.stt-answer-status[data-phase="blocked"],
+.stt-answer-status[data-phase="error"] {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+.stt-answer-preview {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.35;
+}
 .live-answer textarea {
   min-height: 100px;
   resize: vertical;
@@ -767,6 +814,81 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   letter-spacing: 0.04em;
 }
 .video-room-meta { margin: 0; font-size: 11px; }
+.voice-stt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.voice-stt-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+}
+.voice-stt-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: #4f46e5;
+}
+.voice-stt-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+.voice-stt-status[data-phase="listening"],
+.voice-stt-status[data-phase="starting"] { color: #1d4ed8; }
+.voice-stt-status[data-phase="hearing"],
+.voice-stt-status[data-phase="transcribing"] { color: #15803d; }
+.voice-stt-status[data-phase="blocked"],
+.voice-stt-status[data-phase="error"] { color: #b91c1c; }
+.voice-stt-status[data-phase="off"],
+.voice-stt-status[data-phase="unavailable"] { color: #64748b; }
+.voice-stt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #94a3b8;
+  flex-shrink: 0;
+}
+.voice-stt-status[data-phase="listening"] .voice-stt-dot,
+.stt-answer-status[data-phase="listening"] .voice-stt-dot,
+.voice-stt-status[data-phase="starting"] .voice-stt-dot,
+.stt-answer-status[data-phase="starting"] .voice-stt-dot {
+  background: #3b82f6;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.55);
+  animation: stt-pulse 1.4s ease-out infinite;
+}
+.voice-stt-status[data-phase="hearing"] .voice-stt-dot,
+.stt-answer-status[data-phase="hearing"] .voice-stt-dot,
+.voice-stt-status[data-phase="transcribing"] .voice-stt-dot,
+.stt-answer-status[data-phase="transcribing"] .voice-stt-dot {
+  background: #22c55e;
+  box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+  animation: stt-pulse 0.9s ease-out infinite;
+}
+.voice-stt-preview {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #166534;
+  font-style: italic;
+}
+@keyframes stt-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45); }
+  70% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
 .voice-meter {
   display: grid;
   grid-template-columns: auto 1fr auto;

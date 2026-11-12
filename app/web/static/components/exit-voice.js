@@ -5,6 +5,13 @@
 (function (global) {
   const LS_MIC = "sellm.exit.micId";
   const LS_CAM = "sellm.exit.camId";
+  const LS_STT = "sellm.exit.sttEnabled";
+
+  function readSttPref(fallback = true) {
+    const raw = localStorage.getItem(LS_STT);
+    if (raw === null || raw === "") return fallback;
+    return raw !== "0" && raw !== "false";
+  }
 
   function getSpeechRecognitionCtor() {
     return window.SpeechRecognition || window.webkitSpeechRecognition || null;
@@ -28,7 +35,10 @@
     const root = opts.root;
     const sessionId = opts.sessionId;
     const onTranscript = opts.onTranscript || null;
+    const onSpeechModeChange = opts.onSpeechModeChange || null;
+    const onSttActivity = opts.onSttActivity || null;
     const autoStart = opts.autoStart !== false;
+    const sttAvailable = Boolean(getSpeechRecognitionCtor()) && Boolean(onTranscript);
 
     let stream = null;
     let recorder = null;
@@ -45,7 +55,10 @@
     let meterRaf = 0;
     let meterData = null;
     let meterTracks = [];
-    let speechWanted = Boolean(onTranscript);
+    let speechWanted = sttAvailable && readSttPref(opts.speechEnabled !== false);
+    let sttPhase = speechWanted ? "starting" : "off";
+    let sttPreview = "";
+    let hearingTimer = 0;
 
     root.innerHTML = `
       <div class="video-room compact" aria-label="Video recording">
@@ -53,6 +66,17 @@
           <video class="video-preview" playsinline muted autoplay></video>
           <div class="video-preview-empty">Camera</div>
           <span class="video-rec-badge" hidden>REC</span>
+        </div>
+        <div class="voice-stt" data-stt-panel>
+          <label class="voice-stt-toggle">
+            <input type="checkbox" data-stt-enabled ${speechWanted ? "checked" : ""} ${sttAvailable ? "" : "disabled"} />
+            <span>Speech to text</span>
+          </label>
+          <div class="voice-stt-status" data-stt-status aria-live="polite">
+            <span class="voice-stt-dot" aria-hidden="true"></span>
+            <span data-stt-label>Starting…</span>
+          </div>
+          <p class="voice-stt-preview" data-stt-preview hidden></p>
         </div>
         <div class="voice-meter" aria-live="polite">
           <span class="voice-meter-label">Mic level</span>
@@ -94,6 +118,66 @@
     const videoSelect = root.querySelector("[data-video-device]");
     const audioSelect = root.querySelector("[data-audio-device]");
     const troublePanel = root.querySelector("[data-trouble]");
+    const sttEnabledEl = root.querySelector("[data-stt-enabled]");
+    const sttStatusEl = root.querySelector("[data-stt-status]");
+    const sttLabelEl = root.querySelector("[data-stt-label]");
+    const sttPreviewEl = root.querySelector("[data-stt-preview]");
+
+    function emitSttActivity() {
+      const payload = {
+        enabled: speechWanted,
+        available: sttAvailable,
+        phase: sttPhase,
+        preview: sttPreview,
+      };
+      onSttActivity?.(payload);
+    }
+
+    function setSttPhase(phase, preview) {
+      sttPhase = phase;
+      if (preview !== undefined) sttPreview = String(preview || "");
+      if (sttStatusEl) sttStatusEl.dataset.phase = phase;
+      if (sttLabelEl) {
+        const labels = {
+          off: "Typing mode",
+          unavailable: "Speech unavailable",
+          starting: "Starting speech…",
+          listening: "Listening…",
+          hearing: "Hearing you…",
+          transcribing: "Transcribing…",
+          blocked: "Speech blocked",
+          error: "Speech error",
+        };
+        sttLabelEl.textContent = labels[phase] || phase;
+      }
+      if (sttPreviewEl) {
+        const show = Boolean(sttPreview) && (phase === "hearing" || phase === "transcribing");
+        sttPreviewEl.hidden = !show;
+        sttPreviewEl.textContent = show ? sttPreview : "";
+      }
+      emitSttActivity();
+    }
+
+    function isSpeechEnabled() {
+      return speechWanted;
+    }
+
+    function setSpeechEnabled(enabled, { persist = true } = {}) {
+      const next = Boolean(enabled) && sttAvailable;
+      speechWanted = next;
+      if (sttEnabledEl) sttEnabledEl.checked = next;
+      if (persist && sttAvailable) localStorage.setItem(LS_STT, next ? "1" : "0");
+      onSpeechModeChange?.(next);
+      if (!next) {
+        stopSpeech();
+        setSttPhase(sttAvailable ? "off" : "unavailable", "");
+        setMeta("Typing mode — camera still records");
+        return;
+      }
+      setSttPhase("starting", "");
+      if (stream && !cancelled) restartSpeech();
+      else setMeta("Speech to text on");
+    }
 
     function setError(msg) {
       if (!errEl) return;
@@ -389,10 +473,13 @@
     function startSpeech() {
       const Ctor = getSpeechRecognitionCtor();
       if (!Ctor || cancelled || !speechWanted) {
+        setSttPhase(!Ctor || !onTranscript ? "unavailable" : "off", "");
         setMeta(
           !Ctor
             ? "Mic ready · speech API unavailable"
-            : "Mic ready — watch the level meter",
+            : speechWanted
+              ? "Mic ready — watch the level meter"
+              : "Typing mode — camera still records",
         );
         return;
       }
@@ -403,28 +490,47 @@
       recognition.lang = "en-US";
       recognition.onresult = (event) => {
         let interim = "";
+        let gotFinal = false;
         for (let i = event.resultIndex; i < event.results.length; i++) {
           const result = event.results[i];
           const text = (result[0]?.transcript || "").trim();
           if (!text) continue;
-          if (result.isFinal) onTranscript?.(text, true);
-          else interim += (interim ? " " : "") + text;
+          if (result.isFinal) {
+            gotFinal = true;
+            onTranscript?.(text, true);
+          } else interim += (interim ? " " : "") + text;
         }
-        if (interim) onTranscript?.(interim, false);
+        if (interim) {
+          onTranscript?.(interim, false);
+          setSttPhase("hearing", interim);
+          if (hearingTimer) window.clearTimeout(hearingTimer);
+          hearingTimer = window.setTimeout(() => {
+            if (speechWanted && !cancelled) setSttPhase("listening", "");
+          }, 1400);
+        } else if (gotFinal) {
+          setSttPhase("transcribing", "");
+          if (hearingTimer) window.clearTimeout(hearingTimer);
+          hearingTimer = window.setTimeout(() => {
+            if (speechWanted && !cancelled) setSttPhase("listening", "");
+          }, 700);
+        }
       };
       recognition.onerror = (event) => {
         const code = String(event?.error || "");
         if (code === "not-allowed" || code === "service-not-allowed") {
           setMeta("Speech blocked — allow mic in the browser");
+          setSttPhase("blocked", "");
           stopSpeech();
           return;
         }
         if (code === "audio-capture") {
           setMeta("Speech lost mic — try Refresh devices");
+          setSttPhase("error", "");
           return;
         }
         // no-speech / aborted / network: onend will restart
         setMeta(code === "network" ? "Speech reconnecting…" : "Listening…");
+        setSttPhase(code === "network" ? "starting" : "listening", "");
       };
       recognition.onend = () => {
         if (cancelled || !speechWanted || !recognition) return;
@@ -433,17 +539,21 @@
           try {
             recognition.start();
             setMeta("Listening…");
+            setSttPhase("listening", "");
           } catch (_) {
             setMeta("Mic ready — tap Troubleshoot if speech stays quiet");
+            setSttPhase("error", "");
           }
         }, 120);
       };
       try {
         recognition.start();
         setMeta("Listening…");
+        setSttPhase("listening", "");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Speech recognition unavailable");
         setMeta("Mic ready — watch the level meter");
+        setSttPhase("error", "");
       }
     }
 
@@ -524,6 +634,9 @@
       const id = videoSelect.value;
       if (id) void replaceTrack("video", id);
     });
+    sttEnabledEl?.addEventListener("change", () => {
+      setSpeechEnabled(Boolean(sttEnabledEl.checked));
+    });
     root.querySelector("[data-refresh-devices]")?.addEventListener("click", () => {
       void refreshDeviceLists().then(() => setMeta("Device list refreshed"));
     });
@@ -548,11 +661,13 @@
     function teardownMedia({ upload = true } = {}) {
       cancelled = true;
       speechWanted = false;
+      if (hearingTimer) window.clearTimeout(hearingTimer);
       if (navigator.mediaDevices?.removeEventListener) {
         navigator.mediaDevices.removeEventListener("devicechange", onDeviceChange);
       }
       stopSpeech();
       stopMeter();
+      setSttPhase("off", "");
       const sid = activeSessionId;
       const rec = recorder;
       const st = stream;
@@ -596,9 +711,17 @@
     }
 
     void global.SellmApi.fetchVoiceStatus(activeSessionId).catch(() => undefined);
+    setSttPhase(speechWanted ? "starting" : sttAvailable ? "off" : "unavailable", "");
+    emitSttActivity();
     void acquireAndRecord();
 
-    return { stopAndUpload, destroy, discard };
+    return {
+      stopAndUpload,
+      destroy,
+      discard,
+      setSpeechEnabled,
+      isSpeechEnabled,
+    };
   }
 
   global.SellmExitVoice = { createVoiceRoom };
