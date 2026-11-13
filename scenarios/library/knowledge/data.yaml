@@ -1,0 +1,21 @@
+facts:
+- id: LIB-DATA-001
+  statement: Booking request/confirmation records (course code, headcount, slot, resources, status).
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - library_coordinator
+  - administrator
+  disclosure: when_relevant
+- id: LIB-DATA-002
+  statement: Workshop room entities with configurable capacity (default 30 when unset).
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

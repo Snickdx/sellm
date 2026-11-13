@@ -1,0 +1,38 @@
+facts:
+- id: CA-DATA-001
+  statement: Course catalogue entries selectable by students.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-DATA-002
+  statement: Job/career records with associated skills and competency levels.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: CA-DATA-003
+  statement: Skill and competency-level catalogue maintained by admin.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: CA-DATA-004
+  statement: Student course selections / exploration inputs (not individually visible to staff in MVP).
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

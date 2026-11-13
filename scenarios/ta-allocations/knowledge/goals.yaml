@@ -1,0 +1,12 @@
+facts:
+- id: TA-GOAL-001
+  statement: Enable the HOD to allocate TAs to courses within a hard departmental budget and hard 20h/week
+    cap, preferring prior course experience.
+  category: goal
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - hod
+  disclosure: when_relevant

@@ -1,93 +1,91 @@
 facts:
-  - id: LIB-ASM-001
-    statement: Default workshop room capacity is 30 seats unless a room override is configured.
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-001
-    approved_by: instructor@example.com
-    approved_at: "2026-11-02T15:30:00Z"
-    rationale: >-
-      Synthetic pilot needs a numeric capacity for conflict checks; transcript only
-      stated that rooms are capped.
-    known_by: [library_coordinator, administrator]
-    disclosure: when_asked
-    acceptance_criteria:
-      - Capacity checks use 30 when no room-specific capacity is set.
-
-  - id: LIB-ASM-002
-    statement: >-
-      library_coordinator is platform_admin for workshop booking operations
-      (review/approve requests, prevent double-booking, apply conflict preference
-      and larger-cohort override, issue confirmations, operational cancels).
-      administrator is the capacity-policy escalation path (not day-to-day booking
-      queue work), and both roles may configure rooms/capacities (see LIB-ASM-006).
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-002
-    approved_by: instructor
-    approved_at: "2026-11-09T23:50:00Z"
-    rationale: Instructor accepted coordinator as booking platform_admin.
-    known_by: [library_coordinator, administrator]
-    disclosure: when_relevant
-
-  - id: LIB-ASM-003
-    statement: >-
-      Lecturers may cancel their own confirmed workshop booking any time before
-      start; the library coordinator may also cancel for operational reasons.
-      Notification copy remains student elicitation.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-003
-    approved_by: instructor
-    approved_at: "2026-11-09T23:51:00Z"
-    rationale: Instructor chose cancel any time before start.
-    known_by: [lecturer, library_coordinator]
-    disclosure: when_relevant
-
-  - id: LIB-ASM-004
-    statement: >-
-      Every booking request enters a coordinator review queue. A shareable
-      confirmation is issued only after library_coordinator explicitly
-      approves/confirms (auto-confirm is out of graded MVP unless elicited).
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-004
-    approved_by: instructor
-    approved_at: "2026-11-09T23:51:30Z"
-    rationale: Instructor required explicit coordinator approval.
-    known_by: [library_coordinator, lecturer]
-    disclosure: when_relevant
-
-  - id: LIB-ASM-005
-    statement: >-
-      Over-capacity booking requests are hard-rejected and never silently
-      overbooked. Waitlisting and administrator overbook overrides are out of
-      graded MVP unless elicited.
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-005
-    approved_by: instructor
-    approved_at: "2026-11-10T00:02:00Z"
-    rationale: Instructor chose hard reject for over-capacity.
-    known_by: [library_coordinator, administrator, lecturer]
-    disclosure: when_relevant
-
-  - id: LIB-ASM-006
-    statement: >-
-      administrator and library_coordinator may create/update workshop rooms and
-      per-room capacities (default 30 when unset). administrator remains the
-      escalation path for capacity-policy disputes.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-006
-    approved_by: instructor
-    approved_at: "2026-11-10T00:14:00Z"
-    rationale: Instructor allowed coordinator to edit capacities as well as administrator.
-    known_by: [administrator, library_coordinator]
-    disclosure: when_relevant
+- id: LIB-ASM-001
+  statement: Default workshop room capacity is 30 seats unless a room override is configured.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-001
+  approved_by: instructor@example.com
+  approved_at: '2026-11-02T15:30:00Z'
+  rationale: Synthetic pilot needs a numeric capacity for conflict checks; transcript only stated that
+    rooms are capped.
+  known_by:
+  - library_coordinator
+  - administrator
+  disclosure: when_asked
+  acceptance_criteria:
+  - Capacity checks use 30 when no room-specific capacity is set.
+- id: LIB-ASM-002
+  statement: library_coordinator is platform_admin for workshop booking operations (review/approve requests,
+    prevent double-booking, apply conflict preference and larger-cohort override, issue confirmations,
+    operational cancels). administrator is the capacity-policy escalation path (not day-to-day booking
+    queue work), and both roles may configure rooms/capacities (see LIB-ASM-006).
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-002
+  approved_by: instructor
+  approved_at: '2026-11-09T23:50:00Z'
+  rationale: Instructor accepted coordinator as booking platform_admin.
+  known_by:
+  - library_coordinator
+  - administrator
+  disclosure: when_relevant
+- id: LIB-ASM-003
+  statement: Lecturers may cancel their own confirmed workshop booking any time before start; the library
+    coordinator may also cancel for operational reasons. Notification copy remains student elicitation.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-003
+  approved_by: instructor
+  approved_at: '2026-11-09T23:51:00Z'
+  rationale: Instructor chose cancel any time before start.
+  known_by:
+  - lecturer
+  - library_coordinator
+  disclosure: when_relevant
+- id: LIB-ASM-004
+  statement: Every booking request enters a coordinator review queue. A shareable confirmation is issued
+    only after library_coordinator explicitly approves/confirms (auto-confirm is out of graded MVP unless
+    elicited).
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-004
+  approved_by: instructor
+  approved_at: '2026-11-09T23:51:30Z'
+  rationale: Instructor required explicit coordinator approval.
+  known_by:
+  - library_coordinator
+  - lecturer
+  disclosure: when_relevant
+- id: LIB-ASM-005
+  statement: Over-capacity booking requests are hard-rejected and never silently overbooked. Waitlisting
+    and administrator overbook overrides are out of graded MVP unless elicited.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-005
+  approved_by: instructor
+  approved_at: '2026-11-10T00:02:00Z'
+  rationale: Instructor chose hard reject for over-capacity.
+  known_by:
+  - library_coordinator
+  - administrator
+  - lecturer
+  disclosure: when_relevant
+- id: LIB-ASM-006
+  statement: administrator and library_coordinator may create/update workshop rooms and per-room capacities
+    (default 30 when unset). administrator remains the escalation path for capacity-policy disputes.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-006
+  approved_by: instructor
+  approved_at: '2026-11-10T00:14:00Z'
+  rationale: Instructor allowed coordinator to edit capacities as well as administrator.
+  known_by:
+  - administrator
+  - library_coordinator
+  disclosure: when_relevant

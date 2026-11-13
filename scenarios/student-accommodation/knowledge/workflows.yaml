@@ -1,91 +1,91 @@
 facts:
-  - id: SA-WF-001
-    statement: >-
-      Student seeker flow: authenticate → browse/filter active listings
-      (location, price, amenities) → view contact and/or start optional in-app
-      message → arrange visit/rental off-platform.
-    category: workflow
-    status: clarified
-    origin: instructor
-    decision_id: DEC-SA-003
-    approved_by: instructor
-    approved_at: "2026-11-03T13:41:00Z"
-    rationale: Combines transcript contact flow with DEC-SA-003 messaging.
-    source_refs:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/45-0
-        start: "00:05:46.751"
-        end: "00:05:50.421"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-1
-        start: "00:31:44.643"
-        end: "00:31:49.906"
-        speaker: null
-    known_by: [campus_admin, student_seeker]
-    disclosure: when_relevant
-
-  - id: SA-WF-002
-    statement: >-
-      Landlord listing flow: submit listing → pending campus verification → on
-      approval landlord may set active/inactive and update photos/amenities/
-      details.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-004
-    approved_by: instructor
-    approved_at: "2026-11-03T13:42:00Z"
-    rationale: Instructor accepted submit → verify → active/inactive lifecycle.
-    source_refs:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
-        start: "00:21:03.182"
-        end: "00:21:08.191"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/110-0
-        start: "00:16:07.311"
-        end: "00:16:13.295"
-        speaker: null
-    known_by: [campus_admin, landlord]
-    disclosure: when_relevant
-
-  - id: SA-WF-003
-    statement: >-
-      Campus admin verification flow: review landlord application/unit, complete
-      checklist / site confirmation, approve or reject listing for student
-      visibility.
-    category: workflow
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
-        start: "00:21:03.182"
-        end: "00:21:08.191"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/145-2
-        start: "00:21:26.406"
-        end: "00:21:30.468"
-        speaker: null
-    known_by: [campus_admin]
-    disclosure: when_relevant
-
-  - id: SA-WF-004
-    statement: >-
-      Verification outcomes: campus_admin may reject (landlord revises/resubmits),
-      grant provisional acceptance after manual review/certification (still
-      hidden from students), or grant full approval after which landlord may set
-      active/inactive and students may see active listings. campus_admin may
-      later force-deactivate.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-007
-    approved_by: instructor
-    approved_at: "2026-11-10T02:43:00Z"
-    rationale: Combines DEC-SA-007..009 lifecycle depth.
-    known_by: [campus_admin, landlord]
-    disclosure: when_relevant
+- id: SA-WF-001
+  statement: 'Student seeker flow: authenticate → browse/filter active listings (location, price, amenities)
+    → view contact and/or start optional in-app message → arrange visit/rental off-platform.'
+  category: use_case
+  status: clarified
+  origin: instructor
+  decision_id: DEC-SA-003
+  approved_by: instructor
+  approved_at: '2026-11-03T13:41:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Combines transcript contact flow with DEC-SA-003 messaging.'
+  source_refs:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/45-0
+    start: '00:05:46.751'
+    end: '00:05:50.421'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-1
+    start: '00:31:44.643'
+    end: '00:31:49.906'
+    speaker: null
+  known_by:
+  - campus_admin
+  - student_seeker
+  disclosure: when_relevant
+- id: SA-WF-002
+  statement: 'Landlord listing flow: submit listing → pending campus verification → on approval landlord
+    may set active/inactive and update photos/amenities/ details.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-004
+  approved_by: instructor
+  approved_at: '2026-11-03T13:42:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Instructor accepted submit → verify → active/inactive lifecycle.'
+  source_refs:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
+    start: '00:21:03.182'
+    end: '00:21:08.191'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/110-0
+    start: '00:16:07.311'
+    end: '00:16:13.295'
+    speaker: null
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant
+- id: SA-WF-003
+  statement: 'Campus admin verification flow: review landlord application/unit, complete checklist / site
+    confirmation, approve or reject listing for student visibility.'
+  category: use_case
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
+    start: '00:21:03.182'
+    end: '00:21:08.191'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/145-2
+    start: '00:21:26.406'
+    end: '00:21:30.468'
+    speaker: null
+  known_by:
+  - campus_admin
+  disclosure: when_relevant
+  rationale: Prescribed during authoring; retagged journey workflow as use_case. Open for instructor verify/change.
+- id: SA-WF-004
+  statement: 'Verification outcomes: campus_admin may reject (landlord revises/resubmits), grant provisional
+    acceptance after manual review/certification (still hidden from students), or grant full approval
+    after which landlord may set active/inactive and students may see active listings. campus_admin may
+    later force-deactivate.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-007
+  approved_by: instructor
+  approved_at: '2026-11-10T02:43:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Combines DEC-SA-007..009 lifecycle depth.'
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant

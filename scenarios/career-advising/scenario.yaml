@@ -1,26 +1,23 @@
 slug: career-advising
 title: Career Based Advising
-version: "0.2.0"
+version: 0.3.0
 status: approved
-brief: >-
-  Advisor/admin-guided career tool for enrolled university students: courses are
-  selected from a pre-populated catalogue; jobs and courses are linked via skills
-  and competency levels; students explore in both directions (career→courses and
-  courses→careers) with transparent non-absolute suitability ranking; support
-  changing goals via editable selections; identify missing courses without
-  enrolment/booking workflows. Admin defines skills (mainly bulk edit/upload);
-  advisors may update job/course mappings; usage visibility is aggregated only.
-  High-school scope is out (DEC-CA-001).
+brief: 'Advisor/admin-guided career tool for enrolled university students: courses are selected from a
+  pre-populated catalogue; jobs and courses are linked via skills and competency levels; students explore
+  in both directions (career→courses and courses→careers) with transparent non-absolute suitability ranking;
+  support changing goals via editable selections; identify missing courses without enrolment/booking workflows.
+  Admin defines skills (mainly bulk edit/upload); advisors may update job/course mappings; usage visibility
+  is aggregated only. High-school scope is out (DEC-CA-001).'
 source_status: transcript_received
-source_notes: >-
-  VTT: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-  (stakeholder Dr Terry Mohammed). 899 cues; speakers unlabeled. Persona:
-  career_advisor (DEC-CA-001). Assumptions: enrolled university end users
-  (DEC-CA-002), both exploration modes in MVP (DEC-CA-003), non-absolute ranked
-  recommendations (DEC-CA-004), identify-only missing courses (DEC-CA-005).
-  Depth-update 0.2.0: platform_admin authority + skills/competency mapping
-  (DEC-CA-006); admin skill definitions via bulk/upload, advisor mapping updates
-  (DEC-CA-007); catalogue search/select courses (DEC-CA-008); aggregated
-  visibility only (DEC-CA-009); skill/competency overlap ranking (DEC-CA-010).
+source_notes: 'VTT: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt (stakeholder
+  Dr Terry Mohammed). 899 cues; speakers unlabeled. Persona: career_advisor (DEC-CA-001). Assumptions:
+  enrolled university end users (DEC-CA-002), both exploration modes in MVP (DEC-CA-003), non-absolute
+  ranked recommendations (DEC-CA-004), identify-only missing courses (DEC-CA-005). Depth-update 0.2.0:
+  platform_admin authority + skills/competency mapping (DEC-CA-006); admin skill definitions via bulk/upload,
+  advisor mapping updates (DEC-CA-007); catalogue search/select courses (DEC-CA-008); aggregated visibility
+  only (DEC-CA-009); skill/competency overlap ranking (DEC-CA-010).
+
+  SRS prescribe-by-default depth-update to 0.3.0 (2026-11-13T19:42:24Z): SRS scaffolding for dual exploration,
+  ranking, gaps, catalogues. Instructor verify/change via gaps theme srs_prescription.'
 approved_by: instructor
-approved_at: "2026-11-09T23:43:00Z"
+approved_at: '2026-11-13T19:44:00Z'

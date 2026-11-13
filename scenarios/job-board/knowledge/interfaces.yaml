@@ -1,0 +1,23 @@
+facts:
+- id: JB-IF-001
+  statement: External employer application link mode for listings that leave the platform.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  - employer
+  - graduate_applicant
+  disclosure: when_relevant
+- id: JB-IF-002
+  statement: Email/notification channel to eligible subscribers on publish.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  disclosure: when_relevant

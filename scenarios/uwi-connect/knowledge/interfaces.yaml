@@ -1,0 +1,20 @@
+facts:
+- id: UC-IF-001
+  statement: UWI email verification interface as the primary access gate.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - alumni_admin
+  disclosure: when_relevant
+- id: UC-IF-002
+  statement: Outbound email campaign send interface to verified non-revoked alumni.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

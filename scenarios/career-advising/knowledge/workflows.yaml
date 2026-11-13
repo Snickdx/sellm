@@ -1,121 +1,118 @@
 facts:
-  - id: CA-WF-001
-    statement: >-
-      Career-first flow: learner selects or describes a target career; system
-      relates required or typical courses and shows suited pathway information
-      without forcing that career.
-    category: workflow
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/40-1
-        start: "00:05:09.437"
-        end: "00:05:13.432"
-        speaker: null
-      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/40-2
-        start: "00:05:13.432"
-        end: "00:05:17.701"
-        speaker: null
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-WF-002
-    statement: >-
-      Course-first flow: learner enters courses (or liked subject areas); system
-      returns careers suited to that set.
-    category: workflow
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/43-0
-        start: "00:05:54.141"
-        end: "00:05:58.430"
-        speaker: null
-      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/175-0
-        start: "00:22:50.781"
-        end: "00:22:54.621"
-        speaker: null
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-WF-003
-    statement: >-
-      Change-of-direction flow: learner edits inputs (courses/interests/goals);
-      system regenerates suited careers and any newly identified course gaps.
-    category: workflow
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/229-1
-        start: "00:28:49.751"
-        end: "00:28:54.736"
-        speaker: null
-      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/70-1
-        start: "00:09:17.327"
-        end: "00:09:21.237"
-        speaker: null
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-WF-004
-    statement: >-
-      Gap-check flow: given a target path and the learner's courses, system lists
-      missing required courses and stops at identification (no obtain/enrol step).
-    category: workflow
-    status: clarified
-    origin: instructor
-    decision_id: DEC-CA-005
-    approved_by: instructor
-    approved_at: "2026-11-03T13:29:30Z"
-    rationale: >-
-      Transcript supports identify-missing; instructor removed how-to-obtain
-      behaviour from MVP.
-    source_refs:
-      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/287-0
-        start: "00:35:46.061"
-        end: "00:35:47.981"
-        speaker: null
-      - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
-        cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/288-1
-        start: "00:35:52.977"
-        end: "00:35:55.604"
-        speaker: null
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-WF-005
-    statement: >-
-      Admin catalogue flow: admin defines skills and competency levels mainly via
-      bulk edit or upload; advisors then update mappings attaching those
-      skills/levels to jobs and to courses.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-007
-    approved_by: instructor
-    approved_at: "2026-11-09T23:41:00Z"
-    rationale: Instructor described admin bulk skill definition and advisor mapping updates.
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-WF-006
-    statement: >-
-      Student course-entry flow: student searches the pre-populated course
-      catalogue and selects courses for their profile (no free-typed unrecognized
-      course codes on the happy path).
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-008
-    approved_by: instructor
-    approved_at: "2026-11-09T23:42:00Z"
-    rationale: Instructor required catalogue search/select.
-    known_by: [career_advisor]
-    disclosure: when_relevant
+- id: CA-WF-001
+  statement: 'Career-first flow: learner selects or describes a target career; system relates required
+    or typical courses and shows suited pathway information without forcing that career.'
+  category: use_case
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+    cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/40-1
+    start: '00:05:09.437'
+    end: '00:05:13.432'
+    speaker: null
+  - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+    cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/40-2
+    start: '00:05:13.432'
+    end: '00:05:17.701'
+    speaker: null
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+  rationale: Prescribed during authoring; retagged journey workflow as use_case. Open for instructor verify/change.
+- id: CA-WF-002
+  statement: 'Course-first flow: learner enters courses (or liked subject areas); system returns careers
+    suited to that set.'
+  category: use_case
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+    cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/43-0
+    start: '00:05:54.141'
+    end: '00:05:58.430'
+    speaker: null
+  - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+    cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/175-0
+    start: '00:22:50.781'
+    end: '00:22:54.621'
+    speaker: null
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+  rationale: Prescribed during authoring; retagged journey workflow as use_case. Open for instructor verify/change.
+- id: CA-WF-003
+  statement: 'Change-of-direction flow: learner edits inputs (courses/interests/goals); system regenerates
+    suited careers and any newly identified course gaps.'
+  category: use_case
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+    cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/229-1
+    start: '00:28:49.751'
+    end: '00:28:54.736'
+    speaker: null
+  - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+    cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/70-1
+    start: '00:09:17.327'
+    end: '00:09:21.237'
+    speaker: null
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+  rationale: Prescribed during authoring; retagged journey workflow as use_case. Open for instructor verify/change.
+- id: CA-WF-004
+  statement: 'Gap-check flow: given a target path and the learner''s courses, system lists missing required
+    courses and stops at identification (no obtain/enrol step).'
+  category: use_case
+  status: clarified
+  origin: instructor
+  decision_id: DEC-CA-005
+  approved_by: instructor
+  approved_at: '2026-11-03T13:29:30Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Transcript supports identify-missing; instructor removed how-to-obtain behaviour
+    from MVP.'
+  source_refs:
+  - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+    cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/287-0
+    start: '00:35:46.061'
+    end: '00:35:47.981'
+    speaker: null
+  - file: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt
+    cue_id: ce79ae11-2948-4867-9874-6d025f3228ff/288-1
+    start: '00:35:52.977'
+    end: '00:35:55.604'
+    speaker: null
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-WF-005
+  statement: 'Admin catalogue flow: admin defines skills and competency levels mainly via bulk edit or
+    upload; advisors then update mappings attaching those skills/levels to jobs and to courses.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-007
+  approved_by: instructor
+  approved_at: '2026-11-09T23:41:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Instructor described admin bulk skill definition and advisor mapping updates.'
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-WF-006
+  statement: 'Student course-entry flow: student searches the pre-populated course catalogue and selects
+    courses for their profile (no free-typed unrecognized course codes on the happy path).'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-008
+  approved_by: instructor
+  approved_at: '2026-11-09T23:42:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Instructor required catalogue search/select.'
+  known_by:
+  - career_advisor
+  disclosure: when_relevant

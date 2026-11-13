@@ -1,0 +1,34 @@
+facts:
+- id: SA-DATA-001
+  statement: Housing listing records (pending/provisional/approved, amenities, photos, active flag).
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant
+- id: SA-DATA-002
+  statement: Landlord account/unit ownership records.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant
+- id: SA-DATA-003
+  statement: Eligible student seeker identity for closed browse access.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  - student_seeker
+  disclosure: when_relevant

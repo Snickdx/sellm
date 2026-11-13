@@ -1,0 +1,12 @@
+facts:
+- id: CA-GOAL-001
+  statement: Help enrolled university students explore career↔course alignment via skills and competency
+    levels without forcing a single career outcome.
+  category: goal
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant

@@ -1,213 +1,238 @@
 facts:
-  - id: UC-REQ-001
-    statement: >-
-      UWI Connect exists so the fundraising and alumni department can reconnect
-      with and engage alumni through a managed platform.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/12-1
-        start: "00:00:38.486"
-        end: "00:00:44.232"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/14-2
-        start: "00:01:06.850"
-        end: "00:01:11.754"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-0
-        start: "00:01:11.914"
-        end: "00:01:16.753"
-        speaker: null
-    known_by: [alumni_admin]
-    disclosure: when_relevant
-
-  - id: UC-REQ-002
-    statement: >-
-      Access is not open: people must register/apply, and staff manage who is
-      allowed onto the platform after checking alumni status.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-1
-        start: "00:01:16.753"
-        end: "00:01:22.803"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-2
-        start: "00:01:22.803"
-        end: "00:01:27.286"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-4
-        start: "00:01:31.271"
-        end: "00:01:35.114"
-        speaker: null
-    known_by: [alumni_admin]
-    disclosure: when_relevant
-
-  - id: UC-REQ-003
-    statement: >-
-      The live platform includes a job board and an events board among its
-      features.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-0
-        start: "00:01:43.034"
-        end: "00:01:46.084"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-1
-        start: "00:01:46.084"
-        end: "00:01:50.590"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/19-1
-        start: "00:02:27.450"
-        end: "00:02:31.537"
-        speaker: null
-    known_by: [alumni_admin]
-    disclosure: when_relevant
-
-  - id: UC-REQ-004
-    statement: >-
-      Jobs (and events) matter strongly to alumni; the job board and ability to
-      send emails are called out as especially important.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/27-3
-        start: "00:04:24.173"
-        end: "00:04:28.791"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/30-3
-        start: "00:05:29.830"
-        end: "00:05:33.714"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/31-0
-        start: "00:05:33.874"
-        end: "00:05:37.533"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/31-1
-        start: "00:05:37.533"
-        end: "00:05:40.314"
-        speaker: null
-    known_by: [alumni_admin]
-    disclosure: when_relevant
-
-  - id: UC-REQ-005
-    statement: >-
-      Staff build and send emails via the platform to registered alumni as a
-      primary engagement channel alongside the in-platform feed.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-3
-        start: "00:01:53.639"
-        end: "00:01:58.769"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/18-2
-        start: "00:02:11.667"
-        end: "00:02:16.940"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/18-3
-        start: "00:02:16.940"
-        end: "00:02:20.000"
-        speaker: null
-    known_by: [alumni_admin]
-    disclosure: when_relevant
-
-  - id: UC-REQ-006
-    statement: >-
-      Many alumni no longer use UE/UWI student email addresses (those may stop
-      working after graduation); outreach often relies on other contact emails.
-    category: constraint
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/70-0
-        start: "00:13:45.394"
-        end: "00:13:50.405"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/71-1
-        start: "00:14:09.468"
-        end: "00:14:13.674"
-        speaker: null
-    known_by: [alumni_admin]
-    disclosure: when_asked
-
-  - id: UC-REQ-007
-    statement: >-
-      Engagement emails should stay clear and simple, typically focusing on one
-      or two events rather than overloaded messages.
-    category: nonfunctional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/52-1
-        start: "00:10:05.031"
-        end: "00:10:08.045"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/52-2
-        start: "00:10:08.045"
-        end: "00:10:13.091"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/52-3
-        start: "00:10:13.091"
-        end: "00:10:16.302"
-        speaker: null
-    known_by: [alumni_admin]
-    disclosure: when_relevant
-
-  - id: UC-REQ-008
-    statement: >-
-      Fundraising/alumni staff operate the platform as admins (not end-users
-      only): they manage registration, boards content, and outbound email
-      campaigns.
-    category: functional
-    status: clarified
-    origin: instructor
-    decision_id: DEC-UC-006
-    approved_by: instructor
-    approved_at: "2026-11-10T03:13:00Z"
-    rationale: Depth-update system-admin lens; transcript self-describes as admin.
-    source_refs:
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-2
-        start: "00:01:22.803"
-        end: "00:01:27.286"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/151-3
-        start: "00:28:09.731"
-        end: "00:28:14.314"
-        speaker: null
-      - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
-        cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/152-0
-        start: "00:28:14.874"
-        end: "00:28:18.718"
-        speaker: null
-    known_by: [alumni_admin]
-    disclosure: when_relevant
+- id: UC-REQ-001
+  statement: UWI Connect exists so the fundraising and alumni department can reconnect with and engage
+    alumni through a managed platform.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/12-1
+    start: '00:00:38.486'
+    end: '00:00:44.232'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/14-2
+    start: '00:01:06.850'
+    end: '00:01:11.754'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-0
+    start: '00:01:11.914'
+    end: '00:01:16.753'
+    speaker: null
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - UC-FEAT-003
+  - UC-FEAT-004
+  derives_from_ids:
+  - UC-GOAL-001
+- id: UC-REQ-002
+  statement: 'Access is not open: people must register/apply, and staff manage who is allowed onto the
+    platform after checking alumni status.'
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-1
+    start: '00:01:16.753'
+    end: '00:01:22.803'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-2
+    start: '00:01:22.803'
+    end: '00:01:27.286'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-4
+    start: '00:01:31.271'
+    end: '00:01:35.114'
+    speaker: null
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - UC-FEAT-001
+  derives_from_ids:
+  - UC-GOAL-001
+- id: UC-REQ-003
+  statement: The live platform includes a job board and an events board among its features.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-0
+    start: '00:01:43.034'
+    end: '00:01:46.084'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-1
+    start: '00:01:46.084'
+    end: '00:01:50.590'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/19-1
+    start: '00:02:27.450'
+    end: '00:02:31.537'
+    speaker: null
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - UC-FEAT-002
+  - UC-FEAT-003
+  derives_from_ids:
+  - UC-GOAL-001
+- id: UC-REQ-004
+  statement: Jobs (and events) matter strongly to alumni; the job board and ability to send emails are
+    called out as especially important.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/27-3
+    start: '00:04:24.173'
+    end: '00:04:28.791'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/30-3
+    start: '00:05:29.830'
+    end: '00:05:33.714'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/31-0
+    start: '00:05:33.874'
+    end: '00:05:37.533'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/31-1
+    start: '00:05:37.533'
+    end: '00:05:40.314'
+    speaker: null
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - UC-FEAT-002
+  - UC-FEAT-004
+  derives_from_ids:
+  - UC-GOAL-001
+- id: UC-REQ-005
+  statement: Staff build and send emails via the platform to registered alumni as a primary engagement
+    channel alongside the in-platform feed.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/17-3
+    start: '00:01:53.639'
+    end: '00:01:58.769'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/18-2
+    start: '00:02:11.667'
+    end: '00:02:16.940'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/18-3
+    start: '00:02:16.940'
+    end: '00:02:20.000'
+    speaker: null
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - UC-FEAT-004
+  derives_from_ids:
+  - UC-GOAL-001
+- id: UC-REQ-006
+  statement: Many alumni no longer use UE/UWI student email addresses (those may stop working after graduation);
+    outreach often relies on other contact emails.
+  category: constraint
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/70-0
+    start: '00:13:45.394'
+    end: '00:13:50.405'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/71-1
+    start: '00:14:09.468'
+    end: '00:14:13.674'
+    speaker: null
+  known_by:
+  - alumni_admin
+  disclosure: when_asked
+  derives_from_ids:
+  - UC-GOAL-001
+- id: UC-REQ-007
+  statement: Engagement emails should stay clear and simple, typically focusing on one or two events rather
+    than overloaded messages.
+  category: usability
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/52-1
+    start: '00:10:05.031'
+    end: '00:10:08.045'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/52-2
+    start: '00:10:08.045'
+    end: '00:10:13.091'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/52-3
+    start: '00:10:13.091'
+    end: '00:10:16.302'
+    speaker: null
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant
+  derives_from_ids:
+  - UC-GOAL-001
+- id: UC-REQ-008
+  statement: 'Fundraising/alumni staff operate the platform as admins (not end-users only): they manage
+    registration, boards content, and outbound email campaigns.'
+  category: functional
+  status: clarified
+  origin: instructor
+  decision_id: DEC-UC-006
+  approved_by: instructor
+  approved_at: '2026-11-10T03:13:00Z'
+  rationale: Depth-update system-admin lens; transcript self-describes as admin.
+  source_refs:
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/15-2
+    start: '00:01:22.803'
+    end: '00:01:27.286'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/151-3
+    start: '00:28:09.731'
+    end: '00:28:14.314'
+    speaker: null
+  - file: sources/UWI Connect Project Interview - Adrian Chatoor.vtt
+    cue_id: 60db8bca-1069-48c1-83b3-545cbbf86006/152-0
+    start: '00:28:14.874'
+    end: '00:28:18.718'
+    speaker: null
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - UC-FEAT-001
+  - UC-FEAT-002
+  - UC-FEAT-004
+  - UC-FEAT-005
+  derives_from_ids:
+  - UC-GOAL-001

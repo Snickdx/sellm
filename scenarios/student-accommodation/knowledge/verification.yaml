@@ -1,0 +1,12 @@
+facts:
+- id: SA-VER-001
+  statement: Visibility rules (pending/provisional hidden; only fully approved active shown) verified
+    by test of seeker browse.
+  category: verification
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  disclosure: when_asked

@@ -1,0 +1,14 @@
+facts:
+- id: LIB-GOAL-001
+  statement: Reduce email-based workshop booking chaos and prevent double-booked or over-capacity workshop
+    rooms.
+  category: goal
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - library_coordinator
+  - administrator
+  - lecturer
+  disclosure: when_relevant

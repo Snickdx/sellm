@@ -1,0 +1,20 @@
+facts:
+- id: CA-IF-001
+  statement: Admin bulk edit/upload interface for defining skills and competency levels.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-IF-002
+  statement: Student-facing exploration UI for career-first and course-first flows.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

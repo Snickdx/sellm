@@ -1,20 +1,18 @@
 slug: ta-allocations
 title: TA Allocations
-version: "0.2.0"
+version: 0.3.0
 status: approved
-brief: >-
-  HOD (platform_admin) allocates teaching assistants to courses within a hard
-  departmental budget and a hard 20 hours/week cap (blocked with remaining
-  capacity shown); soft-preferring prior course experience; may create, edit,
-  reassign, or remove assignments. System records course assignments and
-  remaining capacity. No task-level tracking, TA portal, or HR/contracts in
-  graded MVP. Chat persona: hod only.
+brief: 'HOD (platform_admin) allocates teaching assistants to courses within a hard departmental budget
+  and a hard 20 hours/week cap (blocked with remaining capacity shown); soft-preferring prior course experience;
+  may create, edit, reassign, or remove assignments. System records course assignments and remaining capacity.
+  No task-level tracking, TA portal, or HR/contracts in graded MVP. Chat persona: hod only.'
 source_status: transcript_received
-source_notes: >-
-  VTT: sources/TA Allocation Project - Cathreena Paul.vtt (Doctor Vijay, Ms
-  Srida Mohammed). 562 cues; speakers unlabeled. Persona: hod (DEC-TA-001).
-  Prior DEC-TA-002..005. Depth-update 0.2.0: platform_admin (DEC-TA-006), hard
-  20h block UX (DEC-TA-007), editable reallocations (DEC-TA-008), hard budget
-  block (DEC-TA-009).
+source_notes: 'VTT: sources/TA Allocation Project - Cathreena Paul.vtt (Doctor Vijay, Ms Srida Mohammed).
+  562 cues; speakers unlabeled. Persona: hod (DEC-TA-001). Prior DEC-TA-002..005. Depth-update 0.2.0:
+  platform_admin (DEC-TA-006), hard 20h block UX (DEC-TA-007), editable reallocations (DEC-TA-008), hard
+  budget block (DEC-TA-009).
+
+  SRS prescribe-by-default depth-update to 0.3.0 (2026-11-13T19:42:24Z): SRS scaffolding for assignment
+  CRUD, hard caps, experience preference. Instructor verify/change via gaps theme srs_prescription.'
 approved_by: instructor
-approved_at: "2026-11-10T02:53:00Z"
+approved_at: '2026-11-13T19:44:00Z'

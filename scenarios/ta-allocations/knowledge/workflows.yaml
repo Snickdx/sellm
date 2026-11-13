@@ -1,64 +1,63 @@
 facts:
-  - id: TA-WF-001
-    statement: >-
-      HOD allocation flow: review budgeted TA capacity → select TA for a course
-      (soft-highlight prior experience) → assign planned weekly hours → system
-      validates ≤20h/week and records the course assignment.
-    category: workflow
-    status: clarified
-    origin: instructor
-    decision_id: DEC-TA-002
-    approved_by: instructor
-    approved_at: "2026-11-03T13:51:00Z"
-    rationale: >-
-      Combines transcript allocation practice with DEC-TA-003/004; task tracking
-      excluded by DEC-TA-005.
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
-        start: "00:01:30.591"
-        end: "00:01:35.617"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
-        start: "00:02:08.541"
-        end: "00:02:11.524"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-WF-002
-    statement: >-
-      HOD review flow: view TAs assigned per course and each TA's planned weekly
-      hours / remaining capacity under the 20h cap.
-    category: workflow
-    status: clarified
-    origin: instructor
-    decision_id: DEC-TA-005
-    approved_by: instructor
-    approved_at: "2026-11-03T14:03:00Z"
-    rationale: Workload visibility without task-level tracking.
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/126-0
-        start: "00:14:25.804"
-        end: "00:14:30.204"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-WF-003
-    statement: >-
-      Cap/budget exception flow: if a create/edit would exceed 20h/week or
-      departmental budget, the system blocks the save and shows remaining
-      capacity/budget; HOD must reduce hours, reassign, or remove other
-      assignments before retrying.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-007
-    approved_by: instructor
-    approved_at: "2026-11-10T02:51:00Z"
-    rationale: Combines DEC-TA-007 and DEC-TA-009 hard-block UX.
-    known_by: [hod]
-    disclosure: when_relevant
+- id: TA-WF-001
+  statement: 'HOD allocation flow: review budgeted TA capacity → select TA for a course (soft-highlight
+    prior experience) → assign planned weekly hours → system validates ≤20h/week and records the course
+    assignment.'
+  category: use_case
+  status: clarified
+  origin: instructor
+  decision_id: DEC-TA-002
+  approved_by: instructor
+  approved_at: '2026-11-03T13:51:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Combines transcript allocation practice with DEC-TA-003/004; task tracking excluded
+    by DEC-TA-005.'
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
+    start: '00:01:30.591'
+    end: '00:01:35.617'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
+    start: '00:02:08.541'
+    end: '00:02:11.524'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-WF-002
+  statement: 'HOD review flow: view TAs assigned per course and each TA''s planned weekly hours / remaining
+    capacity under the 20h cap.'
+  category: use_case
+  status: clarified
+  origin: instructor
+  decision_id: DEC-TA-005
+  approved_by: instructor
+  approved_at: '2026-11-03T14:03:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Workload visibility without task-level tracking.'
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/126-0
+    start: '00:14:25.804'
+    end: '00:14:30.204'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-WF-003
+  statement: 'Cap/budget exception flow: if a create/edit would exceed 20h/week or departmental budget,
+    the system blocks the save and shows remaining capacity/budget; HOD must reduce hours, reassign, or
+    remove other assignments before retrying.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-007
+  approved_by: instructor
+  approved_at: '2026-11-10T02:51:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Combines DEC-TA-007 and DEC-TA-009 hard-block UX.'
+  known_by:
+  - hod
+  disclosure: when_relevant
