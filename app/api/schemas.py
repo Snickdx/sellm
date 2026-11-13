@@ -16,6 +16,9 @@ class ChatRequest(BaseModel):
     message: str
     conversation_history: Optional[List[ChatMessage]] = []
     response_mode: Optional[str] = "vector"
+    # Multi-select compare: when 2+ modes are set, run them in parallel.
+    # "all" / "compare" expands to every comparable mode.
+    response_modes: Optional[List[str]] = None
     conversation_id: Optional[str] = None
     llm_choice: Optional[str] = None  # e.g. openai:gpt-4o-mini, ollama:llama3.2
     debug: Optional[bool] = False  # include retrieval/routing metadata for instructors

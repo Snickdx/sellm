@@ -193,8 +193,10 @@
   const chatForm = document.getElementById("chatForm");
   const chatInput = document.getElementById("chatInput");
   const sendButton = document.getElementById("sendButton");
-  const responseMode = document.getElementById("responseMode");
   const responseModeField = document.getElementById("responseModeField");
+  const responseModeToggle = document.getElementById("responseModeToggle");
+  const responseModeMenu = document.getElementById("responseModeMenu");
+  const responseModeSummary = document.getElementById("responseModeSummary");
   const personaSelect = document.getElementById("personaSelect");
   const personaField = document.getElementById("personaField");
   const scenarioLockedLabel = document.getElementById("scenarioLockedLabel");
@@ -208,11 +210,133 @@
   const LLM_CHOICE_STORAGE_KEY = "sellm_llm_choice";
   let selectedLlmChoice = null;
 
+  const MODE_OPTION_DEFS = [
+    { value: "vector", label: "Vector RAG" },
+    { value: "neo4j", label: "Neo4j RAG" },
+    { value: "hybrid", label: "Hybrid RAG" },
+    { value: "direct", label: "Direct Model" },
+    { value: "yaml", label: "YAML Persona" },
+  ];
+  const MODE_LABEL_BY_VALUE = Object.fromEntries(MODE_OPTION_DEFS.map((m) => [m.value, m.label]));
+
+  function modeCheckboxInputs() {
+    if (!responseModeMenu) return [];
+    return [...responseModeMenu.querySelectorAll('input[data-mode]:not([data-mode="all"])')];
+  }
+
+  function allModeCheckbox() {
+    return responseModeMenu?.querySelector('input[data-mode="all"]') || null;
+  }
+
+  function visibleModeInputs() {
+    return modeCheckboxInputs().filter((input) => {
+      const row = input.closest(".mode-option");
+      return row && !row.hidden && !input.disabled;
+    });
+  }
+
+  function getSelectedModes() {
+    return visibleModeInputs()
+      .filter((input) => input.checked)
+      .map((input) => input.dataset.mode);
+  }
+
+  function syncAllModeCheckbox() {
+    const allInput = allModeCheckbox();
+    if (!allInput) return;
+    const visible = visibleModeInputs();
+    allInput.checked = visible.length > 0 && visible.every((input) => input.checked);
+    allInput.indeterminate = !allInput.checked && visible.some((input) => input.checked);
+  }
+
+  function updateModeSummary() {
+    if (!responseModeSummary) return;
+    const selected = getSelectedModes();
+    if (!selected.length) {
+      responseModeSummary.textContent = "Select modes";
+      return;
+    }
+    const visible = visibleModeInputs();
+    if (visible.length > 0 && selected.length === visible.length) {
+      responseModeSummary.textContent = "All";
+      return;
+    }
+    if (selected.length === 1) {
+      responseModeSummary.textContent = MODE_LABEL_BY_VALUE[selected[0]] || selected[0];
+      return;
+    }
+    responseModeSummary.textContent = `${selected.length} modes`;
+  }
+
+  function setSelectedModes(modes, { allowEmpty = false } = {}) {
+    const wanted = new Set(
+      (Array.isArray(modes) ? modes : [])
+        .map((m) => String(m || "").toLowerCase())
+        .flatMap((m) => {
+          if (m === "compare" || m === "all") return MODE_OPTION_DEFS.map((d) => d.value);
+          if (m === "scenario") return ["yaml"];
+          if (m === "any") return ["vector"];
+          return [m];
+        })
+    );
+    const inputs = modeCheckboxInputs();
+    inputs.forEach((input) => {
+      const row = input.closest(".mode-option");
+      const available = row && !row.hidden && !input.disabled;
+      input.checked = available && wanted.has(input.dataset.mode);
+    });
+    if (!allowEmpty && !getSelectedModes().length) {
+      const first = visibleModeInputs()[0];
+      if (first) first.checked = true;
+    }
+    syncAllModeCheckbox();
+    updateModeSummary();
+  }
+
+  function setModeMenuOpen(open) {
+    if (!responseModeMenu || !responseModeToggle) return;
+    responseModeMenu.hidden = !open;
+    responseModeToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+
+  function wireModeMultiselect() {
+    if (!responseModeToggle || !responseModeMenu) return;
+    responseModeToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setModeMenuOpen(responseModeMenu.hidden);
+    });
+    responseModeMenu.addEventListener("click", (event) => event.stopPropagation());
+    responseModeMenu.addEventListener("change", (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || !input.dataset.mode) return;
+      if (input.dataset.mode === "all") {
+        const checked = input.checked;
+        visibleModeInputs().forEach((opt) => {
+          opt.checked = checked;
+        });
+      } else if (!input.checked && getSelectedModes().length === 0) {
+        // Keep at least one mode selected.
+        input.checked = true;
+      }
+      syncAllModeCheckbox();
+      updateModeSummary();
+    });
+    document.addEventListener("click", () => setModeMenuOpen(false));
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setModeMenuOpen(false);
+    });
+    syncAllModeCheckbox();
+    updateModeSummary();
+  }
+
+  wireModeMultiselect();
+
   function applyUserDefaults(data) {
     if (!data || typeof data !== "object") return;
     const mode = data.default_response_mode;
-    if (mode && responseMode && [...responseMode.options].some((o) => o.value === mode)) {
-      responseMode.value = mode;
+    if (mode) {
+      setSelectedModes([mode]);
     }
     if (data.default_llm_choice) {
       selectedLlmChoice = data.default_llm_choice;
@@ -919,13 +1043,16 @@
         reflectionRow.style.display = tweakModeEnabled ? "flex" : "none";
       }
       applyAllowedModes(config);
-      if (config.default_response_mode && responseMode) {
-        const mode = config.default_response_mode;
-        if ([...responseMode.options].some((o) => o.value === mode && !o.disabled && !o.hidden)) {
-          responseMode.value = mode;
+      if (config.default_response_mode) {
+        const mode = String(config.default_response_mode).toLowerCase();
+        const selectable = new Set(visibleModeInputs().map((input) => input.dataset.mode));
+        if (mode === "compare" || mode === "all") {
+          setSelectedModes(["all"]);
+        } else if (selectable.has(mode === "scenario" ? "yaml" : mode === "any" ? "vector" : mode)) {
+          setSelectedModes([mode]);
         } else {
-          const first = [...responseMode.options].find((o) => o.value && !o.disabled && !o.hidden);
-          if (first) responseMode.value = first.value;
+          const first = visibleModeInputs()[0];
+          setSelectedModes(first ? [first.dataset.mode] : []);
         }
       }
       if (config.default_llm_choice) selectedLlmChoice = config.default_llm_choice;
@@ -967,14 +1094,35 @@
   }
 
   function applyAllowedModes(config) {
-    if (!responseMode) return;
-    const allowed = Array.isArray(config.allowed_modes) ? config.allowed_modes.map((m) => String(m).toLowerCase()) : null;
-    [...responseMode.options].forEach((opt) => {
-      if (!opt.value) return;
-      const ok = allowed == null || allowed.includes(opt.value.toLowerCase());
-      opt.hidden = !ok;
-      opt.disabled = !ok;
+    if (!responseModeMenu) return;
+    const allowed = Array.isArray(config.allowed_modes)
+      ? config.allowed_modes.map((m) => String(m).toLowerCase())
+      : null;
+    const compareAllowed = allowed == null
+      || allowed.includes("compare")
+      || allowed.includes("any");
+    modeCheckboxInputs().forEach((input) => {
+      const value = String(input.dataset.mode || "").toLowerCase();
+      const ok = allowed == null
+        || allowed.includes(value)
+        || compareAllowed;
+      const row = input.closest(".mode-option");
+      if (row) row.hidden = !ok;
+      input.disabled = !ok;
+      if (!ok) input.checked = false;
     });
+    const visible = visibleModeInputs();
+    const allRow = allModeCheckbox()?.closest(".mode-option");
+    if (allRow) {
+      allRow.hidden = visible.length < 2;
+    }
+    const allInput = allModeCheckbox();
+    if (allInput) allInput.disabled = visible.length < 2;
+    if (!getSelectedModes().length && visible[0]) {
+      visible[0].checked = true;
+    }
+    syncAllModeCheckbox();
+    updateModeSummary();
   }
 
   function populateLlmModelSelect(config) {
@@ -1435,8 +1583,20 @@
       direct: "Direct Model",
       compare: "Compare All",
       yaml: "YAML Scenario",
+      hybrid: "Hybrid RAG",
     };
-    if (modeUsed === "compare") return `${labels.compare}${llmPart}`;
+    if (modeUsed === "compare") {
+      const compareModes = Array.isArray(routing?.compare_modes) ? routing.compare_modes : [];
+      if (compareModes.length) {
+        const allKeys = MODE_OPTION_DEFS.map((m) => m.value);
+        const isAll = compareModes.length === allKeys.length
+          && allKeys.every((key) => compareModes.includes(key));
+        if (isAll) return `${labels.compare}${llmPart}`;
+        const names = compareModes.map((key) => labels[key] || MODE_LABEL_BY_VALUE[key] || key);
+        return `Compare (${names.join(", ")})${llmPart}`;
+      }
+      return `${labels.compare}${llmPart}`;
+    }
     if (modeUsed === "direct") return `${labels.direct}${llmPart}`;
     if (modeUsed === "vector" || modeUsed === "neo4j") {
       return `${labels[modeUsed] || modeUsed}${llmPart}`;
@@ -1575,7 +1735,12 @@
         body: JSON.stringify({
           message,
           conversation_history: conversationHistory,
-          response_mode: responseMode.value,
+          response_mode: (() => {
+            const modes = getSelectedModes();
+            if (modes.length > 1) return "compare";
+            return modes[0] || "vector";
+          })(),
+          response_modes: getSelectedModes(),
           conversation_id: currentConversationId,
           llm_choice: selectedLlmChoice || llmModelSelect?.value || null,
           scenario_slug: lockedScenarioSlug,

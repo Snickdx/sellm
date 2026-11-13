@@ -602,6 +602,70 @@ def _resolve_persona_scope(
     return slug, persona, package
 
 
+COMPARABLE_MODES: tuple[str, ...] = ("vector", "neo4j", "hybrid", "direct", "yaml")
+MODE_TITLES: Dict[str, str] = {
+    "vector": "Vector RAG",
+    "neo4j": "Neo4j RAG",
+    "hybrid": "Hybrid RAG",
+    "direct": "Direct Model",
+    "yaml": "YAML Persona",
+}
+
+
+def _normalize_mode_token(raw: str) -> Optional[str]:
+    token = (raw or "").strip().lower()
+    if not token:
+        return None
+    if token in ("compare", "all"):
+        return "all"
+    if token == "scenario":
+        return "yaml"
+    if token == "any":
+        return "vector"
+    if token in COMPARABLE_MODES:
+        return token
+    return None
+
+
+def _resolve_requested_modes(
+    request: ChatRequest,
+    *,
+    forced_mode: Optional[str] = None,
+) -> List[str]:
+    """Resolve single or multi-select modes. 'all'/'compare' expands to every comparable mode."""
+    if forced_mode:
+        token = _normalize_mode_token(forced_mode) or "vector"
+        if token == "all":
+            return list(COMPARABLE_MODES)
+        return [token]
+
+    raw_tokens: List[str] = []
+    if request.response_modes:
+        raw_tokens = [str(m) for m in request.response_modes if str(m or "").strip()]
+    elif request.response_mode:
+        text = str(request.response_mode).strip()
+        if "," in text:
+            raw_tokens = [part for part in text.split(",") if part.strip()]
+        elif text:
+            raw_tokens = [text]
+
+    if not raw_tokens:
+        return ["vector"]
+
+    normalized = [_normalize_mode_token(token) for token in raw_tokens]
+    if any(token == "all" for token in normalized):
+        return list(COMPARABLE_MODES)
+
+    ordered: List[str] = []
+    seen: set[str] = set()
+    for token in normalized:
+        if not token or token == "all" or token in seen:
+            continue
+        seen.add(token)
+        ordered.append(token)
+    return ordered or ["vector"]
+
+
 def _generate_rag_response(
     mode: str,
     message: str,
@@ -741,6 +805,52 @@ def _generate_direct_response(
         "retrieved_chunks": [],
     }
     return response, mode_label, resolved_choice, debug
+
+
+def _generate_yaml_response(
+    message: str,
+    history: List[Dict],
+    *,
+    user: Optional[User] = None,
+    llm_choice: Optional[str] = None,
+    scenario_slug: Optional[str] = None,
+    persona_key: Optional[str] = None,
+    package: Any = None,
+) -> tuple[str, str, str, Optional[Dict[str, Any]], int, str]:
+    """Returns (answer, mode_label, choice_id, debug, usage_tokens, provider)."""
+    import asyncio
+
+    if not scenario_slug or not persona_key or package is None:
+        raise ValueError("YAML mode requires a YAML scenario and persona (not Excel)")
+    backend, model_name = parse_choice_id(llm_choice)
+    override = _get_user_provider_override(user, backend or "")
+    reply = asyncio.run(
+        generate_validated_reply(
+            package=package,
+            persona_key=persona_key,
+            history=history,
+            student_message=message,
+            llm_provider=backend,
+            llm_api_key=override.get("api_key_override"),
+            llm_base_url=override.get("base_url_override"),
+            llm_model=model_name,
+        )
+    )
+    mode_label = f"yaml:{scenario_slug}:{persona_key}"
+    usage_tokens = int((reply.usage or {}).get("total_tokens") or 0)
+    provider = str((reply.usage or {}).get("provider") or "")
+    debug = {
+        "scenario_slug": scenario_slug,
+        "scenario_version": package.meta.version,
+        "persona_key": persona_key,
+        "used_fact_ids": reply.used_fact_ids,
+        "uncertainties": reply.uncertainties,
+        "handoff_suggestion": reply.handoff_suggestion,
+        "model_version": reply.model_version,
+        "requested_llm_choice": llm_choice,
+        "provider": provider,
+    }
+    return reply.answer, mode_label, llm_choice or "", debug, usage_tokens, provider
 
 
 # ── Auth endpoints ────────────────────────────────────────────
@@ -1054,15 +1164,19 @@ def chat(request: ChatRequest, req: Request):
         hist_limit = max(4, int(get_settings().chat_history_limit) * 2 + 2)
         stored_messages = conversation_store.get_messages(conversation_id, limit=hist_limit)
         history = [{"role": m.role, "content": m.content} for m in stored_messages[:-1]]
-        mode = (request.response_mode or forced_mode or "vector").lower()
-        if mode == "any":
-            mode = "vector"
+        selected_modes = _resolve_requested_modes(request, forced_mode=forced_mode)
         allowed_modes = defaults.get("allowed_modes")
-        if allowed_modes is not None and mode not in {m.lower() for m in allowed_modes}:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Mode '{mode}' is not allowed for this account",
-            )
+        if allowed_modes is not None:
+            allowed_set = {m.lower() for m in allowed_modes}
+            compare_allowed = "compare" in allowed_set or "any" in allowed_set
+            for selected in selected_modes:
+                if selected in allowed_set or compare_allowed:
+                    continue
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Mode '{selected}' is not allowed for this account",
+                )
+        mode = selected_modes[0] if len(selected_modes) == 1 else "compare"
         user_provider = _user_llm_provider(user, request.llm_choice)
         if billing == "byok" and not user_provider and ollama_reachable():
             user_provider = "ollama"
@@ -1094,10 +1208,14 @@ def chat(request: ChatRequest, req: Request):
         )
         scope_kw = {"scenario_slug": scope_slug, "persona_key": scope_persona}
 
-        if mode == "compare":
+        if len(selected_modes) > 1:
             if not defaults.get("can_select_mode"):
                 raise HTTPException(status_code=403, detail="Compare mode is limited to testers and admins")
-            _require_stakeholder_llm(user)
+            jobs = [(key, MODE_TITLES[key]) for key in selected_modes if key in MODE_TITLES]
+            if len(jobs) < 2:
+                raise HTTPException(status_code=400, detail="Select at least two modes to compare")
+            if any(key != "yaml" for key, _ in jobs):
+                _require_stakeholder_llm(user)
             sections: List[tuple[str, str]] = []
             compare_debug: Dict[str, Any] = {}
             resolved_choice = llm_choice
@@ -1117,32 +1235,41 @@ def chat(request: ChatRequest, req: Request):
                     return key, title, _generate_hybrid_response(
                         request.message, history, user=user, llm_choice=llm_choice, **scope_kw
                     )
+                if key == "yaml":
+                    return key, title, _generate_yaml_response(
+                        request.message,
+                        history,
+                        user=user,
+                        llm_choice=llm_choice,
+                        scenario_slug=scope_slug,
+                        persona_key=scope_persona,
+                        package=scope_package,
+                    )
                 return key, title, _generate_direct_response(
                     request.message, history, user=user, llm_choice=llm_choice, **scope_kw
                 )
 
-            jobs = (
-                ("vector", "Vector RAG"),
-                ("neo4j", "Neo4j RAG"),
-                ("hybrid", "Hybrid RAG"),
-                ("direct", "Direct Model"),
-            )
-            with ThreadPoolExecutor(max_workers=4) as pool:
-                futures = [pool.submit(_run_compare, key, title) for key, title in jobs]
-                for fut in as_completed(futures):
+            with ThreadPoolExecutor(max_workers=max(2, len(jobs))) as pool:
+                future_meta = {
+                    pool.submit(_run_compare, key, title): (key, title) for key, title in jobs
+                }
+                for fut in as_completed(future_meta):
+                    key, title = future_meta[fut]
                     try:
                         key, title, payload = fut.result()
                         if key == "hybrid":
                             resp, _, resolved_choice, _, dbg = payload
+                        elif key == "yaml":
+                            resp, _, resolved_choice, dbg, _, _ = payload
                         else:
                             resp, _, resolved_choice, dbg = payload
                         compare_debug[key] = dbg
                         sections.append((title, resp))
                     except Exception as exc:
-                        sections.append(("Compare", f"[unavailable: {exc}]"))
+                        sections.append((title, f"[unavailable: {exc}]"))
 
             # Stable section order for the combined transcript
-            order = {"Vector RAG": 0, "Neo4j RAG": 1, "Hybrid RAG": 2, "Direct Model": 3}
+            order = {MODE_TITLES[key]: idx for idx, key in enumerate(COMPARABLE_MODES)}
             sections.sort(key=lambda item: order.get(item[0], 99))
             combined = "\n\n".join(
                 f"**{title}**\n{body}" for title, body in sections
@@ -1157,11 +1284,13 @@ def chat(request: ChatRequest, req: Request):
             if request.debug:
                 debug_out = {"compare": compare_debug}
             llm_payload = _llm_used_payload(resolved_choice or llm_choice)
+            compare_routing = {"compare_modes": [key for key, _ in jobs]}
             return _chat_out(
                 response=combined,
                 sources=None,
                 mode_used="compare",
                 conversation_id=conversation_id,
+                routing=compare_routing,
                 llm_used=llm_payload,
                 debug=debug_out,
                 **_chat_quota_fields(user, billing),
@@ -1211,35 +1340,21 @@ def chat(request: ChatRequest, req: Request):
             )
 
         if mode in ("yaml", "scenario"):
-            if not scope_slug or not scope_persona or scope_package is None:
-                raise ValueError("YAML mode requires a YAML scenario and persona (not Excel)")
-            import asyncio
-
-            # Use the same BYOK / app-key / Ollama choice as other chat modes.
-            # Without credentials, persona chat falls back to the offline heuristic.
-            backend, model_name = parse_choice_id(llm_choice)
-            override = _get_user_provider_override(user, backend or "")
-            reply = asyncio.run(
-                generate_validated_reply(
-                    package=scope_package,
-                    persona_key=scope_persona,
-                    history=history,
-                    student_message=request.message,
-                    llm_provider=backend,
-                    llm_api_key=override.get("api_key_override"),
-                    llm_base_url=override.get("base_url_override"),
-                    llm_model=model_name,
-                )
+            answer, mode_label, _, yaml_debug, usage_tokens, provider = _generate_yaml_response(
+                request.message,
+                history,
+                user=user,
+                llm_choice=llm_choice,
+                scenario_slug=scope_slug,
+                persona_key=scope_persona,
+                package=scope_package,
             )
-            mode_label = f"yaml:{scope_slug}:{scope_persona}"
             conversation_store.add_message(
                 conversation_id=conversation_id,
                 role="assistant",
-                content=reply.answer,
+                content=answer,
                 mode_used=mode_label,
             )
-            usage_tokens = int((reply.usage or {}).get("total_tokens") or 0)
-            provider = str((reply.usage or {}).get("provider") or "")
             # Heuristic / guard replies are free; only bill platform for real LLM usage
             yaml_billing = billing
             if provider in ("heuristic", "guard"):
@@ -1248,27 +1363,17 @@ def chat(request: ChatRequest, req: Request):
                 user,
                 billing=yaml_billing,
                 prompt=request.message,
-                response=reply.answer,
+                response=answer,
                 usage_tokens=usage_tokens,
             )
-            yaml_debug = {
-                "scenario_slug": scope_slug,
-                "scenario_version": scope_package.meta.version,
-                "persona_key": scope_persona,
-                "used_fact_ids": reply.used_fact_ids,
-                "uncertainties": reply.uncertainties,
-                "handoff_suggestion": reply.handoff_suggestion,
-                "model_version": reply.model_version,
-                "requested_llm_choice": llm_choice,
-            }
             return _chat_out(
-                response=reply.answer,
-                sources=[{"fact_id": fid} for fid in reply.used_fact_ids] or None,
+                response=answer,
+                sources=[{"fact_id": fid} for fid in (yaml_debug or {}).get("used_fact_ids", [])] or None,
                 mode_used=mode_label,
                 conversation_id=conversation_id,
                 llm_used={
-                    "provider": (reply.usage or {}).get("provider", "scenario"),
-                    "model": reply.model_version,
+                    "provider": (yaml_debug or {}).get("provider") or "scenario",
+                    "model": (yaml_debug or {}).get("model_version"),
                     "choice": llm_choice,
                 },
                 debug=yaml_debug if request.debug else None,
@@ -1277,7 +1382,8 @@ def chat(request: ChatRequest, req: Request):
 
         if mode not in ("vector", "neo4j"):
             raise ValueError(
-                "Invalid response_mode. Use: vector, neo4j, hybrid, direct, compare, or yaml"
+                "Invalid response_mode. Use: vector, neo4j, hybrid, direct, yaml, "
+                "or select multiple modes / compare"
             )
 
         response, mode_label, resolved, debug_out = _generate_rag_response(
