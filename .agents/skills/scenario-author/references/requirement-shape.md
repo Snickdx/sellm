@@ -26,7 +26,7 @@ satisfies_ids: [LIB-FEAT-001]
 derives_from_ids: [LIB-GOAL-001]
 ```
 
-## Feature (product function)
+## Feature (product function) — prescribed during build
 
 ```yaml
 id: LIB-FEAT-001
@@ -34,12 +34,14 @@ statement: Workshop booking request and confirmation for lecturers.
 category: feature
 status: clarified
 origin: instructor
-decision_id: DEC-LIB-FEAT-001
+rationale: >
+  Prescribed during authoring; clustered from LIB-REQ-001/002 booking cues.
+  Open for instructor verify/change (GAP-LIB-SRS-001).
 known_by: [library_coordinator, lecturer]
 disclosure: when_relevant
 ```
 
-## Goal
+## Goal — prescribed during build
 
 ```yaml
 id: LIB-GOAL-001
@@ -47,10 +49,16 @@ statement: Reduce email-based booking chaos and prevent double-booked workshop r
 category: goal
 status: clarified
 origin: instructor
-decision_id: DEC-LIB-GOAL-001
+rationale: >
+  Prescribed during authoring; implied by coordinator pain about double-booking.
+  Open for instructor verify/change.
 known_by: [library_coordinator, administrator]
 disclosure: when_relevant
 ```
+
+After `verify_accept`, keep as `clarified` (usual for Features/Goals) or upgrade
+pure world-assumptions to `assumed` with `decision_id` / `approved_by` /
+`approved_at` (see Assumption example below).
 
 ## Assumption (instructor-approved synthetic)
 
