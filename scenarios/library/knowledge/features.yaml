@@ -1,0 +1,42 @@
+facts:
+- id: LIB-FEAT-001
+  statement: Lecturer workshop booking request, coordinator review, and shareable confirmation.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - library_coordinator
+  - administrator
+  - lecturer
+  disclosure: when_relevant
+- id: LIB-FEAT-002
+  statement: Conflict preference with larger-cohort override and hard capacity enforcement.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id002
+  - library_coordinator
+  - administrator
+  disclosure: when_relevant
+- id: LIB-FEAT-003
+  statement: Booking cancellation by lecturer or coordinator before session start.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: LIB-FEAT-004
+  statement: Workshop room and per-room capacity configuration.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id002
+  disclosure: when_relevant

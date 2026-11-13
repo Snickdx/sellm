@@ -1,0 +1,47 @@
+facts:
+- id: UC-FEAT-001
+  statement: UWI-email verification gate for alumni board and campaign access.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - alumni_admin
+  disclosure: when_relevant
+- id: UC-FEAT-002
+  statement: Alumni job and event listing submit with admin publish/reject/unpublish.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: UC-FEAT-003
+  statement: Alumni browse of published job and event boards.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: UC-FEAT-004
+  statement: Admin email campaign builder (compose, audience of verified non-revoked alumni, send).
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: UC-FEAT-005
+  statement: Account revoke/disable with loss of browse access and campaign exclusion.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

@@ -1,137 +1,124 @@
 facts:
-  - id: CA-ASM-001
-    statement: >-
-      The only student-facing chatbot persona is career_advisor (fictionalized
-      from the outreach/advising stakeholder voice).
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-001
-    approved_by: instructor
-    approved_at: "2026-11-03T13:26:00Z"
-    rationale: Instructor selected advisor-only persona set.
-    known_by: [career_advisor]
-    disclosure: never_student
-
-  - id: CA-ASM-002
-    statement: >-
-      Primary end users of the graded system are enrolled university students who
-      declare programme context and course lists for career alignment.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-002
-    approved_by: instructor
-    approved_at: "2026-11-03T13:27:00Z"
-    rationale: Instructor accepted enrolled university students only.
-    known_by: [career_advisor]
-    disclosure: when_relevant
-    acceptance_criteria:
-      - A student profile can record programme and current/completed courses.
-      - High-school-only profiles are not a graded MVP requirement.
-
-  - id: CA-ASM-003
-    statement: >-
-      Both career-first and course-first exploration modes are required in the
-      graded MVP (not optional phase-2 work).
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-003
-    approved_by: instructor
-    approved_at: "2026-11-03T13:28:00Z"
-    rationale: >-
-      Transcript describes both angles; instructor required both in MVP.
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-ASM-004
-    statement: >-
-      Product requirement: show ranked suited careers with explicit non-absolute
-      wording; never present a single forced career outcome.
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-004
-    approved_by: instructor
-    approved_at: "2026-11-03T13:29:00Z"
-    rationale: Instructor accepted hard-rule tone for graded product.
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-ASM-005
-    statement: >-
-      career_advisor is platform_admin for the advising product. Jobs/careers and
-      courses are related via skills and competency levels that belong to a job
-      and to a course. Enrolled students are end users; exact admin UI screens
-      remain student elicitation.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-006
-    approved_by: instructor
-    approved_at: "2026-11-09T23:39:00Z"
-    rationale: >-
-      Instructor confirmed admin authority and skills/competency mapping method.
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-ASM-006
-    statement: >-
-      Skill catalogue definition (create/update/retire skills and competency
-      levels) is admin-only and is performed mainly via bulk edit or upload.
-      Advisors may update mappings that attach skills/competency levels to jobs
-      and to courses. Students cannot edit the shared catalogue.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-007
-    approved_by: instructor
-    approved_at: "2026-11-09T23:41:00Z"
-    rationale: Instructor split admin skill definitions vs advisor mapping updates.
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-ASM-007
-    statement: >-
-      Admin/advisor tooling may show aggregated usage only; individual students’
-      exploration history is not visible for graded MVP.
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-009
-    approved_by: instructor
-    approved_at: "2026-11-09T23:42:30Z"
-    rationale: Instructor chose aggregated visibility only.
-    known_by: [career_advisor]
-    disclosure: when_asked
-
-  - id: CA-ASM-008
-    statement: >-
-      MVP ranking is a transparent suitability ordering from skill/competency
-      overlap between the student’s selected courses and each job, always labeled
-      as non-absolute suggestions. Advanced ML ranking and live labour-market
-      feeds are out of graded MVP unless elicited.
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-010
-    approved_by: instructor
-    approved_at: "2026-11-09T23:43:00Z"
-    rationale: Instructor accepted transparent skill/competency overlap ranking.
-    known_by: [career_advisor]
-    disclosure: when_relevant
-
-  - id: CA-ASM-009
-    statement: >-
-      The course catalogue is pre-populated in the system. Students add courses by
-      searching and selecting from that list rather than typing arbitrary codes.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-CA-008
-    approved_by: instructor
-    approved_at: "2026-11-09T23:42:00Z"
-    rationale: Instructor required catalogue search/select instead of free-typed codes.
-    known_by: [career_advisor]
-    disclosure: when_relevant
+- id: CA-ASM-001
+  statement: The only student-facing chatbot persona is career_advisor (fictionalized from the outreach/advising
+    stakeholder voice).
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-001
+  approved_by: instructor
+  approved_at: '2026-11-03T13:26:00Z'
+  rationale: Instructor selected advisor-only persona set.
+  known_by:
+  - career_advisor
+  disclosure: never_student
+- id: CA-ASM-002
+  statement: Primary end users of the graded system are enrolled university students who declare programme
+    context and course lists for career alignment.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-002
+  approved_by: instructor
+  approved_at: '2026-11-03T13:27:00Z'
+  rationale: Instructor accepted enrolled university students only.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+  acceptance_criteria:
+  - A student profile can record programme and current/completed courses.
+  - High-school-only profiles are not a graded MVP requirement.
+- id: CA-ASM-003
+  statement: Both career-first and course-first exploration modes are required in the graded MVP (not
+    optional phase-2 work).
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-003
+  approved_by: instructor
+  approved_at: '2026-11-03T13:28:00Z'
+  rationale: Transcript describes both angles; instructor required both in MVP.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-ASM-004
+  statement: 'Product requirement: show ranked suited careers with explicit non-absolute wording; never
+    present a single forced career outcome.'
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-004
+  approved_by: instructor
+  approved_at: '2026-11-03T13:29:00Z'
+  rationale: Instructor accepted hard-rule tone for graded product.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-ASM-005
+  statement: career_advisor is platform_admin for the advising product. Jobs/careers and courses are related
+    via skills and competency levels that belong to a job and to a course. Enrolled students are end users;
+    exact admin UI screens remain student elicitation.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-006
+  approved_by: instructor
+  approved_at: '2026-11-09T23:39:00Z'
+  rationale: Instructor confirmed admin authority and skills/competency mapping method.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-ASM-006
+  statement: Skill catalogue definition (create/update/retire skills and competency levels) is admin-only
+    and is performed mainly via bulk edit or upload. Advisors may update mappings that attach skills/competency
+    levels to jobs and to courses. Students cannot edit the shared catalogue.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-007
+  approved_by: instructor
+  approved_at: '2026-11-09T23:41:00Z'
+  rationale: Instructor split admin skill definitions vs advisor mapping updates.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-ASM-007
+  statement: Admin/advisor tooling may show aggregated usage only; individual students’ exploration history
+    is not visible for graded MVP.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-009
+  approved_by: instructor
+  approved_at: '2026-11-09T23:42:30Z'
+  rationale: Instructor chose aggregated visibility only.
+  known_by:
+  - career_advisor
+  disclosure: when_asked
+- id: CA-ASM-008
+  statement: MVP ranking is a transparent suitability ordering from skill/competency overlap between the
+    student’s selected courses and each job, always labeled as non-absolute suggestions. Advanced ML ranking
+    and live labour-market feeds are out of graded MVP unless elicited.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-010
+  approved_by: instructor
+  approved_at: '2026-11-09T23:43:00Z'
+  rationale: Instructor accepted transparent skill/competency overlap ranking.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-ASM-009
+  statement: The course catalogue is pre-populated in the system. Students add courses by searching and
+    selecting from that list rather than typing arbitrary codes.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-CA-008
+  approved_by: instructor
+  approved_at: '2026-11-09T23:42:00Z'
+  rationale: Instructor required catalogue search/select instead of free-typed codes.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant

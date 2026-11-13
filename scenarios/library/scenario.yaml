@@ -1,19 +1,24 @@
 slug: library
 title: Library Workshop Booking
-version: "0.2.0"
+version: 0.3.0
 status: approved
-brief: >-
-  Lecturers request workshop sessions on library resources from a booking system
-  operated by the library coordinator (explicit approve/confirm; conflict
-  preference with larger-cohort override; cancellations any time before start).
-  Over-capacity requests are hard-rejected. Administrator and coordinator may
-  configure rooms/capacities (default 30); administrator escalates capacity-policy
-  disputes. Lecturers need shareable confirmations after acceptance.
+brief: Lecturers request workshop sessions on library resources from a booking system operated by the
+  library coordinator (explicit approve/confirm; conflict preference with larger-cohort override; cancellations
+  any time before start). Over-capacity requests are hard-rejected. Administrator and coordinator may
+  configure rooms/capacities (default 30); administrator escalates capacity-policy disputes. Lecturers
+  need shareable confirmations after acceptance.
 source_status: transcript_received_plus_synthetic_pilot
-source_notes: >-
-  Real interview VTT present: sources/Library Project Interview - Kriston Latoo.vtt.
-  Package 0.2.0 remains grounded on the SYNTHETIC pilot (library-synthetic.vtt)
-  plus instructor depth decisions DEC-LIB-002..006. Re-author against the real
-  transcript in a later version before treating facts as real-interview ground truth.
+source_notes: 'Real interview VTT present: sources/Library Project Interview - Kriston Latoo.vtt. Package
+  0.2.0 remains grounded on the SYNTHETIC pilot (library-synthetic.vtt) plus instructor depth decisions
+  DEC-LIB-002..006. Re-author against the real transcript in a later version before treating facts as
+  real-interview ground truth.
+
+  SRS prescribe-by-default depth-update to 0.3.0 (2026-11-13T19:42:16Z): added GOAL/FEAT/DATA/IF/VER,
+  remapped ASM categories, retagged WF use_cases, wired trace links. Instructor verify/change via gaps
+  theme srs_prescription.
+
+  SRS prescribe-by-default depth-update to 0.3.0 (2026-11-13T19:42:24Z): added GOAL/FEAT/DATA/IF/VER,
+  remapped ASM categories, retagged WF use_cases, wired trace links. Instructor verify/change via gaps
+  theme srs_prescription.'
 approved_by: instructor
-approved_at: "2026-11-10T00:14:00Z"
+approved_at: '2026-11-13T19:44:00Z'

@@ -1,0 +1,12 @@
+facts:
+- id: TT-VER-001
+  statement: Overdue flagging and scoped visibility are verified by test of due-date expiry and role-based
+    reads.
+  category: verification
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - pg_coordinator
+  disclosure: when_asked

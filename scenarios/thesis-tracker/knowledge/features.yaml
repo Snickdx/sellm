@@ -1,0 +1,48 @@
+facts:
+- id: TT-FEAT-001
+  statement: Record and change student–supervisor pairings (coordinator; supervisor confirms).
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+- id: TT-FEAT-002
+  statement: Student submission with supervisor in-app feedback notes and configurable due dates.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: TT-FEAT-003
+  statement: Overdue feedback flags to coordinator with optional in-system nudge to supervisors.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: TT-FEAT-004
+  statement: Freeform progress notes and coordinator summary for grad studies.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: TT-FEAT-005
+  statement: Cross-pairing read access for coordinator; supervisors scoped to own supervisees.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

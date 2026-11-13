@@ -1,0 +1,12 @@
+facts:
+- id: TA-DEP-001
+  statement: HR approval, contracts, and payroll remain an external process outside the graded allocation
+    system boundary.
+  category: dependency
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - hod
+  disclosure: when_asked

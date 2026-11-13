@@ -1,0 +1,12 @@
+facts:
+- id: CA-NFR-001
+  statement: Staff tooling exposes aggregated usage only; individual exploration history is out of graded
+    MVP.
+  category: security
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - career_advisor
+  disclosure: when_relevant

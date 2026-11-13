@@ -1,0 +1,29 @@
+facts:
+- id: UC-DATA-001
+  statement: Alumni account records (verified/revoked) used for access and campaign audiences.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - alumni_admin
+  disclosure: when_relevant
+- id: UC-DATA-002
+  statement: Job and event listing records (pending/published/rejected/unpublished).
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: UC-DATA-003
+  statement: Email campaign records (compose content, audience snapshot, send).
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

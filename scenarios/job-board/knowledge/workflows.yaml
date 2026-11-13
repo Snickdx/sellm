@@ -1,112 +1,112 @@
 facts:
-  - id: JB-WF-001
-    statement: >-
-      Current publish workflow: employer/staff submit a listing form with a
-      deadline → admin is notified → admin reviews → admin publishes → admin
-      separately notifies the subscriber list. Desired change: notify
-      subscribers automatically on publish.
-    category: workflow
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/58-0
-        start: "00:08:58.262"
-        end: "00:09:01.354"
-        speaker: null
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/66-0
-        start: "00:10:39.902"
-        end: "00:10:45.983"
-        speaker: null
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/67-0
-        start: "00:11:00.982"
-        end: "00:11:04.782"
-        speaker: null
-    known_by: [administrator]
-    disclosure: when_relevant
-
-  - id: JB-WF-002
-    statement: >-
-      Current graduate discovery workflow: subscribe → receive email → open
-      platform listing → apply via on-platform form or external employer link.
-    category: workflow
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/55-0
-        start: "00:08:10.022"
-        end: "00:08:13.003"
-        speaker: null
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/55-2
-        start: "00:08:17.111"
-        end: "00:08:21.219"
-        speaker: null
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/55-4
-        start: "00:08:26.388"
-        end: "00:08:29.502"
-        speaker: null
-    known_by: [administrator, graduate_applicant]
-    disclosure: when_relevant
-
-  - id: JB-WF-003
-    statement: >-
-      Listing corrections are rare; when needed, submitters email the admin or
-      submit a second form entry that staff treat as the holding/current version.
-    category: workflow
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/60-0
-        start: "00:09:29.462"
-        end: "00:09:34.553"
-        speaker: null
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/60-1
-        start: "00:09:34.553"
-        end: "00:09:39.358"
-        speaker: null
-      - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
-        cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/60-2
-        start: "00:09:39.358"
-        end: "00:09:43.302"
-        speaker: null
-    known_by: [administrator]
-    disclosure: when_asked
-
-  - id: JB-WF-004
-    statement: >-
-      Reject/revise flow: administrator rejects a pending listing → employer
-      revises and resubmits → listing returns to admin review before any publish.
-      Graduates never see rejected/pending listings.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-JB-008
-    approved_by: instructor
-    approved_at: "2026-11-10T02:38:00Z"
-    rationale: Instructor chose revise-and-resubmit after reject.
-    known_by: [administrator, employer]
-    disclosure: when_relevant
-
-  - id: JB-WF-005
-    statement: >-
-      Publish-notify flow: administrator publishes an approved listing → eligible
-      programme subscribers are notified automatically (no separate mandatory
-      notify step). Administrator may later unpublish to hide the listing from
-      graduates.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-JB-009
-    approved_by: instructor
-    approved_at: "2026-11-10T02:39:00Z"
-    rationale: >-
-      Auto-notify (DEC-JB-009) plus admin unpublish (DEC-JB-010) for graded MVP.
-    known_by: [administrator, graduate_applicant]
-    disclosure: when_relevant
+- id: JB-WF-001
+  statement: 'Current publish workflow: employer/staff submit a listing form with a deadline → admin is
+    notified → admin reviews → admin publishes → admin separately notifies the subscriber list. Desired
+    change: notify subscribers automatically on publish.'
+  category: use_case
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/58-0
+    start: '00:08:58.262'
+    end: '00:09:01.354'
+    speaker: null
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/66-0
+    start: '00:10:39.902'
+    end: '00:10:45.983'
+    speaker: null
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/67-0
+    start: '00:11:00.982'
+    end: '00:11:04.782'
+    speaker: null
+  known_by:
+  - administrator
+  disclosure: when_relevant
+  rationale: Prescribed during authoring; retagged journey workflow as use_case. Open for instructor verify/change.
+- id: JB-WF-002
+  statement: 'Current graduate discovery workflow: subscribe → receive email → open platform listing →
+    apply via on-platform form or external employer link.'
+  category: use_case
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/55-0
+    start: '00:08:10.022'
+    end: '00:08:13.003'
+    speaker: null
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/55-2
+    start: '00:08:17.111'
+    end: '00:08:21.219'
+    speaker: null
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/55-4
+    start: '00:08:26.388'
+    end: '00:08:29.502'
+    speaker: null
+  known_by:
+  - administrator
+  - graduate_applicant
+  disclosure: when_relevant
+  rationale: Prescribed during authoring; retagged journey workflow as use_case. Open for instructor verify/change.
+- id: JB-WF-003
+  statement: Listing corrections are rare; when needed, submitters email the admin or submit a second
+    form entry that staff treat as the holding/current version.
+  category: use_case
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/60-0
+    start: '00:09:29.462'
+    end: '00:09:34.553'
+    speaker: null
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/60-1
+    start: '00:09:34.553'
+    end: '00:09:39.358'
+    speaker: null
+  - file: sources/Job Board Project Interview - Jacob Ramsoobhag.vtt
+    cue_id: e9823c0a-0b0a-4a0d-944c-3555d5a00ac5/60-2
+    start: '00:09:39.358'
+    end: '00:09:43.302'
+    speaker: null
+  known_by:
+  - administrator
+  disclosure: when_asked
+  rationale: Prescribed during authoring; retagged journey workflow as use_case. Open for instructor verify/change.
+- id: JB-WF-004
+  statement: 'Reject/revise flow: administrator rejects a pending listing → employer revises and resubmits
+    → listing returns to admin review before any publish. Graduates never see rejected/pending listings.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-JB-008
+  approved_by: instructor
+  approved_at: '2026-11-10T02:38:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Instructor chose revise-and-resubmit after reject.'
+  known_by:
+  - administrator
+  - employer
+  disclosure: when_relevant
+- id: JB-WF-005
+  statement: 'Publish-notify flow: administrator publishes an approved listing → eligible programme subscribers
+    are notified automatically (no separate mandatory notify step). Administrator may later unpublish
+    to hide the listing from graduates.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-JB-009
+  approved_by: instructor
+  approved_at: '2026-11-10T02:39:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Auto-notify (DEC-JB-009) plus admin unpublish (DEC-JB-010) for graded MVP.'
+  known_by:
+  - administrator
+  - graduate_applicant
+  disclosure: when_relevant

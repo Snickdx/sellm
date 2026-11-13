@@ -1,0 +1,30 @@
+facts:
+- id: TT-DATA-001
+  statement: Pairing records linking student and supervisor.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+- id: TT-DATA-002
+  statement: Submission artefacts and feedback notes with due dates / overdue flags.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: TT-DATA-003
+  statement: Freeform progress notes suitable for coordinator summaries.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

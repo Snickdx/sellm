@@ -1,133 +1,135 @@
 facts:
-  - id: SA-ASM-001
-    statement: >-
-      Student-facing personas are campus_admin, student_seeker, and landlord.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-001
-    approved_by: instructor
-    approved_at: "2026-11-03T13:39:00Z"
-    rationale: Instructor accepted three-persona set.
-    known_by: [campus_admin]
-    disclosure: never_student
-
-  - id: SA-ASM-002
-    statement: >-
-      Eligible student seekers are St. Augustine full-time or part-time
-      registered students authenticating with a student ID, plus a provisional
-      incoming-student path for those who need housing before an ID is issued.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-002
-    approved_by: instructor
-    approved_at: "2026-11-03T13:40:00Z"
-    rationale: Instructor accepted option 2 including provisional path.
-    known_by: [campus_admin, student_seeker]
-    disclosure: when_relevant
-    acceptance_criteria:
-      - Registered students can authenticate with student ID.
-      - A provisional/incoming pathway exists before ID issuance.
-
-  - id: SA-ASM-003
-    statement: >-
-      Students may optionally message landlords in-app; contact details remain
-      available; no payments or contracts are handled by the system.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-003
-    approved_by: instructor
-    approved_at: "2026-11-03T13:41:00Z"
-    rationale: Instructor accepted referral + optional messaging.
-    known_by: [campus_admin, student_seeker, landlord]
-    disclosure: when_relevant
-
-  - id: SA-ASM-004
-    statement: >-
-      Listing lifecycle is landlord submit → pending → campus_admin
-      verify/approve → landlord controls active/inactive visibility.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-004
-    approved_by: instructor
-    approved_at: "2026-11-03T13:42:00Z"
-    rationale: Instructor accepted option 1.
-    known_by: [campus_admin, landlord]
-    disclosure: when_relevant
-
-  - id: SA-ASM-005
-    statement: >-
-      Graded MVP requires amenity fields and amenity filters in addition to
-      location/price filters; automated matching is out of required scope.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-005
-    approved_by: instructor
-    approved_at: "2026-11-03T13:44:00Z"
-    rationale: Instructor accepted baseline + amenities.
-    known_by: [campus_admin, student_seeker, landlord]
-    disclosure: when_relevant
-
-  - id: SA-ASM-006
-    statement: >-
-      campus_admin is platform_admin (verify/approve/reject, eligibility gate,
-      force-deactivate). landlord is operator for their own units after approval.
-      student_seeker is end_user. Exact admin UI screens remain elicitation.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-006
-    approved_by: instructor
-    approved_at: "2026-11-10T02:41:00Z"
-    rationale: Instructor accepted system-role split.
-    known_by: [campus_admin, landlord, student_seeker]
-    disclosure: when_relevant
-
-  - id: SA-ASM-007
-    statement: >-
-      campus_admin may reject a pending listing with an optional reason; landlord
-      may revise and resubmit. A listing may receive provisional acceptance after
-      manual review and certification. Rejected/pending/provisional listings are
-      not student-visible until full approval (see SA-ASM-009).
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-007
-    approved_by: instructor
-    approved_at: "2026-11-10T02:43:00Z"
-    rationale: Instructor chose reject→revise/resubmit plus provisional acceptance.
-    known_by: [campus_admin, landlord]
-    disclosure: when_relevant
-
-  - id: SA-ASM-008
-    statement: >-
-      Landlord may set approved listings active/inactive. campus_admin may also
-      force-deactivate or unpublish a listing that becomes unsuitable.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-008
-    approved_by: instructor
-    approved_at: "2026-11-10T02:44:00Z"
-    rationale: Instructor accepted dual takedown control.
-    known_by: [campus_admin, landlord]
-    disclosure: when_relevant
-
-  - id: SA-ASM-009
-    statement: >-
-      Provisionally accepted listings remain hidden from student seekers until
-      full (non-provisional) approval. Only fully approved active listings are
-      student-visible.
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-SA-009
-    approved_by: instructor
-    approved_at: "2026-11-10T02:44:30Z"
-    rationale: Instructor chose provisional hidden until full approval.
-    known_by: [campus_admin, landlord, student_seeker]
-    disclosure: when_relevant
+- id: SA-ASM-001
+  statement: Student-facing personas are campus_admin, student_seeker, and landlord.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-001
+  approved_by: instructor
+  approved_at: '2026-11-03T13:39:00Z'
+  rationale: Instructor accepted three-persona set.
+  known_by:
+  - campus_admin
+  disclosure: never_student
+- id: SA-ASM-002
+  statement: Eligible student seekers are St. Augustine full-time or part-time registered students authenticating
+    with a student ID, plus a provisional incoming-student path for those who need housing before an ID
+    is issued.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-002
+  approved_by: instructor
+  approved_at: '2026-11-03T13:40:00Z'
+  rationale: Instructor accepted option 2 including provisional path.
+  known_by:
+  - campus_admin
+  - student_seeker
+  disclosure: when_relevant
+  acceptance_criteria:
+  - Registered students can authenticate with student ID.
+  - A provisional/incoming pathway exists before ID issuance.
+- id: SA-ASM-003
+  statement: Students may optionally message landlords in-app; contact details remain available; no payments
+    or contracts are handled by the system.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-003
+  approved_by: instructor
+  approved_at: '2026-11-03T13:41:00Z'
+  rationale: Instructor accepted referral + optional messaging.
+  known_by:
+  - campus_admin
+  - student_seeker
+  - landlord
+  disclosure: when_relevant
+- id: SA-ASM-004
+  statement: Listing lifecycle is landlord submit → pending → campus_admin verify/approve → landlord controls
+    active/inactive visibility.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-004
+  approved_by: instructor
+  approved_at: '2026-11-03T13:42:00Z'
+  rationale: Instructor accepted option 1.
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant
+- id: SA-ASM-005
+  statement: Graded MVP requires amenity fields and amenity filters in addition to location/price filters;
+    automated matching is out of required scope.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-005
+  approved_by: instructor
+  approved_at: '2026-11-03T13:44:00Z'
+  rationale: Instructor accepted baseline + amenities.
+  known_by:
+  - campus_admin
+  - student_seeker
+  - landlord
+  disclosure: when_relevant
+- id: SA-ASM-006
+  statement: campus_admin is platform_admin (verify/approve/reject, eligibility gate, force-deactivate).
+    landlord is operator for their own units after approval. student_seeker is end_user. Exact admin UI
+    screens remain elicitation.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-006
+  approved_by: instructor
+  approved_at: '2026-11-10T02:41:00Z'
+  rationale: Instructor accepted system-role split.
+  known_by:
+  - campus_admin
+  - landlord
+  - student_seeker
+  disclosure: when_relevant
+- id: SA-ASM-007
+  statement: campus_admin may reject a pending listing with an optional reason; landlord may revise and
+    resubmit. A listing may receive provisional acceptance after manual review and certification. Rejected/pending/provisional
+    listings are not student-visible until full approval (see SA-ASM-009).
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-007
+  approved_by: instructor
+  approved_at: '2026-11-10T02:43:00Z'
+  rationale: Instructor chose reject→revise/resubmit plus provisional acceptance.
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant
+- id: SA-ASM-008
+  statement: Landlord may set approved listings active/inactive. campus_admin may also force-deactivate
+    or unpublish a listing that becomes unsuitable.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-008
+  approved_by: instructor
+  approved_at: '2026-11-10T02:44:00Z'
+  rationale: Instructor accepted dual takedown control.
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant
+- id: SA-ASM-009
+  statement: Provisionally accepted listings remain hidden from student seekers until full (non-provisional)
+    approval. Only fully approved active listings are student-visible.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-SA-009
+  approved_by: instructor
+  approved_at: '2026-11-10T02:44:30Z'
+  rationale: Instructor chose provisional hidden until full approval.
+  known_by:
+  - campus_admin
+  - landlord
+  - student_seeker
+  disclosure: when_relevant

@@ -38,6 +38,7 @@ class GapAction(str, Enum):
     modify = "modify"
     reject = "reject"
     defer = "defer"
+    verify_accept = "verify_accept"
 
 
 class ScenarioStatus(str, Enum):

@@ -1,0 +1,14 @@
+facts:
+- id: SA-GOAL-001
+  statement: Help eligible campus students find verified off-campus housing near St. Augustine / Mount
+    Hope via a closed referral platform (no payments/contracts).
+  category: goal
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  - student_seeker
+  - landlord
+  disclosure: when_relevant

@@ -1,0 +1,11 @@
+facts:
+- id: TA-VER-001
+  statement: Hard cap/budget blocks are verified by test of create/edit attempts that exceed limits.
+  category: verification
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - hod
+  disclosure: when_asked

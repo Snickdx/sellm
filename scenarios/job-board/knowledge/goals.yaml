@@ -1,0 +1,14 @@
+facts:
+- id: JB-GOAL-001
+  statement: Connect eligible programme graduates with employer job listings through an admin-gated publish
+    workflow with application tracking.
+  category: goal
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  - employer
+  - graduate_applicant
+  disclosure: when_relevant

@@ -1,0 +1,23 @@
+facts:
+- id: SA-IF-001
+  statement: Student seeker listing browse/filter UI and optional messaging UI.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  - student_seeker
+  - landlord
+  disclosure: when_relevant
+- id: SA-IF-002
+  statement: Campus admin verification checklist / site-confirmation workflow UI.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  disclosure: when_relevant

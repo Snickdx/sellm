@@ -1,209 +1,310 @@
 open_questions:
-  - id: GAP-LIB-001
-    priority: important
-    prompt: How late may a lecturer cancel a confirmed workshop booking?
-    citations:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0007
-        start: "00:00:52.500"
-        end: "00:01:01.000"
-        speaker: coordinator
-        note: Coordinator states cancellation deadline is fuzzy
-    why_it_matters: Affects fairness, room reuse, and student notifications.
-    alternatives:
-      - Up to 24 hours before start
-      - Up to 2 hours before start
-      - Any time before start
-      - Defer for student elicitation
-    recommended_default: Up to 24 hours before start
-    suggested_assumption: |
-      Lecturers may cancel their own confirmed workshop booking any time before
-      start; the library coordinator may also cancel for operational reasons.
-      Notification copy remains elicitation.
-    status: decided
-    actions: [accept, modify, reject, defer]
+- id: GAP-LIB-001
+  priority: important
+  prompt: How late may a lecturer cancel a confirmed workshop booking?
+  citations:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0007
+    start: '00:00:52.500'
+    end: '00:01:01.000'
+    speaker: coordinator
+    note: Coordinator states cancellation deadline is fuzzy
+  why_it_matters: Affects fairness, room reuse, and student notifications.
+  alternatives:
+  - Up to 24 hours before start
+  - Up to 2 hours before start
+  - Any time before start
+  - Defer for student elicitation
+  recommended_default: Up to 24 hours before start
+  suggested_assumption: 'Lecturers may cancel their own confirmed workshop booking any time before
 
-  - id: GAP-LIB-002
-    priority: critical
-    theme: system_authority
-    prompt: |
-      Depth-update: library_coordinator currently has a thin role string and
-      refers capacity disputes to administrator. For the graded booking system,
-      is the coordinator the primary platform operator (approves/manages bookings,
-      rooms, overrides), with administrator as capacity-policy escalations only?
-    citations:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0002
-        note: Coordinator receives requests by email and checks room calendar
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0005
-        note: Coordinator may override conflicts for larger cohorts
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0008
-        note: Administrator speaks to capacity must not be exceeded
-    why_it_matters: >-
-      Sets system_role / admin_capabilities and whether students elicit coordinator
-      ops vs a separate admin surface.
-    alternatives:
-      - library_coordinator = platform_admin for booking ops; administrator = capacity policy / escalation only
-      - administrator = platform_admin; coordinator = day-to-day operator without overrides
-      - Both are full platform_admins with overlapping powers
-      - Defer for student elicitation
-    recommended_default: >-
-      library_coordinator = platform_admin for booking ops; administrator = capacity policy / escalation only
-    suggested_assumption: |
-      library_coordinator is platform_admin for workshop booking operations
-      (review requests, prevent double-booking, apply conflict preference,
-      override for larger cohorts, confirmations). administrator is approver/
-      escalation for capacity-policy disputes and room capacity configuration,
-      not day-to-day booking queue work.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    start; the library coordinator may also cancel for operational reasons.
 
-  - id: GAP-LIB-003
-    priority: important
-    theme: approval_power
-    prompt: |
-      When a lecturer submits a workshop booking request, does it become
-      confirmed automatically if the slot is free and under capacity, or must
-      the library_coordinator explicitly approve/confirm?
-    citations:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0002
-        note: Coordinator currently receives requests by email
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0006
-        note: Lecturers need confirmation after booking is accepted
-    why_it_matters: Defines submit→confirm workflow and coordinator queue depth.
-    alternatives:
-      - Auto-confirm when slot free and under capacity; coordinator only handles conflicts/overrides
-      - Always require library_coordinator explicit approve/confirm before confirmation is issued
-      - Auto-confirm under capacity; administrator must approve any override cases
-      - Defer for student elicitation
-    recommended_default: >-
-      Always require library_coordinator explicit approve/confirm before
-      confirmation is issued
-    suggested_assumption: |
-      Every booking request enters a coordinator review queue. A shareable
-      confirmation is issued only after library_coordinator explicitly
-      approves/confirms (auto-confirm is out of graded MVP unless elicited).
-    status: decided
-    actions: [accept, modify, reject, defer]
+    Notification copy remains elicitation.
 
-  - id: GAP-LIB-004
-    priority: important
-    theme: exception_path
-    prompt: |
-      If a request would exceed room capacity, what should the system do?
-    citations:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0008
-        note: Rooms must not be overbooked beyond capacity
-    why_it_matters: Capacity hard rule vs waitlist/reject UX for students to elicit detail.
-    alternatives:
-      - Hard reject — cannot book over capacity; lecturer must reduce headcount or pick another slot
-      - Waitlist — request stays pending until capacity frees or coordinator resolves
-      - Allow overbook only with administrator override (coordinator alone cannot)
-      - Defer for student elicitation
-    recommended_default: >-
-      Hard reject — cannot book over capacity; lecturer must reduce headcount or
-      pick another slot
-    suggested_assumption: |
-      Requests that would exceed configured room capacity are rejected (never
-      silently overbooked). Waitlisting and administrator overbook overrides are
-      out of graded MVP unless elicited.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-LIB-002
+  priority: critical
+  theme: system_authority
+  prompt: 'Depth-update: library_coordinator currently has a thin role string and
 
-  - id: GAP-LIB-005
-    priority: important
-    theme: config_default
-    prompt: |
-      Who may create/update workshop rooms and their capacity values (default 30
-      unless overridden per LIB-ASM-001)?
-    citations:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0008
-        note: Administrator enforces capacity limits
-    why_it_matters: Separates booking ops (coordinator) from capacity configuration (admin).
-    alternatives:
-      - administrator only configures rooms/capacities; coordinator uses them in booking
-      - library_coordinator can also edit room capacities
-      - Rooms/capacities are fixed fixtures for MVP (no in-app config); students elicit
-      - Defer for student elicitation
-    recommended_default: >-
-      administrator only configures rooms/capacities; coordinator uses them in
-      booking
-    suggested_assumption: |
-      administrator configures workshop rooms and per-room capacities (default 30
-      when unset). library_coordinator consumes those values for booking checks
-      and does not change capacity configuration in graded MVP unless elicited.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    refers capacity disputes to administrator. For the graded booking system,
 
+    is the coordinator the primary platform operator (approves/manages bookings,
+
+    rooms, overrides), with administrator as capacity-policy escalations only?
+
+    '
+  citations:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0002
+    note: Coordinator receives requests by email and checks room calendar
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0005
+    note: Coordinator may override conflicts for larger cohorts
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0008
+    note: Administrator speaks to capacity must not be exceeded
+  why_it_matters: Sets system_role / admin_capabilities and whether students elicit coordinator ops vs
+    a separate admin surface.
+  alternatives:
+  - library_coordinator = platform_admin for booking ops; administrator = capacity policy / escalation
+    only
+  - administrator = platform_admin; coordinator = day-to-day operator without overrides
+  - Both are full platform_admins with overlapping powers
+  - Defer for student elicitation
+  recommended_default: library_coordinator = platform_admin for booking ops; administrator = capacity
+    policy / escalation only
+  suggested_assumption: 'library_coordinator is platform_admin for workshop booking operations
+
+    (review requests, prevent double-booking, apply conflict preference,
+
+    override for larger cohorts, confirmations). administrator is approver/
+
+    escalation for capacity-policy disputes and room capacity configuration,
+
+    not day-to-day booking queue work.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-LIB-003
+  priority: important
+  theme: approval_power
+  prompt: 'When a lecturer submits a workshop booking request, does it become
+
+    confirmed automatically if the slot is free and under capacity, or must
+
+    the library_coordinator explicitly approve/confirm?
+
+    '
+  citations:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0002
+    note: Coordinator currently receives requests by email
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0006
+    note: Lecturers need confirmation after booking is accepted
+  why_it_matters: Defines submit→confirm workflow and coordinator queue depth.
+  alternatives:
+  - Auto-confirm when slot free and under capacity; coordinator only handles conflicts/overrides
+  - Always require library_coordinator explicit approve/confirm before confirmation is issued
+  - Auto-confirm under capacity; administrator must approve any override cases
+  - Defer for student elicitation
+  recommended_default: Always require library_coordinator explicit approve/confirm before confirmation
+    is issued
+  suggested_assumption: 'Every booking request enters a coordinator review queue. A shareable
+
+    confirmation is issued only after library_coordinator explicitly
+
+    approves/confirms (auto-confirm is out of graded MVP unless elicited).
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-LIB-004
+  priority: important
+  theme: exception_path
+  prompt: 'If a request would exceed room capacity, what should the system do?
+
+    '
+  citations:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0008
+    note: Rooms must not be overbooked beyond capacity
+  why_it_matters: Capacity hard rule vs waitlist/reject UX for students to elicit detail.
+  alternatives:
+  - Hard reject — cannot book over capacity; lecturer must reduce headcount or pick another slot
+  - Waitlist — request stays pending until capacity frees or coordinator resolves
+  - Allow overbook only with administrator override (coordinator alone cannot)
+  - Defer for student elicitation
+  recommended_default: Hard reject — cannot book over capacity; lecturer must reduce headcount or pick
+    another slot
+  suggested_assumption: 'Requests that would exceed configured room capacity are rejected (never
+
+    silently overbooked). Waitlisting and administrator overbook overrides are
+
+    out of graded MVP unless elicited.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-LIB-005
+  priority: important
+  theme: config_default
+  prompt: 'Who may create/update workshop rooms and their capacity values (default 30
+
+    unless overridden per LIB-ASM-001)?
+
+    '
+  citations:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0008
+    note: Administrator enforces capacity limits
+  why_it_matters: Separates booking ops (coordinator) from capacity configuration (admin).
+  alternatives:
+  - administrator only configures rooms/capacities; coordinator uses them in booking
+  - library_coordinator can also edit room capacities
+  - Rooms/capacities are fixed fixtures for MVP (no in-app config); students elicit
+  - Defer for student elicitation
+  recommended_default: administrator only configures rooms/capacities; coordinator uses them in booking
+  suggested_assumption: 'administrator configures workshop rooms and per-room capacities (default 30
+
+    when unset). library_coordinator consumes those values for booking checks
+
+    and does not change capacity configuration in graded MVP unless elicited.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-LIB-SRS-001
+  priority: important
+  theme: srs_prescription
+  prompt: Verify prescribed Goals, Features, and FR satisfies/derives links for library booking.
+  citations:
+  - file: scenario.yaml
+    cue_id: srs-prescription
+    note: Structural prescription from brief + existing package facts (no single VTT cue)
+  why_it_matters: Students need named product functions and graph SATISFIES/DERIVES_FROM edges.
+  prescribed_fact_ids:
+  - LIB-GOAL-001
+  - LIB-FEAT-001
+  - LIB-FEAT-002
+  - LIB-FEAT-003
+  - LIB-FEAT-004
+  - LIB-REQ-001
+  - LIB-REQ-002
+  - LIB-REQ-003
+  - LIB-REQ-005
+  - LIB-REQ-006
+  - LIB-REQ-007
+  - LIB-REQ-008
+  suggested_assumption: Keep LIB-GOAL-001 and LIB-FEAT-001..004 with REQ satisfies/derives as written.
+  recommended_default: Keep prescriptions as written
+  alternatives:
+  - Keep as prescribed
+  - Modify statements or clustering
+  - Reject and remove prescribed facts
+  - Defer review; keep prescription in package
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
+- id: GAP-LIB-SRS-002
+  priority: important
+  theme: srs_prescription
+  prompt: Verify Data/Interface/Verification prescriptions and ASM→assumption remaps / WF→use_case retags.
+  citations:
+  - file: scenario.yaml
+    cue_id: srs-prescription
+    note: Structural prescription from brief + existing package facts (no single VTT cue)
+  why_it_matters: SRS data/interface/verification coverage and correct Assumption/UseCase labels.
+  prescribed_fact_ids:
+  - LIB-DATA-001
+  - LIB-DATA-002
+  - LIB-IF-001
+  - LIB-VER-001
+  suggested_assumption: Keep data/interface/verification facts; keep ASM category assumption and WF as
+    use_case.
+  recommended_default: Keep prescriptions as written
+  alternatives:
+  - Keep as prescribed
+  - Modify statements or clustering
+  - Reject and remove prescribed facts
+  - Defer review; keep prescription in package
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
 decisions:
-  - decision_id: DEC-LIB-002
-    gap_id: GAP-LIB-002
-    action: accept
-    chosen: >-
-      library_coordinator = platform_admin for booking ops; administrator =
-      capacity policy / escalation only
-    modified_text: null
-    rationale: Instructor accepted recommended default.
-    approved_by: instructor
-    approved_at: "2026-11-09T23:50:00Z"
-    resulting_fact_ids: [LIB-ASM-002]
-  - decision_id: DEC-LIB-003
-    gap_id: GAP-LIB-001
-    action: accept
-    chosen: Any time before start
-    modified_text: null
-    rationale: Instructor chose option 3 — cancel any time before start.
-    approved_by: instructor
-    approved_at: "2026-11-09T23:51:00Z"
-    resulting_fact_ids: [LIB-ASM-003, LIB-REQ-007]
-  - decision_id: DEC-LIB-004
-    gap_id: GAP-LIB-003
-    action: accept
-    chosen: >-
-      Always require library_coordinator explicit approve/confirm before
-      confirmation is issued
-    modified_text: null
-    rationale: Instructor chose option 2 — explicit coordinator approval.
-    approved_by: instructor
-    approved_at: "2026-11-09T23:51:30Z"
-    resulting_fact_ids: [LIB-ASM-004, LIB-WF-001]
-  - decision_id: DEC-LIB-005
-    gap_id: GAP-LIB-004
-    action: accept
-    chosen: >-
-      Hard reject — cannot book over capacity; lecturer must reduce headcount or
-      pick another slot
-    modified_text: null
-    rationale: Instructor chose option 1 — hard reject over capacity.
-    approved_by: instructor
-    approved_at: "2026-11-10T00:02:00Z"
-    resulting_fact_ids: [LIB-ASM-005, LIB-BR-002]
-  - decision_id: DEC-LIB-006
-    gap_id: GAP-LIB-005
-    action: accept
-    chosen: >-
-      library_coordinator can also edit room capacities
-    modified_text: >-
-      administrator and library_coordinator may create/update workshop rooms and
-      per-room capacities (default 30 when unset). administrator remains the
-      escalation path for capacity-policy disputes.
-    rationale: >-
-      Instructor chose option 2 — coordinator may also edit capacities (in
-      addition to administrator).
-    approved_by: instructor
-    approved_at: "2026-11-10T00:14:00Z"
-    resulting_fact_ids: [LIB-ASM-006, LIB-REQ-008]
-  - decision_id: DEC-LIB-001
-    gap_id: GAP-LIB-000
-    action: accept
-    chosen: Default capacity 30 seats
-    rationale: Needed numeric default for capacity checks in the synthetic pilot.
-    approved_by: instructor@example.com
-    approved_at: "2026-11-02T15:30:00Z"
-    resulting_fact_ids: [LIB-ASM-001]
+- decision_id: DEC-LIB-002
+  gap_id: GAP-LIB-002
+  action: accept
+  chosen: library_coordinator = platform_admin for booking ops; administrator = capacity policy / escalation
+    only
+  modified_text: null
+  rationale: Instructor accepted recommended default.
+  approved_by: instructor
+  approved_at: '2026-11-09T23:50:00Z'
+  resulting_fact_ids:
+  - LIB-ASM-002
+- decision_id: DEC-LIB-003
+  gap_id: GAP-LIB-001
+  action: accept
+  chosen: Any time before start
+  modified_text: null
+  rationale: Instructor chose option 3 — cancel any time before start.
+  approved_by: instructor
+  approved_at: '2026-11-09T23:51:00Z'
+  resulting_fact_ids:
+  - LIB-ASM-003
+  - LIB-REQ-007
+- decision_id: DEC-LIB-004
+  gap_id: GAP-LIB-003
+  action: accept
+  chosen: Always require library_coordinator explicit approve/confirm before confirmation is issued
+  modified_text: null
+  rationale: Instructor chose option 2 — explicit coordinator approval.
+  approved_by: instructor
+  approved_at: '2026-11-09T23:51:30Z'
+  resulting_fact_ids:
+  - LIB-ASM-004
+  - LIB-WF-001
+- decision_id: DEC-LIB-005
+  gap_id: GAP-LIB-004
+  action: accept
+  chosen: Hard reject — cannot book over capacity; lecturer must reduce headcount or pick another slot
+  modified_text: null
+  rationale: Instructor chose option 1 — hard reject over capacity.
+  approved_by: instructor
+  approved_at: '2026-11-10T00:02:00Z'
+  resulting_fact_ids:
+  - LIB-ASM-005
+  - LIB-BR-002
+- decision_id: DEC-LIB-006
+  gap_id: GAP-LIB-005
+  action: accept
+  chosen: library_coordinator can also edit room capacities
+  modified_text: administrator and library_coordinator may create/update workshop rooms and per-room capacities
+    (default 30 when unset). administrator remains the escalation path for capacity-policy disputes.
+  rationale: Instructor chose option 2 — coordinator may also edit capacities (in addition to administrator).
+  approved_by: instructor
+  approved_at: '2026-11-10T00:14:00Z'
+  resulting_fact_ids:
+  - LIB-ASM-006
+  - LIB-REQ-008
+- decision_id: DEC-LIB-001
+  gap_id: GAP-LIB-000
+  action: accept
+  chosen: Default capacity 30 seats
+  rationale: Needed numeric default for capacity checks in the synthetic pilot.
+  approved_by: instructor@example.com
+  approved_at: '2026-11-02T15:30:00Z'
+  resulting_fact_ids:
+  - LIB-ASM-001

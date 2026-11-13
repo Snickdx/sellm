@@ -1,0 +1,38 @@
+facts:
+- id: TA-FEAT-001
+  statement: Create/edit/reassign/remove TA↔course assignments with planned weekly hours.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - hod
+  disclosure: when_relevant
+- id: TA-FEAT-002
+  statement: Hard-block validation for 20h/week cap and departmental budget with remaining capacity shown.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: TA-FEAT-003
+  statement: Soft highlight of prior course experience during assignment selection.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: TA-FEAT-004
+  statement: HOD workload review of TAs per course and remaining capacity.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
