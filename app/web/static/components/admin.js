@@ -13,7 +13,7 @@
     ["hybrid", "Hybrid RAG"],
     ["direct", "Direct Model"],
     ["yaml", "YAML Persona"],
-    ["compare", "Compare All"],
+    ["compare", "Compare (multi-select / All)"],
   ];
   const ROLES = [
     ["student", "Student (locked mode/model)"],

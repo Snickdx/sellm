@@ -249,17 +249,22 @@ class RequirementsRAGNeo4j:
             print(f"⚠ Neo4j vector index unavailable (will use capped fallback): {exc}")
 
     def upsert_scenario_graph(self, packages, *, content_hash: Optional[str] = None) -> int:
-        """Load the generalized YAML scenario graph into Neo4j.
+        """Translate scenario package facts into a Neo4j domain graph.
 
-        Node types: YamlScenario, YamlPersona, YamlFact, YamlSystemRole,
-        YamlCapability, YamlDecision, YamlSourceCue.
+        Workflow:
+        1. Build a deterministic graph plan (`app.scenarios.neo4j_graph`)
+        2. Map flat KnowledgeFacts onto Excel-aligned typed labels
+           (Requirement / Constraint / Task / …) under ``ScenarioPack``
+        3. Write package + provenance + domain edges without touching Excel-only nodes
 
-        Relationships: HAS_PERSONA, HAS_FACT, KNOWS, HAS_ROLE, CAN,
-        FROM_DECISION, PRODUCED, CITED_FROM.
-
-        Returns total relationship count created for YAML scenarios.
+        Returns total relationship count created for scenario packages.
         """
-        from app.scenarios.filter import facts_for_persona
+        from app.scenarios.neo4j_graph import (
+            LEGACY_SCENARIO_LABELS,
+            SCENARIO_PACK_LABEL,
+            build_scenario_graph_plan,
+            iter_embed_texts,
+        )
 
         digest = content_hash or hashlib.sha256(
             "|".join(
@@ -271,280 +276,89 @@ class RequirementsRAGNeo4j:
             print("✓ Scenario graph unchanged — skipping Neo4j reindex")
             return 0
 
+        plans = [build_scenario_graph_plan(package) for package in packages]
         edges = 0
         with self.driver.session() as session:
-            # Wipe prior YAML scenario subgraph only (leave Excel RAG nodes alone).
-            for label in (
-                "YamlSourceCue",
-                "YamlDecision",
-                "YamlCapability",
-                "YamlSystemRole",
-                "YamlFact",
-                "YamlPersona",
-                "YamlScenario",
-            ):
+            # Wipe scenario-pack subgraph only (leave Excel-only nodes alone).
+            session.run(f"MATCH (n:{SCENARIO_PACK_LABEL}) DETACH DELETE n")
+            for label in LEGACY_SCENARIO_LABELS:
                 session.run(f"MATCH (n:{label}) DETACH DELETE n")
 
-            for package in packages:
-                slug = package.meta.slug
-                version = package.meta.version
-                status = (
-                    package.meta.status.value
-                    if hasattr(package.meta.status, "value")
-                    else str(package.meta.status)
-                )
+            for plan in plans:
+                embed_map = {}
+                texts = list(iter_embed_texts(plan))
+                if texts:
+                    vectors = self.embedding_model.encode([t for _, t in texts]).tolist()
+                    embed_map = {node_id: vec for (node_id, _), vec in zip(texts, vectors)}
+
+                for node in plan.nodes:
+                    labels = ":".join(node.labels)
+                    # Keys are controlled vocabulary from the translator.
+                    key_props = ", ".join(f"{k}: ${k}" for k in node.key.keys())
+                    props = dict(node.props)
+                    props.pop("needs_embedding", None)
+                    node_id = node.key.get("node_id")
+                    if node_id and node_id in embed_map:
+                        props["embedding"] = embed_map[node_id]
+                    params = {**node.key, "properties": props}
+                    session.run(
+                        f"""
+                        MERGE (n:{labels} {{{key_props}}})
+                        SET n += $properties
+                        """,
+                        **params,
+                    )
+
+                for edge in plan.edges:
+                    from_labels = ":".join(edge.from_labels)
+                    to_labels = ":".join(edge.to_labels)
+                    from_key = ", ".join(f"{k}: $from_{k}" for k in edge.from_key.keys())
+                    to_key = ", ".join(f"{k}: $to_{k}" for k in edge.to_key.keys())
+                    params = {
+                        **{f"from_{k}": v for k, v in edge.from_key.items()},
+                        **{f"to_{k}": v for k, v in edge.to_key.items()},
+                        "edge_props": edge.props or {},
+                    }
+                    session.run(
+                        f"""
+                        MATCH (a:{from_labels} {{{from_key}}})
+                        MATCH (b:{to_labels} {{{to_key}}})
+                        MERGE (a)-[r:{edge.rel_type}]->(b)
+                        SET r += $edge_props
+                        """,
+                        **params,
+                    )
+                    edges += 1
+
+        self._ensure_scenario_vector_index()
+        self._scenario_graph_hash = digest
+        fact_total = sum(p.stats.get("facts", 0) for p in plans)
+        print(
+            f"✓ Indexed {edges} scenario graph relationships "
+            f"({fact_total} typed facts) into Neo4j"
+        )
+        return edges
+
+    def _ensure_scenario_vector_index(self) -> None:
+        """Vector index for scenario-pack embeddings (neo4j mode)."""
+        try:
+            with self.driver.session() as session:
                 session.run(
                     """
-                    MERGE (s:YamlScenario {slug: $slug, version: $version})
-                    SET s.title = $title,
-                        s.brief = $brief,
-                        s.status = $status
-                    """,
-                    slug=slug,
-                    version=version,
-                    title=package.meta.title,
-                    brief=package.meta.brief or "",
-                    status=status,
+                    CREATE VECTOR INDEX scenario_pack_embeddings IF NOT EXISTS
+                    FOR (n:ScenarioPack)
+                    ON n.embedding
+                    OPTIONS {
+                      indexConfig: {
+                        `vector.dimensions`: 384,
+                        `vector.similarity_function`: 'cosine'
+                      }
+                    }
+                    """
                 )
-
-                # Instructor decisions that produced student-visible facts (no Gap nodes).
-                gaps = getattr(package, "gaps", None)
-                decisions = list(getattr(gaps, "decisions", None) or [])
-                for decision in decisions:
-                    action = (
-                        decision.action.value
-                        if hasattr(decision.action, "value")
-                        else str(decision.action)
-                    )
-                    session.run(
-                        """
-                        MATCH (s:YamlScenario {slug: $slug, version: $version})
-                        MERGE (d:YamlDecision {
-                            decision_id: $decision_id,
-                            scenario_slug: $slug,
-                            scenario_version: $version
-                        })
-                        SET d.gap_id = $gap_id,
-                            d.action = $action,
-                            d.chosen = $chosen,
-                            d.rationale = $rationale
-                        MERGE (s)-[:HAS_DECISION]->(d)
-                        """,
-                        slug=slug,
-                        version=version,
-                        decision_id=decision.decision_id,
-                        gap_id=decision.gap_id,
-                        action=action,
-                        chosen=decision.chosen or "",
-                        rationale=decision.rationale or "",
-                    )
-                    edges += 1
-
-                # Index every student-visible fact once, then link personas that know it.
-                indexed_facts: set[str] = set()
-                for persona in package.personas:
-                    system_role = (
-                        persona.system_role.value
-                        if getattr(persona, "system_role", None) is not None
-                        and hasattr(persona.system_role, "value")
-                        else (
-                            str(persona.system_role)
-                            if getattr(persona, "system_role", None)
-                            else ""
-                        )
-                    )
-                    admin_capabilities = list(
-                        getattr(persona, "admin_capabilities", None) or []
-                    )
-                    session.run(
-                        """
-                        MATCH (s:YamlScenario {slug: $slug, version: $version})
-                        MERGE (p:YamlPersona {
-                            key: $key,
-                            scenario_slug: $slug,
-                            scenario_version: $version
-                        })
-                        SET p.display_name = $display_name,
-                            p.role = $role,
-                            p.system_role = $system_role,
-                            p.admin_capabilities = $admin_capabilities
-                        MERGE (s)-[:HAS_PERSONA]->(p)
-                        """,
-                        slug=slug,
-                        version=version,
-                        key=persona.id,
-                        display_name=persona.display_name,
-                        role=persona.role,
-                        system_role=system_role,
-                        admin_capabilities=admin_capabilities,
-                    )
-                    edges += 1
-
-                    if system_role:
-                        session.run(
-                            """
-                            MATCH (p:YamlPersona {
-                                key: $key,
-                                scenario_slug: $slug,
-                                scenario_version: $version
-                            })
-                            MERGE (r:YamlSystemRole {name: $system_role})
-                            MERGE (p)-[:HAS_ROLE]->(r)
-                            """,
-                            key=persona.id,
-                            slug=slug,
-                            version=version,
-                            system_role=system_role,
-                        )
-                        edges += 1
-
-                    for capability in admin_capabilities:
-                        name = str(capability).strip()
-                        if not name:
-                            continue
-                        session.run(
-                            """
-                            MATCH (p:YamlPersona {
-                                key: $key,
-                                scenario_slug: $slug,
-                                scenario_version: $version
-                            })
-                            MERGE (c:YamlCapability {name: $name})
-                            MERGE (p)-[:CAN]->(c)
-                            """,
-                            key=persona.id,
-                            slug=slug,
-                            version=version,
-                            name=name,
-                        )
-                        edges += 1
-
-                    for fact in facts_for_persona(
-                        package, persona.id, include_never_student=False
-                    ):
-                        node_id = f"yaml:{slug}:{fact.id}"
-                        status_val = (
-                            fact.status.value
-                            if hasattr(fact.status, "value")
-                            else str(fact.status)
-                        )
-                        origin_val = (
-                            fact.origin.value
-                            if hasattr(fact.origin, "value")
-                            else str(fact.origin)
-                        )
-                        disclosure_val = (
-                            fact.disclosure.value
-                            if hasattr(fact.disclosure, "value")
-                            else str(fact.disclosure)
-                        )
-                        if fact.id not in indexed_facts:
-                            text = (
-                                f"Scenario: {package.meta.title}\n"
-                                f"Category: {fact.category}\n"
-                                f"Status: {status_val}\n"
-                                f"Statement: {fact.statement}"
-                            )
-                            embedding = self.embedding_model.encode([text]).tolist()[0]
-                            session.run(
-                                """
-                                MATCH (s:YamlScenario {slug: $slug, version: $version})
-                                MERGE (f:YamlFact {node_id: $node_id})
-                                SET f.text = $text,
-                                    f.sheet = 'Knowledge',
-                                    f.fact_id = $fact_id,
-                                    f.scenario_slug = $slug,
-                                    f.scenario_version = $version,
-                                    f.category = $category,
-                                    f.status = $status,
-                                    f.origin = $origin,
-                                    f.disclosure = $disclosure,
-                                    f.decision_id = $decision_id,
-                                    f.embedding = $embedding
-                                MERGE (s)-[:HAS_FACT]->(f)
-                                """,
-                                slug=slug,
-                                version=version,
-                                node_id=node_id,
-                                text=text,
-                                fact_id=fact.id,
-                                category=fact.category,
-                                status=status_val,
-                                origin=origin_val,
-                                disclosure=disclosure_val,
-                                decision_id=fact.decision_id or "",
-                                embedding=embedding,
-                            )
-                            edges += 1
-                            indexed_facts.add(fact.id)
-
-                            if fact.decision_id:
-                                session.run(
-                                    """
-                                    MATCH (f:YamlFact {node_id: $node_id})
-                                    MATCH (d:YamlDecision {
-                                        decision_id: $decision_id,
-                                        scenario_slug: $slug,
-                                        scenario_version: $version
-                                    })
-                                    MERGE (f)-[:FROM_DECISION]->(d)
-                                    MERGE (d)-[:PRODUCED]->(f)
-                                    """,
-                                    node_id=node_id,
-                                    decision_id=fact.decision_id,
-                                    slug=slug,
-                                    version=version,
-                                )
-                                edges += 2
-
-                            for ref in fact.source_refs or []:
-                                cue_id = getattr(ref, "cue_id", None) or ""
-                                file_name = getattr(ref, "file", None) or ""
-                                if not cue_id:
-                                    continue
-                                session.run(
-                                    """
-                                    MATCH (f:YamlFact {node_id: $node_id})
-                                    MERGE (c:YamlSourceCue {
-                                        cue_id: $cue_id,
-                                        file: $file,
-                                        scenario_slug: $slug
-                                    })
-                                    SET c.start = $start,
-                                        c.end = $end,
-                                        c.speaker = $speaker
-                                    MERGE (f)-[:CITED_FROM]->(c)
-                                    """,
-                                    node_id=node_id,
-                                    cue_id=cue_id,
-                                    file=file_name,
-                                    slug=slug,
-                                    start=getattr(ref, "start", None) or "",
-                                    end=getattr(ref, "end", None) or "",
-                                    speaker=getattr(ref, "speaker", None) or "",
-                                )
-                                edges += 1
-
-                        session.run(
-                            """
-                            MATCH (p:YamlPersona {
-                                key: $persona_key,
-                                scenario_slug: $slug,
-                                scenario_version: $version
-                            })
-                            MATCH (f:YamlFact {node_id: $node_id})
-                            MERGE (p)-[:KNOWS]->(f)
-                            """,
-                            persona_key=persona.id,
-                            slug=slug,
-                            version=version,
-                            node_id=node_id,
-                        )
-                        edges += 1
-
-        self._scenario_graph_hash = digest
-        print(f"✓ Indexed {edges} YAML scenario graph relationships into Neo4j")
-        return edges
+            print("✓ Neo4j vector index scenario_pack_embeddings ready")
+        except Exception as exc:  # noqa: BLE001
+            print(f"⚠ Neo4j scenario_pack vector index unavailable: {exc}")
 
     def search(
         self,
@@ -556,7 +370,7 @@ class RequirementsRAGNeo4j:
     ) -> List[Dict]:
         """
         Hybrid search: vector similarity + graph traversal.
-        When scenario_slug + persona_key are set, search YamlFact nodes that persona KNOWS.
+        When scenario_slug + persona_key are set, search ScenarioPack facts that persona KNOWS.
         """
         query_embedding = self.embedding_model.encode([query]).tolist()[0]
 
@@ -598,11 +412,15 @@ class RequirementsRAGNeo4j:
         persona_key: str,
         n_results: int,
     ) -> List[Dict]:
-        """Vector search over YamlFact nodes known by a persona."""
+        """Vector search over ScenarioPack knowledge nodes known by a stakeholder."""
         with self.driver.session() as session:
             result = session.run(
                 """
-                MATCH (p:YamlPersona {key: $persona_key, scenario_slug: $scenario_slug})-[:KNOWS]->(n:YamlFact)
+                MATCH (p:ScenarioPack:Stakeholder {
+                    key: $persona_key,
+                    scenario_slug: $scenario_slug
+                })-[:KNOWS]->(n:ScenarioPack)
+                WHERE n.embedding IS NOT NULL
                 RETURN n
                 """,
                 persona_key=persona_key,
@@ -627,12 +445,15 @@ class RequirementsRAGNeo4j:
                         "document": node.get("text", ""),
                         "metadata": {
                             "node_id": node.get("node_id"),
-                            "sheet": node.get("sheet", "Knowledge"),
-                            "sheet_type": "requirements",
+                            "sheet": node.get("sheet", "Requirement"),
+                            "sheet_type": node.get("sheet_type") or node.get("kind") or "requirement",
+                            "category": node.get("category"),
+                            "kind": node.get("kind"),
+                            "family": node.get("family"),
                             "scenario_slug": node.get("scenario_slug"),
                             "fact_id": node.get("fact_id"),
                             "persona_key": persona_key,
-                            "source": "yaml",
+                            "source": "scenario",
                         },
                         "distance": 1 - similarity,
                     }
@@ -648,9 +469,7 @@ class RequirementsRAGNeo4j:
                         """
                         CALL db.index.vector.queryNodes('excel_embeddings', $k, $embedding)
                         YIELD node, score
-                        WHERE NOT node:YamlFact AND NOT node:YamlPersona AND NOT node:YamlScenario
-                          AND NOT node:YamlSystemRole AND NOT node:YamlCapability
-                          AND NOT node:YamlDecision AND NOT node:YamlSourceCue
+                        WHERE NOT node:ScenarioPack
                         RETURN node AS n, score
                         LIMIT $k
                         """,
@@ -686,16 +505,12 @@ class RequirementsRAGNeo4j:
                     print(f"⚠ Neo4j vector query failed, using capped fallback: {exc}")
                     self._vector_index_ready = False
 
-            yaml_exclude = (
-                "NOT n:YamlFact AND NOT n:YamlPersona AND NOT n:YamlScenario "
-                "AND NOT n:YamlSystemRole AND NOT n:YamlCapability "
-                "AND NOT n:YamlDecision AND NOT n:YamlSourceCue"
-            )
-            label_filter = f"WHERE {yaml_exclude} AND n.embedding IS NOT NULL"
+            pack_exclude = "NOT n:ScenarioPack"
+            label_filter = f"WHERE {pack_exclude} AND n.embedding IS NOT NULL"
             if detected_sheets:
                 labels = [self._get_sheet_type(sheet) for sheet in detected_sheets]
                 or_labels = " OR ".join(f"n:{label}" for label in labels)
-                label_filter = f"WHERE ({or_labels}) AND {yaml_exclude} AND n.embedding IS NOT NULL"
+                label_filter = f"WHERE ({or_labels}) AND {pack_exclude} AND n.embedding IS NOT NULL"
 
             query = f"""
             MATCH (n)
@@ -731,34 +546,101 @@ class RequirementsRAGNeo4j:
                 )
             return results
 
+    def _related_record(self, node, rel_type: str) -> Dict:
+        labels = list(node.labels) if hasattr(node, "labels") else []
+        return {
+            "node_id": (
+                node.get("node_id")
+                or node.get("criterion_id")
+                or node.get("decision_id")
+                or node.get("cue_id")
+            ),
+            "sheet": node.get("sheet", ""),
+            "rel_type": rel_type,
+            "labels": labels,
+            "text": (node.get("text") or node.get("chosen") or node.get("cue_id") or "")[:100],
+        }
+
     def _get_related_nodes(self, node_id: str, limit: int = 2) -> List[Dict]:
         """Get related nodes via graph traversal (Excel + YAML scenario edges)."""
         with self.driver.session() as session:
-            query = """
-            MATCH (n {node_id: $node_id})-[r]-(related)
-            WHERE NOT related:YamlPersona
-              AND NOT related:YamlScenario
-              AND NOT related:YamlSystemRole
-              AND NOT related:YamlCapability
-            RETURN related, type(r) as rel_type
-            LIMIT $limit
-            """
+            related: List[Dict] = []
+            seen: set = set()
 
-            result = session.run(query, node_id=node_id, limit=limit)
+            def _consume(records, rel_type: Optional[str] = None) -> None:
+                for record in records:
+                    node = record["related"]
+                    item = self._related_record(
+                        node, rel_type or record.get("rel_type") or "RELATED"
+                    )
+                    rid = item.get("node_id")
+                    if not rid or rid in seen:
+                        continue
+                    seen.add(rid)
+                    related.append(item)
+                    if len(related) >= limit:
+                        return
 
-            related = []
-            for record in result:
-                node = record["related"]
-                labels = list(node.labels) if hasattr(node, "labels") else []
-                related.append({
-                    "node_id": node.get("node_id") or node.get("decision_id") or node.get("cue_id"),
-                    "sheet": node.get("sheet", ""),
-                    "rel_type": record["rel_type"],
-                    "labels": labels,
-                    "text": (node.get("text") or node.get("chosen") or node.get("cue_id") or "")[:100],
-                })
+            # Domain-style scenario expansion (closer to Excel relationship enrichment).
+            _consume(
+                session.run(
+                    """
+                    MATCH (n:ScenarioPack {node_id: $node_id})-[:IN_CATEGORY]->(:Category)
+                          <-[:IN_CATEGORY]-(related:ScenarioPack)
+                    WHERE related.node_id <> $node_id AND related.embedding IS NOT NULL
+                    RETURN related
+                    LIMIT $limit
+                    """,
+                    node_id=node_id,
+                    limit=limit,
+                ),
+                "SAME_CATEGORY",
+            )
+            if len(related) < limit:
+                _consume(
+                    session.run(
+                        """
+                        MATCH (n:ScenarioPack {node_id: $node_id})-[:IN_FAMILY]->(:FactFamily)
+                              <-[:IN_FAMILY]-(related:ScenarioPack)
+                        WHERE related.node_id <> $node_id AND related.embedding IS NOT NULL
+                        RETURN related
+                        LIMIT $limit
+                        """,
+                        node_id=node_id,
+                        limit=limit,
+                    ),
+                    "SAME_FAMILY",
+                )
+            if len(related) < limit:
+                _consume(
+                    session.run(
+                        """
+                        MATCH (n:ScenarioPack {node_id: $node_id})-[:HAS_CRITERION]->(related:AcceptanceCriterion)
+                        RETURN related
+                        LIMIT $limit
+                        """,
+                        node_id=node_id,
+                        limit=limit,
+                    ),
+                    "HAS_CRITERION",
+                )
+            if related:
+                return related[:limit]
 
-            return related
+            # Excel Relationships sheet / generic one-hop neighbors (non-pack nodes).
+            _consume(
+                session.run(
+                    """
+                    MATCH (n {node_id: $node_id})-[r]-(related)
+                    WHERE NOT related:ScenarioPack
+                    RETURN related, type(r) as rel_type
+                    LIMIT $limit
+                    """,
+                    node_id=node_id,
+                    limit=limit,
+                )
+            )
+            return related[:limit]
     
     def _detect_sheet_intent(self, query: str) -> List[str]:
         """Detect which sheets the user is asking about"""

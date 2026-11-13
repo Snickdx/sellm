@@ -96,6 +96,10 @@ async def generate_validated_reply(
     history: list[dict[str, str]],
     student_message: str,
     settings: Settings | None = None,
+    llm_provider: str | None = None,
+    llm_api_key: str | None = None,
+    llm_base_url: str | None = None,
+    llm_model: str | None = None,
 ) -> PersonaReply:
     settings = settings or get_settings()
     persona = get_persona(package, persona_key)
@@ -125,7 +129,13 @@ async def generate_validated_reply(
             usage={"provider": "guard", "prompt_injection_flag": True},
         )
 
-    provider = get_llm_provider(settings)
+    provider = get_llm_provider(
+        settings,
+        provider=llm_provider,
+        api_key=llm_api_key,
+        base_url=llm_base_url,
+        model=llm_model,
+    )
     reply = await provider.generate_persona_reply(
         persona=persona.model_dump(),
         allowed_facts=allowed,

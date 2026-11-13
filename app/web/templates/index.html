@@ -558,6 +558,58 @@
         .reflection-busy-hint { font-size: 12px; color: #4338ca; font-weight: 600; min-height: 1.2em; }
         .reflection-send-btn:disabled { opacity: 0.65; cursor: wait; }
         .mode-select { padding: 8px 12px; border: 1px solid #d0d0d0; border-radius: 10px; background: white; color: #333; font-size: 13px; }
+        .mode-multiselect { position: relative; width: 100%; min-width: 0; }
+        .mode-multiselect-toggle {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            text-align: left;
+            cursor: pointer;
+        }
+        .mode-multiselect-toggle #responseModeSummary {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .mode-chevron { color: #64748b; font-size: 11px; flex-shrink: 0; }
+        .mode-multiselect-menu {
+            position: absolute;
+            z-index: 40;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            max-height: 260px;
+            overflow: auto;
+            padding: 6px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+        }
+        .mode-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #1e293b;
+            cursor: pointer;
+            user-select: none;
+        }
+        .mode-option:hover { background: #f1f5f9; }
+        .mode-option input { margin: 0; accent-color: #2563eb; }
+        .mode-option-all {
+            font-weight: 700;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 4px;
+            border-radius: 8px 8px 0 0;
+        }
+        .mode-option[hidden] { display: none; }
         .mode-row.hidden,
         .controls-field.hidden { display: none; }
         .llm-hint { font-size: 11px; color: #6b7280; line-height: 1.35; }
@@ -1009,15 +1061,39 @@
                                 <select id="personaSelect" class="mode-select" title="Stakeholder persona for this scenario"></select>
                             </div>
                             <div class="controls-field" id="responseModeField">
-                                <label for="responseMode">Mode</label>
-                                <select id="responseMode" class="mode-select">
-                                    <option value="vector">Vector RAG</option>
-                                    <option value="neo4j">Neo4j RAG</option>
-                                    <option value="hybrid">Hybrid RAG</option>
-                                    <option value="direct">Direct Model</option>
-                                    <option value="yaml">YAML Persona</option>
-                                    <option value="compare">Compare All</option>
-                                </select>
+                                <label id="responseModeLabel">Mode</label>
+                                <div class="mode-multiselect" id="responseModeMultiselect">
+                                    <button type="button" class="mode-select mode-multiselect-toggle" id="responseModeToggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="responseModeLabel">
+                                        <span id="responseModeSummary">Vector RAG</span>
+                                        <span class="mode-chevron" aria-hidden="true">▾</span>
+                                    </button>
+                                    <div class="mode-multiselect-menu" id="responseModeMenu" hidden role="listbox" aria-multiselectable="true" aria-labelledby="responseModeLabel">
+                                        <label class="mode-option mode-option-all">
+                                            <input type="checkbox" data-mode="all" />
+                                            <span>All</span>
+                                        </label>
+                                        <label class="mode-option">
+                                            <input type="checkbox" data-mode="vector" checked />
+                                            <span>Vector RAG</span>
+                                        </label>
+                                        <label class="mode-option">
+                                            <input type="checkbox" data-mode="neo4j" />
+                                            <span>Neo4j RAG</span>
+                                        </label>
+                                        <label class="mode-option">
+                                            <input type="checkbox" data-mode="hybrid" />
+                                            <span>Hybrid RAG</span>
+                                        </label>
+                                        <label class="mode-option">
+                                            <input type="checkbox" data-mode="direct" />
+                                            <span>Direct Model</span>
+                                        </label>
+                                        <label class="mode-option">
+                                            <input type="checkbox" data-mode="yaml" />
+                                            <span>YAML Persona</span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                             <div class="controls-field hidden" id="llmModelRow">
                                 <label for="llmModelSelect">LLM model</label>
@@ -1227,7 +1303,7 @@
     <script src="/static/components/exit-voice.js?v=7"></script>
     <script src="/static/components/exit.js?v=35"></script>
     <script src="/static/components/group.js?v=3"></script>
-    <script src="/static/components/chat.js?v=28"></script>
+    <script src="/static/components/chat.js?v=29"></script>
     <script src="/static/components/router.js?v=6"></script>
     <script>
       if ("serviceWorker" in navigator) {
