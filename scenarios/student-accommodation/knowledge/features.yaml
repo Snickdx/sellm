@@ -1,0 +1,55 @@
+facts:
+- id: SA-FEAT-001
+  statement: Student browse/filter of fully approved active listings (location, price, amenities).
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - campus_admin
+  - student_seeker
+  - landlord
+  disclosure: when_relevant
+- id: SA-FEAT-002
+  statement: Landlord listing submit with campus verification (reject→revise; provisional then full approval).
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant
+- id: SA-FEAT-003
+  statement: Landlord active/inactive control and campus_admin force-deactivate/unpublish.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  - landlord
+  disclosure: when_relevant
+- id: SA-FEAT-004
+  statement: Optional in-app messaging plus landlord contact details for off-platform arrangements.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: SA-FEAT-005
+  statement: Eligibility authentication for student seekers (student ID / provisional incoming path).
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - campus_admin
+  - student_seeker
+  disclosure: when_relevant

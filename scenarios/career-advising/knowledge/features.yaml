@@ -1,0 +1,47 @@
+facts:
+- id: CA-FEAT-001
+  statement: 'Dual exploration: career-first and course-first pathways with editable student inputs.'
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - career_advisor
+  disclosure: when_relevant
+- id: CA-FEAT-002
+  statement: Transparent non-absolute suitability ranking from skill/competency overlap.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: CA-FEAT-003
+  statement: Missing-course gap detection for a target path (identify only; no enrol/book).
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: CA-FEAT-004
+  statement: Admin skill/competency catalogue (bulk edit/upload) and course↔job skill mappings.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: CA-FEAT-005
+  statement: Pre-populated course catalogue search/select for student profiles.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

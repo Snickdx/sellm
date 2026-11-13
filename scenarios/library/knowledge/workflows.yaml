@@ -1,33 +1,33 @@
 facts:
-  - id: LIB-WF-001
-    statement: >-
-      Booking request flow: lecturer submits course code, headcount, preferred
-      date, and resources; request enters library_coordinator review; on approve,
-      a shareable confirmation is issued; on conflict, earlier request wins unless
-      coordinator overrides for a larger cohort; over-capacity requests are
-      hard-rejected before or during review.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-004
-    approved_by: instructor
-    approved_at: "2026-11-09T23:51:30Z"
-    rationale: >-
-      Combines transcript conflict/capacity rules with explicit-approval decision.
-    known_by: [library_coordinator, lecturer]
-    disclosure: when_relevant
-
-  - id: LIB-WF-002
-    statement: >-
-      Cancellation flow: lecturer may cancel a confirmed booking any time before
-      start; library_coordinator may cancel for operational reasons; freed slots
-      become available for new requests.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-003
-    approved_by: instructor
-    approved_at: "2026-11-09T23:51:00Z"
-    rationale: Instructor chose cancel any time before start.
-    known_by: [lecturer, library_coordinator]
-    disclosure: when_relevant
+- id: LIB-WF-001
+  statement: 'Booking request flow: lecturer submits course code, headcount, preferred date, and resources;
+    request enters library_coordinator review; on approve, a shareable confirmation is issued; on conflict,
+    earlier request wins unless coordinator overrides for a larger cohort; over-capacity requests are
+    hard-rejected before or during review.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-004
+  approved_by: instructor
+  approved_at: '2026-11-09T23:51:30Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Combines transcript conflict/capacity rules with explicit-approval decision.'
+  known_by:
+  - library_coordinator
+  - lecturer
+  disclosure: when_relevant
+- id: LIB-WF-002
+  statement: 'Cancellation flow: lecturer may cancel a confirmed booking any time before start; library_coordinator
+    may cancel for operational reasons; freed slots become available for new requests.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-003
+  approved_by: instructor
+  approved_at: '2026-11-09T23:51:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Instructor chose cancel any time before start.'
+  known_by:
+  - lecturer
+  - library_coordinator
+  disclosure: when_relevant

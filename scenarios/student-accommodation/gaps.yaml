@@ -1,461 +1,597 @@
 open_questions:
-  - id: GAP-SA-001
-    priority: critical
-    prompt: |
-      Interview stakeholders are Mr Kevin Snaggs and Mr Kobe Sandy (campus
-      accommodation / referral side). The VTT describes students browsing
-      off-campus listings and landlords managing units after campus
-      verification. Which personas should the student-facing scenario include?
-    citations:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/12-1
-        start: "00:00:15.499"
-        end: "00:00:21.980"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-3
-        start: "00:05:14.172"
-        end: "00:05:18.221"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/44-1
-        start: "00:05:31.367"
-        end: "00:05:34.677"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-0
-        start: "00:20:58.791"
-        end: "00:21:03.182"
-        speaker: null
-    why_it_matters: Personas bound known_fact_ids.
-    alternatives:
-      - campus_admin only (transcript-faithful)
-      - campus_admin + student_seeker + landlord
-      - campus_admin + student_seeker only (landlord facts via admin)
-      - Defer — decide after pilot
-    recommended_default: campus_admin + student_seeker + landlord
-    status: decided
-    actions: [accept, modify, reject, defer]
+- id: GAP-SA-001
+  priority: critical
+  prompt: 'Interview stakeholders are Mr Kevin Snaggs and Mr Kobe Sandy (campus
 
-  - id: GAP-SA-002
-    priority: critical
-    prompt: |
-      Who may authenticate as a student seeker on the closed platform, and which
-      campus / listing geography is in graded scope?
-    citations:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/64-3
-        start: "00:07:50.919"
-        end: "00:07:55.071"
-        speaker: null
-        note: For all students at St. Augustine campus
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/65-0
-        start: "00:07:55.711"
-        end: "00:08:00.794"
-        speaker: null
-        note: Apartments around St. Augustine / Mount Hope
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/66-0
-        start: "00:08:06.351"
-        end: "00:08:11.329"
-        speaker: null
-        note: Full-time and part-time registered students
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/66-2
-        start: "00:08:14.538"
-        end: "00:08:19.647"
-        speaker: null
-        note: Unique student ID number
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/67-3
-        start: "00:08:38.574"
-        end: "00:08:41.878"
-        speaker: null
-        note: Incoming students may lack ID yet but need housing
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/213-0
-        start: "00:31:22.271"
-        end: "00:31:26.460"
-        speaker: null
-        note: Closed platform for our students
-    why_it_matters: Auth, eligibility checks, and listing location filters.
-    alternatives:
-      - St. Augustine registered students (FT/PT) with student ID; listings near St. Augustine / Mount Hope
-      - Same, plus a provisional/incoming-student path before ID is issued
-      - Any authenticated UWI student nationwide; geography is soft filter only
-      - Defer for student elicitation
-    recommended_default: >-
-      St. Augustine registered students (FT/PT) with student ID; listings near
-      St. Augustine / Mount Hope (incoming-without-ID as elicitation)
-    status: decided
-    actions: [accept, modify, reject, defer]
+    accommodation / referral side). The VTT describes students browsing
 
-  - id: GAP-SA-003
-    priority: critical
-    prompt: |
-      Stakeholders insist this is a referral platform — not sales, and campus
-      does not engage on behalf of students. Confirm the graded MVP transaction
-      boundary after a student finds a listing.
-    citations:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-0
-        start: "00:05:03.431"
-        end: "00:05:06.669"
-        speaker: null
-        note: From listing, contact the landlord
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-2
-        start: "00:05:09.746"
-        end: "00:05:14.172"
-        speaker: null
-        note: Engage directly with landlord
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/208-0
-        start: "00:31:06.031"
-        end: "00:31:10.200"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/208-2
-        start: "00:31:12.589"
-        end: "00:31:16.301"
-        speaker: null
-        note: Referral platform, not sales
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-3
-        start: "00:31:53.274"
-        end: "00:31:55.871"
-        speaker: null
-        note: Student needs landlord contact info
-    why_it_matters: >-
-      Bounds payments, in-app chat, booking, and whether campus mediates deals.
-    alternatives:
-      - Referral only — show contact (phone/email); no in-app booking, payments, or mediated chat
-      - Referral + optional in-app message thread; still no payments/contracts
-      - Full marketplace — apply/book/pay on platform
-      - Defer for student elicitation
-    recommended_default: >-
-      Referral only — show contact (phone/email); no in-app booking, payments, or
-      mediated chat
-    status: decided
-    actions: [accept, modify, reject, defer]
+    off-campus listings and landlords managing units after campus
 
-  - id: GAP-SA-004
-    priority: critical
-    prompt: |
-      Landlords must be verified by campus (site visit / checklist) before units
-      are suitable for students. What is the graded listing publish lifecycle?
-    citations:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-0
-        start: "00:20:58.791"
-        end: "00:21:03.182"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
-        start: "00:21:03.182"
-        end: "00:21:08.191"
-        speaker: null
-        note: Campus verifies unit in person
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/145-2
-        start: "00:21:26.406"
-        end: "00:21:30.468"
-        speaker: null
-        note: Checklist to confirm
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/110-0
-        start: "00:16:07.311"
-        end: "00:16:13.295"
-        speaker: null
-        note: Turn listings on/off by availability
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/201-1
-        start: "00:30:26.612"
-        end: "00:30:30.702"
-        speaker: null
-        note: Active vs not active controls listing visibility
-    why_it_matters: Admin vs landlord permissions and what students can see.
-    alternatives:
-      - Landlord submits → pending → campus_admin verifies/approves → landlord can set active/inactive
-      - Campus_admin creates all listings after offline verification (no landlord self-serve submit)
-      - Landlord publishes directly; campus can take down later
-      - Defer for student elicitation
-    recommended_default: >-
-      Landlord submits → pending → campus_admin verifies/approves → landlord can
-      set active/inactive
-    status: decided
-    actions: [accept, modify, reject, defer]
+    verification. Which personas should the student-facing scenario include?
 
-  - id: GAP-SA-005
-    priority: important
-    prompt: |
-      Stakeholders named a minimal student triad (see listings; filter by
-      location and price; get landlord contact) and landlord triad (add/view/
-      update listing details). Confirm what is *required* in the graded MVP
-      beyond that baseline (amenities filters, photos, etc.).
-    citations:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-0
-        start: "00:31:39.871"
-        end: "00:31:44.643"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-1
-        start: "00:31:44.643"
-        end: "00:31:49.906"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-3
-        start: "00:31:53.274"
-        end: "00:31:55.871"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/220-0
-        start: "00:32:03.951"
-        end: "00:32:08.627"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/221-0
-        start: "00:32:11.431"
-        end: "00:32:15.967"
-        speaker: null
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/81-1
-        start: "00:11:38.815"
-        end: "00:11:43.671"
-        speaker: null
-        note: Amenities mentioned earlier in interview
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/87-3
-        start: "00:12:37.096"
-        end: "00:12:41.930"
-        speaker: null
-        note: Bathroom, kitchen, wash facilities examples
-    why_it_matters: Keeps MVP testable without over-scoping matching/AI.
-    alternatives:
-      - Baseline only — location+price filters; contact; landlord CRUD of listing fields/photos; optional in-app messages (DEC-SA-003)
-      - Baseline + required amenities (bathroom/kitchen/wash) as listing fields and filters
-      - Baseline + amenities + automated student↔listing matching
-      - Defer extras to elicitation; baseline only graded
-    recommended_default: >-
-      Baseline + required amenities (bathroom/kitchen/wash) as listing fields and
-      filters
-    status: decided
-    actions: [accept, modify, reject, defer]
+    '
+  citations:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/12-1
+    start: '00:00:15.499'
+    end: '00:00:21.980'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-3
+    start: '00:05:14.172'
+    end: '00:05:18.221'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/44-1
+    start: '00:05:31.367'
+    end: '00:05:34.677'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-0
+    start: '00:20:58.791'
+    end: '00:21:03.182'
+    speaker: null
+  why_it_matters: Personas bound known_fact_ids.
+  alternatives:
+  - campus_admin only (transcript-faithful)
+  - campus_admin + student_seeker + landlord
+  - campus_admin + student_seeker only (landlord facts via admin)
+  - Defer — decide after pilot
+  recommended_default: campus_admin + student_seeker + landlord
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-002
+  priority: critical
+  prompt: 'Who may authenticate as a student seeker on the closed platform, and which
 
-  - id: GAP-SA-006
-    priority: critical
-    theme: system_authority
-    prompt: |
-      Depth-update: confirm system roles. campus_admin verifies/approves listings
-      and gates eligibility; landlord submits and manages own units after
-      approval; student_seeker browses/contacts as end user. Is campus_admin
-      platform_admin, landlord operator of own listings, student_seeker end_user?
-    citations:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
-        note: Campus verification before listing
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-3
-        note: Closed platform for eligible students
-    why_it_matters: Makes admin authority explicit for persona system_role fields.
-    alternatives:
-      - Yes — campus_admin=platform_admin; landlord=operator (own listings); student=end_user
-      - campus_admin and landlord both platform_admin with overlapping publish powers
-      - campus_admin=approver only; a separate estates office is platform_admin (out of chat)
-      - Defer for student elicitation
-    recommended_default: >-
-      Yes — campus_admin=platform_admin; landlord=operator (own listings);
-      student=end_user
-    suggested_assumption: |
-      campus_admin is platform_admin (verify/approve/reject listings, eligibility
-      gate, closed-platform rules). landlord is operator for their own units
-      after approval (active/inactive, photos, amenities). student_seeker is
-      end_user (browse/filter/contact/message). Exact admin UI screens remain
-      elicitation.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    campus / listing geography is in graded scope?
 
-  - id: GAP-SA-007
-    priority: important
-    theme: exception_path
-    prompt: |
-      When campus_admin rejects a landlord unit/listing after verification, what
-      should happen?
-    citations:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/145-2
-        note: Admin approve or reject after checklist / site confirmation
-    why_it_matters: Completes verification workflow with a reject path.
-    alternatives:
-      - Reject with optional reason; landlord may revise and resubmit for another review
-      - Permanent reject — landlord cannot resubmit that unit without a new application process
-      - Reject only after site visit failure; otherwise always request more info first
-      - Defer for student elicitation
-    recommended_default: >-
-      Reject with optional reason; landlord may revise and resubmit for another
-      review
-    suggested_assumption: |
-      campus_admin may reject a pending listing with an optional reason.
-      Landlord may revise and resubmit for another verification. Rejected/
-      pending listings stay hidden from students.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    '
+  citations:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/64-3
+    start: '00:07:50.919'
+    end: '00:07:55.071'
+    speaker: null
+    note: For all students at St. Augustine campus
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/65-0
+    start: '00:07:55.711'
+    end: '00:08:00.794'
+    speaker: null
+    note: Apartments around St. Augustine / Mount Hope
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/66-0
+    start: '00:08:06.351'
+    end: '00:08:11.329'
+    speaker: null
+    note: Full-time and part-time registered students
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/66-2
+    start: '00:08:14.538'
+    end: '00:08:19.647'
+    speaker: null
+    note: Unique student ID number
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/67-3
+    start: '00:08:38.574'
+    end: '00:08:41.878'
+    speaker: null
+    note: Incoming students may lack ID yet but need housing
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/213-0
+    start: '00:31:22.271'
+    end: '00:31:26.460'
+    speaker: null
+    note: Closed platform for our students
+  why_it_matters: Auth, eligibility checks, and listing location filters.
+  alternatives:
+  - St. Augustine registered students (FT/PT) with student ID; listings near St. Augustine / Mount Hope
+  - Same, plus a provisional/incoming-student path before ID is issued
+  - Any authenticated UWI student nationwide; geography is soft filter only
+  - Defer for student elicitation
+  recommended_default: St. Augustine registered students (FT/PT) with student ID; listings near St. Augustine
+    / Mount Hope (incoming-without-ID as elicitation)
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-003
+  priority: critical
+  prompt: 'Stakeholders insist this is a referral platform — not sales, and campus
 
-  - id: GAP-SA-008
-    priority: important
-    theme: approval_power
-    prompt: |
-      After a listing is approved (including provisional acceptance after manual
-      review/certification), who may take it down or force inactive if it becomes
-      unsuitable?
-    citations:
-      - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
-        cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/110-0
-        note: Landlord manages listing after approval
-    why_it_matters: Separates landlord active/inactive from admin safety takedown.
-    alternatives:
-      - Landlord controls active/inactive; campus_admin may also force-unpublish / deactivate
-      - Landlord only — admin cannot take down after approval
-      - Admin only for takedown; landlord cannot set inactive (must request admin)
-      - Defer for student elicitation
-    recommended_default: >-
-      Landlord controls active/inactive; campus_admin may also force-unpublish /
-      deactivate
-    suggested_assumption: |
-      Landlord may set their approved listing active/inactive. campus_admin may
-      also force-deactivate or unpublish a listing that becomes unsuitable.
-      Exact notice/reason UI remains elicitation.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    does not engage on behalf of students. Confirm the graded MVP transaction
 
-  - id: GAP-SA-009
-    priority: important
-    theme: visibility
-    prompt: |
-      For provisional acceptance (DEC-SA-007), are provisionally accepted
-      listings visible to eligible students like fully approved ones, or is
-      visibility restricted until full certification?
-    citations: []
-    why_it_matters: Clarifies what students see during provisional state.
-    alternatives:
-      - Visible to eligible students the same as fully approved active listings
-      - Visible but clearly labelled as provisionally accepted / pending final certification
-      - Hidden from students until full (non-provisional) approval
-      - Defer for student elicitation
-    recommended_default: >-
-      Visible but clearly labelled as provisionally accepted / pending final
-      certification
-    suggested_assumption: |
-      Provisionally accepted listings may appear to eligible students when the
-      landlord sets them active, but must be clearly labelled as provisionally
-      accepted / pending final certification. Exact label copy remains
-      elicitation.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    boundary after a student finds a listing.
 
+    '
+  citations:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-0
+    start: '00:05:03.431'
+    end: '00:05:06.669'
+    speaker: null
+    note: From listing, contact the landlord
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-2
+    start: '00:05:09.746'
+    end: '00:05:14.172'
+    speaker: null
+    note: Engage directly with landlord
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/208-0
+    start: '00:31:06.031'
+    end: '00:31:10.200'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/208-2
+    start: '00:31:12.589'
+    end: '00:31:16.301'
+    speaker: null
+    note: Referral platform, not sales
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-3
+    start: '00:31:53.274'
+    end: '00:31:55.871'
+    speaker: null
+    note: Student needs landlord contact info
+  why_it_matters: Bounds payments, in-app chat, booking, and whether campus mediates deals.
+  alternatives:
+  - Referral only — show contact (phone/email); no in-app booking, payments, or mediated chat
+  - Referral + optional in-app message thread; still no payments/contracts
+  - Full marketplace — apply/book/pay on platform
+  - Defer for student elicitation
+  recommended_default: Referral only — show contact (phone/email); no in-app booking, payments, or mediated
+    chat
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-004
+  priority: critical
+  prompt: 'Landlords must be verified by campus (site visit / checklist) before units
+
+    are suitable for students. What is the graded listing publish lifecycle?
+
+    '
+  citations:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-0
+    start: '00:20:58.791'
+    end: '00:21:03.182'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
+    start: '00:21:03.182'
+    end: '00:21:08.191'
+    speaker: null
+    note: Campus verifies unit in person
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/145-2
+    start: '00:21:26.406'
+    end: '00:21:30.468'
+    speaker: null
+    note: Checklist to confirm
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/110-0
+    start: '00:16:07.311'
+    end: '00:16:13.295'
+    speaker: null
+    note: Turn listings on/off by availability
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/201-1
+    start: '00:30:26.612'
+    end: '00:30:30.702'
+    speaker: null
+    note: Active vs not active controls listing visibility
+  why_it_matters: Admin vs landlord permissions and what students can see.
+  alternatives:
+  - Landlord submits → pending → campus_admin verifies/approves → landlord can set active/inactive
+  - Campus_admin creates all listings after offline verification (no landlord self-serve submit)
+  - Landlord publishes directly; campus can take down later
+  - Defer for student elicitation
+  recommended_default: Landlord submits → pending → campus_admin verifies/approves → landlord can set
+    active/inactive
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-005
+  priority: important
+  prompt: 'Stakeholders named a minimal student triad (see listings; filter by
+
+    location and price; get landlord contact) and landlord triad (add/view/
+
+    update listing details). Confirm what is *required* in the graded MVP
+
+    beyond that baseline (amenities filters, photos, etc.).
+
+    '
+  citations:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-0
+    start: '00:31:39.871'
+    end: '00:31:44.643'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-1
+    start: '00:31:44.643'
+    end: '00:31:49.906'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/216-3
+    start: '00:31:53.274'
+    end: '00:31:55.871'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/220-0
+    start: '00:32:03.951'
+    end: '00:32:08.627'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/221-0
+    start: '00:32:11.431'
+    end: '00:32:15.967'
+    speaker: null
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/81-1
+    start: '00:11:38.815'
+    end: '00:11:43.671'
+    speaker: null
+    note: Amenities mentioned earlier in interview
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/87-3
+    start: '00:12:37.096'
+    end: '00:12:41.930'
+    speaker: null
+    note: Bathroom, kitchen, wash facilities examples
+  why_it_matters: Keeps MVP testable without over-scoping matching/AI.
+  alternatives:
+  - Baseline only — location+price filters; contact; landlord CRUD of listing fields/photos; optional
+    in-app messages (DEC-SA-003)
+  - Baseline + required amenities (bathroom/kitchen/wash) as listing fields and filters
+  - Baseline + amenities + automated student↔listing matching
+  - Defer extras to elicitation; baseline only graded
+  recommended_default: Baseline + required amenities (bathroom/kitchen/wash) as listing fields and filters
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-006
+  priority: critical
+  theme: system_authority
+  prompt: 'Depth-update: confirm system roles. campus_admin verifies/approves listings
+
+    and gates eligibility; landlord submits and manages own units after
+
+    approval; student_seeker browses/contacts as end user. Is campus_admin
+
+    platform_admin, landlord operator of own listings, student_seeker end_user?
+
+    '
+  citations:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/144-1
+    note: Campus verification before listing
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/43-3
+    note: Closed platform for eligible students
+  why_it_matters: Makes admin authority explicit for persona system_role fields.
+  alternatives:
+  - Yes — campus_admin=platform_admin; landlord=operator (own listings); student=end_user
+  - campus_admin and landlord both platform_admin with overlapping publish powers
+  - campus_admin=approver only; a separate estates office is platform_admin (out of chat)
+  - Defer for student elicitation
+  recommended_default: Yes — campus_admin=platform_admin; landlord=operator (own listings); student=end_user
+  suggested_assumption: 'campus_admin is platform_admin (verify/approve/reject listings, eligibility
+
+    gate, closed-platform rules). landlord is operator for their own units
+
+    after approval (active/inactive, photos, amenities). student_seeker is
+
+    end_user (browse/filter/contact/message). Exact admin UI screens remain
+
+    elicitation.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-007
+  priority: important
+  theme: exception_path
+  prompt: 'When campus_admin rejects a landlord unit/listing after verification, what
+
+    should happen?
+
+    '
+  citations:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/145-2
+    note: Admin approve or reject after checklist / site confirmation
+  why_it_matters: Completes verification workflow with a reject path.
+  alternatives:
+  - Reject with optional reason; landlord may revise and resubmit for another review
+  - Permanent reject — landlord cannot resubmit that unit without a new application process
+  - Reject only after site visit failure; otherwise always request more info first
+  - Defer for student elicitation
+  recommended_default: Reject with optional reason; landlord may revise and resubmit for another review
+  suggested_assumption: 'campus_admin may reject a pending listing with an optional reason.
+
+    Landlord may revise and resubmit for another verification. Rejected/
+
+    pending listings stay hidden from students.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-008
+  priority: important
+  theme: approval_power
+  prompt: 'After a listing is approved (including provisional acceptance after manual
+
+    review/certification), who may take it down or force inactive if it becomes
+
+    unsuitable?
+
+    '
+  citations:
+  - file: sources/Student Accommodation Project - Sy'rai Simon.vtt
+    cue_id: ddb31cdc-b2f1-4be5-a94b-cd9eecd07eda/110-0
+    note: Landlord manages listing after approval
+  why_it_matters: Separates landlord active/inactive from admin safety takedown.
+  alternatives:
+  - Landlord controls active/inactive; campus_admin may also force-unpublish / deactivate
+  - Landlord only — admin cannot take down after approval
+  - Admin only for takedown; landlord cannot set inactive (must request admin)
+  - Defer for student elicitation
+  recommended_default: Landlord controls active/inactive; campus_admin may also force-unpublish / deactivate
+  suggested_assumption: 'Landlord may set their approved listing active/inactive. campus_admin may
+
+    also force-deactivate or unpublish a listing that becomes unsuitable.
+
+    Exact notice/reason UI remains elicitation.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-009
+  priority: important
+  theme: visibility
+  prompt: 'For provisional acceptance (DEC-SA-007), are provisionally accepted
+
+    listings visible to eligible students like fully approved ones, or is
+
+    visibility restricted until full certification?
+
+    '
+  citations: []
+  why_it_matters: Clarifies what students see during provisional state.
+  alternatives:
+  - Visible to eligible students the same as fully approved active listings
+  - Visible but clearly labelled as provisionally accepted / pending final certification
+  - Hidden from students until full (non-provisional) approval
+  - Defer for student elicitation
+  recommended_default: Visible but clearly labelled as provisionally accepted / pending final certification
+  suggested_assumption: 'Provisionally accepted listings may appear to eligible students when the
+
+    landlord sets them active, but must be clearly labelled as provisionally
+
+    accepted / pending final certification. Exact label copy remains
+
+    elicitation.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-SA-SRS-001
+  priority: important
+  theme: srs_prescription
+  prompt: Verify Goals/Features/trace links for student accommodation.
+  citations:
+  - file: scenario.yaml
+    cue_id: srs-prescription
+    note: Structural prescription from brief + existing package facts (no single VTT cue)
+  why_it_matters: Named referral-platform capabilities and SATISFIES edges.
+  prescribed_fact_ids:
+  - SA-GOAL-001
+  - SA-FEAT-001
+  - SA-FEAT-002
+  - SA-FEAT-003
+  - SA-FEAT-004
+  - SA-FEAT-005
+  - SA-REQ-001
+  - SA-REQ-002
+  - SA-REQ-003
+  - SA-REQ-004
+  - SA-REQ-005
+  - SA-REQ-006
+  - SA-REQ-007
+  - SA-REQ-008
+  - SA-REQ-009
+  suggested_assumption: Keep SA-GOAL-001 and SA-FEAT-001..005 with REQ links.
+  recommended_default: Keep prescriptions as written
+  alternatives:
+  - Keep as prescribed
+  - Modify statements or clustering
+  - Reject and remove prescribed facts
+  - Defer review; keep prescription in package
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
+- id: GAP-SA-SRS-002
+  priority: important
+  theme: srs_prescription
+  prompt: Verify Data/Interface/Verification prescriptions and ASM/use_case remaps.
+  citations:
+  - file: scenario.yaml
+    cue_id: srs-prescription
+    note: Structural prescription from brief + existing package facts (no single VTT cue)
+  why_it_matters: SRS support coverage and correct labels.
+  prescribed_fact_ids:
+  - SA-DATA-001
+  - SA-DATA-002
+  - SA-DATA-003
+  - SA-IF-001
+  - SA-IF-002
+  - SA-VER-001
+  - SA-ASM-001
+  - SA-ASM-002
+  - SA-ASM-003
+  - SA-ASM-004
+  - SA-ASM-005
+  - SA-ASM-006
+  - SA-ASM-007
+  - SA-ASM-008
+  - SA-ASM-009
+  - SA-WF-001
+  - SA-WF-002
+  - SA-WF-003
+  - SA-WF-004
+  suggested_assumption: Keep as prescribed.
+  recommended_default: Keep prescriptions as written
+  alternatives:
+  - Keep as prescribed
+  - Modify statements or clustering
+  - Reject and remove prescribed facts
+  - Defer review; keep prescription in package
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
 decisions:
-  - decision_id: DEC-SA-006
-    gap_id: GAP-SA-006
-    action: accept
-    chosen: >-
-      Yes — campus_admin=platform_admin; landlord=operator (own listings);
-      student=end_user
-    modified_text: null
-    rationale: Instructor accepted recommended system-role split.
-    approved_by: instructor
-    approved_at: "2026-11-10T02:41:00Z"
-    resulting_fact_ids: [SA-ASM-006]
-  - decision_id: DEC-SA-007
-    gap_id: GAP-SA-007
-    action: modify
-    chosen: >-
-      Reject with optional reason; landlord may revise and resubmit; provisional
-      acceptance possible after manual review and certification
-    modified_text: >-
-      campus_admin may reject a pending listing with an optional reason; landlord
-      may revise and resubmit for another review. A listing may also receive
-      provisional acceptance once it has passed manual review and is certified.
-      Rejected/pending (non-accepted) listings stay hidden from students.
-    rationale: >-
-      Instructor accepted reject→revise/resubmit and added provisional acceptance
-      after manual review/certification.
-    approved_by: instructor
-    approved_at: "2026-11-10T02:43:00Z"
-    resulting_fact_ids: [SA-ASM-007, SA-WF-004]
-  - decision_id: DEC-SA-008
-    gap_id: GAP-SA-008
-    action: accept
-    chosen: >-
-      Landlord controls active/inactive; campus_admin may also force-unpublish /
-      deactivate
-    modified_text: null
-    rationale: Instructor accepted dual takedown control (option 1).
-    approved_by: instructor
-    approved_at: "2026-11-10T02:44:00Z"
-    resulting_fact_ids: [SA-ASM-008, SA-REQ-009]
-  - decision_id: DEC-SA-009
-    gap_id: GAP-SA-009
-    action: accept
-    chosen: Hidden from students until full (non-provisional) approval
-    modified_text: null
-    rationale: >-
-      Instructor chose option 3 — provisional is not student-visible until full
-      approval.
-    approved_by: instructor
-    approved_at: "2026-11-10T02:44:30Z"
-    resulting_fact_ids: [SA-ASM-009, SA-BR-005]
-  - decision_id: DEC-SA-001
-    gap_id: GAP-SA-001
-    action: accept
-    chosen: campus_admin + student_seeker + landlord
-    modified_text: null
-    rationale: Instructor accepted option 2.
-    approved_by: instructor
-    approved_at: "2026-11-03T13:39:00Z"
-    resulting_fact_ids: [SA-ASM-001]
-  - decision_id: DEC-SA-002
-    gap_id: GAP-SA-002
-    action: accept
-    chosen: >-
-      St. Augustine registered students (FT/PT) with student ID, plus
-      provisional/incoming-student path before ID is issued; listings near
-      St. Augustine / Mount Hope
-    modified_text: null
-    rationale: Instructor accepted option 2.
-    approved_by: instructor
-    approved_at: "2026-11-03T13:40:00Z"
-    resulting_fact_ids: [SA-ASM-002, SA-BR-002]
-  - decision_id: DEC-SA-003
-    gap_id: GAP-SA-003
-    action: accept
-    chosen: >-
-      Referral + optional in-app message thread; still no payments/contracts
-    modified_text: null
-    rationale: Instructor accepted option 2 (enriched vs recommended default).
-    approved_by: instructor
-    approved_at: "2026-11-03T13:41:00Z"
-    resulting_fact_ids: [SA-ASM-003, SA-BR-003, SA-WF-001]
-  - decision_id: DEC-SA-004
-    gap_id: GAP-SA-004
-    action: accept
-    chosen: >-
-      Landlord submits → pending → campus_admin verifies/approves → landlord can
-      set active/inactive
-    modified_text: null
-    rationale: Instructor accepted option 1.
-    approved_by: instructor
-    approved_at: "2026-11-03T13:42:00Z"
-    resulting_fact_ids: [SA-ASM-004, SA-WF-002]
-  - decision_id: DEC-SA-005
-    gap_id: GAP-SA-005
-    action: accept
-    chosen: >-
-      Baseline + required amenities (bathroom/kitchen/wash) as listing fields and
-      filters
-    modified_text: null
-    rationale: Instructor accepted option 2.
-    approved_by: instructor
-    approved_at: "2026-11-03T13:44:00Z"
-    resulting_fact_ids: [SA-ASM-005, SA-REQ-006]
+- decision_id: DEC-SA-006
+  gap_id: GAP-SA-006
+  action: accept
+  chosen: Yes — campus_admin=platform_admin; landlord=operator (own listings); student=end_user
+  modified_text: null
+  rationale: Instructor accepted recommended system-role split.
+  approved_by: instructor
+  approved_at: '2026-11-10T02:41:00Z'
+  resulting_fact_ids:
+  - SA-ASM-006
+- decision_id: DEC-SA-007
+  gap_id: GAP-SA-007
+  action: modify
+  chosen: Reject with optional reason; landlord may revise and resubmit; provisional acceptance possible
+    after manual review and certification
+  modified_text: campus_admin may reject a pending listing with an optional reason; landlord may revise
+    and resubmit for another review. A listing may also receive provisional acceptance once it has passed
+    manual review and is certified. Rejected/pending (non-accepted) listings stay hidden from students.
+  rationale: Instructor accepted reject→revise/resubmit and added provisional acceptance after manual
+    review/certification.
+  approved_by: instructor
+  approved_at: '2026-11-10T02:43:00Z'
+  resulting_fact_ids:
+  - SA-ASM-007
+  - SA-WF-004
+- decision_id: DEC-SA-008
+  gap_id: GAP-SA-008
+  action: accept
+  chosen: Landlord controls active/inactive; campus_admin may also force-unpublish / deactivate
+  modified_text: null
+  rationale: Instructor accepted dual takedown control (option 1).
+  approved_by: instructor
+  approved_at: '2026-11-10T02:44:00Z'
+  resulting_fact_ids:
+  - SA-ASM-008
+  - SA-REQ-009
+- decision_id: DEC-SA-009
+  gap_id: GAP-SA-009
+  action: accept
+  chosen: Hidden from students until full (non-provisional) approval
+  modified_text: null
+  rationale: Instructor chose option 3 — provisional is not student-visible until full approval.
+  approved_by: instructor
+  approved_at: '2026-11-10T02:44:30Z'
+  resulting_fact_ids:
+  - SA-ASM-009
+  - SA-BR-005
+- decision_id: DEC-SA-001
+  gap_id: GAP-SA-001
+  action: accept
+  chosen: campus_admin + student_seeker + landlord
+  modified_text: null
+  rationale: Instructor accepted option 2.
+  approved_by: instructor
+  approved_at: '2026-11-03T13:39:00Z'
+  resulting_fact_ids:
+  - SA-ASM-001
+- decision_id: DEC-SA-002
+  gap_id: GAP-SA-002
+  action: accept
+  chosen: St. Augustine registered students (FT/PT) with student ID, plus provisional/incoming-student
+    path before ID is issued; listings near St. Augustine / Mount Hope
+  modified_text: null
+  rationale: Instructor accepted option 2.
+  approved_by: instructor
+  approved_at: '2026-11-03T13:40:00Z'
+  resulting_fact_ids:
+  - SA-ASM-002
+  - SA-BR-002
+- decision_id: DEC-SA-003
+  gap_id: GAP-SA-003
+  action: accept
+  chosen: Referral + optional in-app message thread; still no payments/contracts
+  modified_text: null
+  rationale: Instructor accepted option 2 (enriched vs recommended default).
+  approved_by: instructor
+  approved_at: '2026-11-03T13:41:00Z'
+  resulting_fact_ids:
+  - SA-ASM-003
+  - SA-BR-003
+  - SA-WF-001
+- decision_id: DEC-SA-004
+  gap_id: GAP-SA-004
+  action: accept
+  chosen: Landlord submits → pending → campus_admin verifies/approves → landlord can set active/inactive
+  modified_text: null
+  rationale: Instructor accepted option 1.
+  approved_by: instructor
+  approved_at: '2026-11-03T13:42:00Z'
+  resulting_fact_ids:
+  - SA-ASM-004
+  - SA-WF-002
+- decision_id: DEC-SA-005
+  gap_id: GAP-SA-005
+  action: accept
+  chosen: Baseline + required amenities (bathroom/kitchen/wash) as listing fields and filters
+  modified_text: null
+  rationale: Instructor accepted option 2.
+  approved_by: instructor
+  approved_at: '2026-11-03T13:44:00Z'
+  resulting_fact_ids:
+  - SA-ASM-005
+  - SA-REQ-006

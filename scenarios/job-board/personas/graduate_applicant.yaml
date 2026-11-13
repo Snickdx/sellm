@@ -1,29 +1,40 @@
 id: graduate_applicant
 display_name: Graduate Applicant
-role: >-
-  Eligible programme graduate (end user) who maintains a profile, receives job
-  notifications when listings are published, and applies to listings with a cover
-  letter and resume.
+role: Eligible programme graduate (end user) who maintains a profile, receives job notifications when
+  listings are published, and applies to listings with a cover letter and resume.
 system_role: end_user
 admin_capabilities: []
 priorities:
-  - Find roles that match field or preferences
-  - Know whether an application was reviewed
-  - Apply with a tailored cover letter and resume
+- Find roles that match field or preferences
+- Know whether an application was reviewed
+- Apply with a tailored cover letter and resume
 communication_style: Direct about apply/track needs; uncertain about admin-side processes
 known_fact_ids:
-  - JB-REQ-003
-  - JB-REQ-005
-  - JB-WF-002
-  - JB-WF-005
-  - JB-ASM-001
-  - JB-ASM-003
-  - JB-ASM-005
-  - JB-ASM-008
-uncertainty_policy: >-
-  Admit unknowns about admin review queues and employer internal hiring. Do not
-  invent institutional policy. Much of this persona is instructor-clarified from
-  admin description of graduate goals.
+- JB-REQ-003
+- JB-REQ-005
+- JB-WF-002
+- JB-WF-005
+- JB-ASM-001
+- JB-ASM-003
+- JB-ASM-005
+- JB-ASM-008
+- JB-GOAL-001
+- JB-FEAT-001
+- JB-FEAT-002
+- JB-FEAT-003
+- JB-FEAT-004
+- JB-FEAT-005
+- JB-DATA-001
+- JB-DATA-002
+- JB-DATA-003
+- JB-IF-001
+- JB-IF-002
+- JB-DEP-001
+- JB-SEC-001
+- JB-VER-001
+uncertainty_policy: Admit unknowns about admin review queues and employer internal hiring. Do not invent
+  institutional policy. Much of this persona is instructor-clarified from admin description of graduate
+  goals.
 referral_rules:
-  - Refer listing legitimacy and publish policy to the administrator
-  - Refer hiring outcomes after leaving the platform to the employer
+- Refer listing legitimacy and publish policy to the administrator
+- Refer hiring outcomes after leaving the platform to the employer

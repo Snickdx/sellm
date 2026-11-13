@@ -1,98 +1,101 @@
 facts:
-  - id: TT-WF-001
-    statement: >-
-      Pairing flow: student–supervisor relationship is recorded once agreed;
-      coordinator can see active pairings.
-    category: workflow
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-2
-        start: "00:04:42.326"
-        end: "00:04:46.381"
-        speaker: null
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
-
-  - id: TT-WF-002
-    statement: >-
-      Submission/feedback flow: student submits work → supervisor provides
-      in-app feedback notes by due date → coordinator sees status including
-      overdue feedback.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TT-004
-    approved_by: instructor
-    approved_at: "2026-11-03T14:10:00Z"
-    rationale: Multi-role product (DEC-TT-002) + feedback rules (DEC-TT-004).
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/107-2
-        start: "00:11:02.249"
-        end: "00:11:07.412"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/290-3
-        start: "00:31:32.999"
-        end: "00:31:37.703"
-        speaker: null
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
-
-  - id: TT-WF-003
-    statement: >-
-      Progress logging flow: supervisors/coordinators add freeform progress
-      notes; coordinator can export/summarize progress for grad studies.
-    category: workflow
-    status: clarified
-    origin: instructor
-    decision_id: DEC-TT-005
-    approved_by: instructor
-    approved_at: "2026-11-03T14:11:00Z"
-    rationale: >-
-      Transcript wants progress tracking and grad-studies summary; instructor
-      rejected structured milestones in favour of freeform notes.
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/234-0
-        start: "00:25:15.842"
-        end: "00:25:20.957"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/325-3
-        start: "00:34:40.762"
-        end: "00:34:45.382"
-        speaker: null
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
-
-  - id: TT-WF-004
-    statement: >-
-      Pairing admin flow: student may request/initiate → supervisor confirms →
-      pg_coordinator records or changes the official pairing; coordinator can
-      later change pairings when needed.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TT-007
-    approved_by: instructor
-    approved_at: "2026-11-10T02:58:00Z"
-    rationale: Instructor accepted coordinator-owned pairing records.
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
-
-  - id: TT-WF-005
-    statement: >-
-      Overdue feedback flow: due date passes → item flagged to pg_coordinator →
-      coordinator may send an in-system reminder/nudge to the supervisor.
-    category: workflow
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TT-008
-    approved_by: instructor
-    approved_at: "2026-11-10T03:06:00Z"
-    rationale: Instructor chose in-system nudge.
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
+- id: TT-WF-001
+  statement: 'Pairing flow: student–supervisor relationship is recorded once agreed; coordinator can see
+    active pairings.'
+  category: use_case
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-2
+    start: '00:04:42.326'
+    end: '00:04:46.381'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+  rationale: Prescribed during authoring; retagged journey workflow as use_case. Open for instructor verify/change.
+- id: TT-WF-002
+  statement: 'Submission/feedback flow: student submits work → supervisor provides in-app feedback notes
+    by due date → coordinator sees status including overdue feedback.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TT-004
+  approved_by: instructor
+  approved_at: '2026-11-03T14:10:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Multi-role product (DEC-TT-002) + feedback rules (DEC-TT-004).'
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/107-2
+    start: '00:11:02.249'
+    end: '00:11:07.412'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/290-3
+    start: '00:31:32.999'
+    end: '00:31:37.703'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+- id: TT-WF-003
+  statement: 'Progress logging flow: supervisors/coordinators add freeform progress notes; coordinator
+    can export/summarize progress for grad studies.'
+  category: use_case
+  status: clarified
+  origin: instructor
+  decision_id: DEC-TT-005
+  approved_by: instructor
+  approved_at: '2026-11-03T14:11:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Transcript wants progress tracking and grad-studies summary; instructor rejected
+    structured milestones in favour of freeform notes.'
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/234-0
+    start: '00:25:15.842'
+    end: '00:25:20.957'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/325-3
+    start: '00:34:40.762'
+    end: '00:34:45.382'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+- id: TT-WF-004
+  statement: 'Pairing admin flow: student may request/initiate → supervisor confirms → pg_coordinator
+    records or changes the official pairing; coordinator can later change pairings when needed.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TT-007
+  approved_by: instructor
+  approved_at: '2026-11-10T02:58:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Instructor accepted coordinator-owned pairing records.'
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+- id: TT-WF-005
+  statement: 'Overdue feedback flow: due date passes → item flagged to pg_coordinator → coordinator may
+    send an in-system reminder/nudge to the supervisor.'
+  category: use_case
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TT-008
+  approved_by: instructor
+  approved_at: '2026-11-10T03:06:00Z'
+  rationale: 'Prescribed during authoring; retagged journey workflow as use_case. Open for instructor
+    verify/change. Prior: Instructor chose in-system nudge.'
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant

@@ -1,0 +1,33 @@
+facts:
+- id: JB-DATA-001
+  statement: Job listing records (pending/published/unpublished/rejected, deadline).
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  - employer
+  disclosure: when_relevant
+- id: JB-DATA-002
+  statement: Graduate profile including resume/CV and subscription preferences.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - administrator
+  - employer
+  - graduate_applicant
+  disclosure: when_relevant
+- id: JB-DATA-003
+  statement: On-platform applications with statuses submitted/reviewed/shortlisted/rejected/hired.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

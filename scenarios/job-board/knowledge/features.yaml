@@ -1,0 +1,55 @@
+facts:
+- id: JB-FEAT-001
+  statement: Employer listing submit → admin approve/reject/publish/unpublish lifecycle.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - administrator
+  - employer
+  - graduate_applicant
+  disclosure: when_relevant
+- id: JB-FEAT-002
+  statement: Graduate subscribe, discover, and apply via on-platform collect or external link.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: JB-FEAT-003
+  statement: On-platform application status updates owned by the listing employer.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - employer
+  - graduate_applicant
+  - administrator
+  disclosure: when_relevant
+- id: JB-FEAT-004
+  statement: Automatic notify of eligible subscribers on publish; admin export/forward of applicant packages.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  - employer
+  disclosure: when_relevant
+- id: JB-FEAT-005
+  statement: Eligibility gate so only eligible programme students subscribe/apply.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  disclosure: when_relevant

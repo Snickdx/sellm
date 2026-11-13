@@ -1,0 +1,11 @@
+facts:
+- id: UC-NFR-001
+  statement: Engagement emails should stay clear and simple, typically focusing on one or two events.
+  category: usability
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant

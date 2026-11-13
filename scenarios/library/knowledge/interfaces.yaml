@@ -1,0 +1,14 @@
+facts:
+- id: LIB-IF-001
+  statement: Lecturer and coordinator user interfaces for submit/review/confirm/cancel; as-is email intake
+    is contextual legacy, not the graded primary channel.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - library_coordinator
+  - administrator
+  - lecturer
+  disclosure: when_relevant

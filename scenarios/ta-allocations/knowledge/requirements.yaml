@@ -1,181 +1,204 @@
 facts:
-  - id: TA-REQ-001
-    statement: >-
-      The department allocates a limited number of teaching assistants each year
-      based primarily on budgetary constraints and need, assigning them to
-      courses.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-0
-        start: "00:01:26.604"
-        end: "00:01:30.591"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
-        start: "00:01:30.591"
-        end: "00:01:35.617"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-2
-        start: "00:01:35.617"
-        end: "00:01:41.164"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-REQ-002
-    statement: >-
-      Allocations prefer TAs who already have experience with the course
-      (taught, worked through, or marked it) so they stay with familiar content.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-0
-        start: "00:01:51.404"
-        end: "00:01:54.768"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-1
-        start: "00:01:54.768"
-        end: "00:02:00.036"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-3
-        start: "00:02:04.542"
-        end: "00:02:08.541"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-REQ-003
-    statement: >-
-      Each TA is allocated a maximum of 20 hours of work per week (classroom
-      support and/or marking among possible duties).
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
-        start: "00:02:08.541"
-        end: "00:02:11.524"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/24-0
-        start: "00:02:12.764"
-        end: "00:02:20.353"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/24-1
-        start: "00:02:20.353"
-        end: "00:02:23.644"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_relevant
-    acceptance_criteria:
-      - Planned weekly hours for a TA cannot exceed 20 in the graded system.
-
-  - id: TA-REQ-004
-    statement: >-
-      TAs are often placed on larger courses to assist with marking of scripts.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/26-0
-        start: "00:02:24.684"
-        end: "00:02:28.507"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_asked
-
-  - id: TA-REQ-005
-    statement: >-
-      The HOD has stronger responsibility for final TA selection decisions than
-      lecturers/departmental staff.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/39-0
-        start: "00:03:50.284"
-        end: "00:03:56.363"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-REQ-006
-    statement: >-
-      Allocation information should be available to the head of department (and
-      departmental staff) on the system.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/126-0
-        start: "00:14:25.804"
-        end: "00:14:30.204"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-REQ-007
-    statement: >-
-      People rarely start directly as a TA; they normally begin as a marker
-      before progressing.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/141-0
-        start: "00:16:34.204"
-        end: "00:16:42.086"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_asked
-
-  - id: TA-REQ-008
-    statement: >-
-      Real-world hiring involves budget checks and HR approval; that external
-      process exists but is outside the graded allocation system boundary.
-    category: functional
-    status: clarified
-    origin: instructor
-    decision_id: DEC-TA-002
-    approved_by: instructor
-    approved_at: "2026-11-03T13:51:00Z"
-    rationale: >-
-      Transcript mentions HR approval; instructor kept HR/contracts out of the
-      graded product.
-    source_refs:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/176-2
-        start: "00:20:48.311"
-        end: "00:20:53.856"
-        speaker: null
-    known_by: [hod]
-    disclosure: when_asked
-
-  - id: TA-REQ-009
-    statement: >-
-      The HOD may create, edit planned hours, reassign, or remove TA↔course
-      assignments; every change revalidates the hard 20h/week cap and hard
-      departmental budget constraints.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-008
-    approved_by: instructor
-    approved_at: "2026-11-10T02:52:00Z"
-    rationale: Instructor allowed mid-term reallocations with revalidation.
-    known_by: [hod]
-    disclosure: when_relevant
+- id: TA-REQ-001
+  statement: The department allocates a limited number of teaching assistants each year based primarily
+    on budgetary constraints and need, assigning them to courses.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-0
+    start: '00:01:26.604'
+    end: '00:01:30.591'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
+    start: '00:01:30.591'
+    end: '00:01:35.617'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-2
+    start: '00:01:35.617'
+    end: '00:01:41.164'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_relevant
+  satisfies_ids:
+  - TA-FEAT-001
+  - TA-FEAT-002
+  derives_from_ids:
+  - TA-GOAL-001
+- id: TA-REQ-002
+  statement: Allocations prefer TAs who already have experience with the course (taught, worked through,
+    or marked it) so they stay with familiar content.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-0
+    start: '00:01:51.404'
+    end: '00:01:54.768'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-1
+    start: '00:01:54.768'
+    end: '00:02:00.036'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-3
+    start: '00:02:04.542'
+    end: '00:02:08.541'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_relevant
+  satisfies_ids:
+  - TA-FEAT-003
+  derives_from_ids:
+  - TA-GOAL-001
+- id: TA-REQ-003
+  statement: Each TA is allocated a maximum of 20 hours of work per week (classroom support and/or marking
+    among possible duties).
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
+    start: '00:02:08.541'
+    end: '00:02:11.524'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/24-0
+    start: '00:02:12.764'
+    end: '00:02:20.353'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/24-1
+    start: '00:02:20.353'
+    end: '00:02:23.644'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_relevant
+  acceptance_criteria:
+  - Planned weekly hours for a TA cannot exceed 20 in the graded system.
+  satisfies_ids:
+  - TA-FEAT-002
+  derives_from_ids:
+  - TA-GOAL-001
+- id: TA-REQ-004
+  statement: TAs are often placed on larger courses to assist with marking of scripts.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/26-0
+    start: '00:02:24.684'
+    end: '00:02:28.507'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_asked
+  satisfies_ids:
+  - TA-FEAT-001
+  derives_from_ids:
+  - TA-GOAL-001
+- id: TA-REQ-005
+  statement: The HOD has stronger responsibility for final TA selection decisions than lecturers/departmental
+    staff.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/39-0
+    start: '00:03:50.284'
+    end: '00:03:56.363'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_relevant
+  satisfies_ids:
+  - TA-FEAT-001
+  derives_from_ids:
+  - TA-GOAL-001
+- id: TA-REQ-006
+  statement: Allocation information should be available to the head of department (and departmental staff)
+    on the system.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/126-0
+    start: '00:14:25.804'
+    end: '00:14:30.204'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_relevant
+  satisfies_ids:
+  - TA-FEAT-004
+  derives_from_ids:
+  - TA-GOAL-001
+- id: TA-REQ-007
+  statement: People rarely start directly as a TA; they normally begin as a marker before progressing.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/141-0
+    start: '00:16:34.204'
+    end: '00:16:42.086'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_asked
+  derives_from_ids:
+  - TA-GOAL-001
+- id: TA-REQ-008
+  statement: Real-world hiring involves budget checks and HR approval; that external process exists but
+    is outside the graded allocation system boundary.
+  category: functional
+  status: clarified
+  origin: instructor
+  decision_id: DEC-TA-002
+  approved_by: instructor
+  approved_at: '2026-11-03T13:51:00Z'
+  rationale: Transcript mentions HR approval; instructor kept HR/contracts out of the graded product.
+  source_refs:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/176-2
+    start: '00:20:48.311'
+    end: '00:20:53.856'
+    speaker: null
+  known_by:
+  - hod
+  disclosure: when_asked
+  derives_from_ids:
+  - TA-GOAL-001
+  depends_on_ids:
+  - TA-DEP-001
+- id: TA-REQ-009
+  statement: The HOD may create, edit planned hours, reassign, or remove TA↔course assignments; every
+    change revalidates the hard 20h/week cap and hard departmental budget constraints.
+  category: functional
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-008
+  approved_by: instructor
+  approved_at: '2026-11-10T02:52:00Z'
+  rationale: Instructor allowed mid-term reallocations with revalidation.
+  known_by:
+  - hod
+  disclosure: when_relevant
+  satisfies_ids:
+  - TA-FEAT-001
+  - TA-FEAT-002
+  derives_from_ids:
+  - TA-GOAL-001

@@ -1,0 +1,21 @@
+facts:
+- id: TT-IF-001
+  statement: In-app feedback and progress-note interfaces for supervisors and coordinator oversight views.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+- id: TT-IF-002
+  statement: In-system reminder/nudge channel from coordinator to supervisor on overdue feedback.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

@@ -1,0 +1,12 @@
+facts:
+- id: UC-GOAL-001
+  statement: Re-engage UWI alumni through a managed platform with verified access, job/event boards, and
+    admin email campaigns.
+  category: goal
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - alumni_admin
+  disclosure: when_relevant

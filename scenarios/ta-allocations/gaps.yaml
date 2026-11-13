@@ -1,414 +1,547 @@
 open_questions:
-  - id: GAP-TA-001
-    priority: critical
-    prompt: |
-      Stakeholders are Doctor Vijay and Ms Srida Mohammed (TA workload /
-      allocation). The VTT describes HOD/departmental staff allocating TAs,
-      lecturers supervising day-to-day work, markers progressing to TAs, and HR
-      contract steps. Which personas should the student-facing scenario include?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/7-1
-        start: "00:00:06.875"
-        end: "00:00:12.731"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/30-0
-        start: "00:02:45.084"
-        end: "00:02:51.862"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/71-0
-        start: "00:07:56.764"
-        end: "00:08:02.896"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/141-0
-        start: "00:16:34.204"
-        end: "00:16:42.086"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/176-2
-        start: "00:20:48.311"
-        end: "00:20:53.856"
-        speaker: null
-    why_it_matters: Personas bound known_fact_ids.
-    alternatives:
-      - hod only (transcript-faithful)
-      - hod + course_lecturer + teaching_assistant
-      - hod + course_lecturer + teaching_assistant + hr_officer
-      - Defer — decide after pilot
-    recommended_default: hod + course_lecturer + teaching_assistant
-    status: decided
-    actions: [accept, modify, reject, defer]
+- id: GAP-TA-001
+  priority: critical
+  prompt: 'Stakeholders are Doctor Vijay and Ms Srida Mohammed (TA workload /
 
-  - id: GAP-TA-002
-    priority: critical
-    prompt: |
-      With a single hod persona (DEC-TA-001), what is the *graded product*
-      boundary for the TA allocation system?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
-        start: "00:01:30.591"
-        end: "00:01:35.617"
-        speaker: null
-        note: Budgetary constraints on TA count
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
-        start: "00:02:08.541"
-        end: "00:02:11.524"
-        speaker: null
-        note: Max 20 hours/week
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-0
-        start: "00:01:51.404"
-        end: "00:01:54.768"
-        speaker: null
-        note: Assign by prior course experience
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/176-2
-        start: "00:20:48.311"
-        end: "00:20:53.856"
-        speaker: null
-        note: HR approval in real hiring path
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/64-1
-        start: "00:07:13.545"
-        end: "00:07:20.705"
-        speaker: null
-        note: Progress tracking vs lecturer responsibility
-    why_it_matters: Keeps MVP to HOD-visible allocation/tracking without building HR/payroll.
-    alternatives:
-      - Allocate TAs to courses under budget/hours; record assignments and workloads visible to HOD (HR/contracts out of system)
-      - Same, plus lecturer task/progress tracking inside the system
-      - Full hire-to-contract path including HR approval steps in-app
-      - Defer for student elicitation
-    recommended_default: >-
-      Allocate TAs to courses under budget/hours; record assignments and
-      workloads visible to HOD (HR/contracts out of system)
-    status: decided
-    actions: [accept, modify, reject, defer]
+    allocation). The VTT describes HOD/departmental staff allocating TAs,
 
-  - id: GAP-TA-003
-    priority: critical
-    prompt: |
-      Transcript states TAs are given a maximum of 20 hours a week. How hard
-      should that be in the graded system?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
-        start: "00:02:08.541"
-        end: "00:02:11.524"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/82-2
-        start: "00:09:34.825"
-        end: "00:09:41.273"
-        speaker: null
-        note: Example lab-hour accounting
-    why_it_matters: Core business rule for allocation validation and overload warnings.
-    alternatives:
-      - Hard cap — system blocks assignments that would exceed 20h/week per TA
-      - Soft warning — allow override with HOD acknowledgement
-      - Policy text only — no automated enforcement (elicitation)
-      - Defer
-    recommended_default: Hard cap — system blocks assignments that would exceed 20h/week per TA
-    status: decided
-    actions: [accept, modify, reject, defer]
+    lecturers supervising day-to-day work, markers progressing to TAs, and HR
 
-  - id: GAP-TA-004
-    priority: critical
-    prompt: |
-      Stakeholders prefer keeping TAs on courses they have already taught/marked,
-      and say HODs have stronger final selectivity than lecturers. How should
-      assignment preference work in the graded MVP?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-1
-        start: "00:01:54.768"
-        end: "00:02:00.036"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-3
-        start: "00:02:04.542"
-        end: "00:02:08.541"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/39-0
-        start: "00:03:50.284"
-        end: "00:03:56.363"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/43-2
-        start: "00:04:20.478"
-        end: "00:04:26.865"
-        speaker: null
-        note: Final choices when it comes to the TAs
-    why_it_matters: Ranking/eligibility UX for HOD allocation decisions.
-    alternatives:
-      - Soft preference — system highlights prior course experience; HOD may assign anyone eligible under hours/budget
-      - Hard filter — only TAs with prior experience on that course may be assigned (unless HOD override flag)
-      - Lecturer nominates; HOD must approve final assignment
-      - Defer for student elicitation
-    recommended_default: >-
-      Soft preference — system highlights prior course experience; HOD may
-      assign anyone eligible under hours/budget
-    status: decided
-    actions: [accept, modify, reject, defer]
+    contract steps. Which personas should the student-facing scenario include?
 
-  - id: GAP-TA-005
-    priority: important
-    prompt: |
-      DEC-TA-002 includes lecturer task/progress tracking, but the chatbot
-      persona is hod-only. What must the graded MVP record for TA work under a
-      course?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/24-0
-        start: "00:02:12.764"
-        end: "00:02:20.353"
-        speaker: null
-        note: Classroom and marking work
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/54-0
-        start: "00:06:00.844"
-        end: "00:06:06.284"
-        speaker: null
-        note: Weekly assigned tasks discussed
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/64-1
-        start: "00:07:13.545"
-        end: "00:07:20.705"
-        speaker: null
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/242-0
-        start: "00:27:11.884"
-        end: "00:27:18.161"
-        speaker: null
-        note: Weekly schedule / which labs
-    why_it_matters: Defines minimum tracking entities without a lecturer chatbot persona.
-    alternatives:
-      - Per-TA weekly planned hours by task type (lab/tutorial/marking/other) + simple completion/status notes visible to HOD
-      - Full timesheets with daily clock-in and student-facing TA portal
-      - Assignment to course only — no task-level tracking after all (narrow DEC-TA-002)
-      - Defer for student elicitation
-    recommended_default: >-
-      Per-TA weekly planned hours by task type (lab/tutorial/marking/other) +
-      simple completion/status notes visible to HOD
-    status: decided
-    actions: [accept, modify, reject, defer]
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/7-1
+    start: '00:00:06.875'
+    end: '00:00:12.731'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/30-0
+    start: '00:02:45.084'
+    end: '00:02:51.862'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/71-0
+    start: '00:07:56.764'
+    end: '00:08:02.896'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/141-0
+    start: '00:16:34.204'
+    end: '00:16:42.086'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/176-2
+    start: '00:20:48.311'
+    end: '00:20:53.856'
+    speaker: null
+  why_it_matters: Personas bound known_fact_ids.
+  alternatives:
+  - hod only (transcript-faithful)
+  - hod + course_lecturer + teaching_assistant
+  - hod + course_lecturer + teaching_assistant + hr_officer
+  - Defer — decide after pilot
+  recommended_default: hod + course_lecturer + teaching_assistant
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-002
+  priority: critical
+  prompt: 'With a single hod persona (DEC-TA-001), what is the *graded product*
 
-  - id: GAP-TA-006
-    priority: critical
-    theme: system_authority
-    prompt: |
-      Depth-update: the chat persona is hod only. Is the Head of Department the
-      platform_admin / allocating authority who creates and changes TA↔course
-      assignments in the graded system (budget + 20h hard cap), with HR and
-      lecturers outside the system?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
-        note: Department allocates TAs to courses under budget
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
-        note: 20h/week maximum
-    why_it_matters: Makes understated admin authority explicit via system_role.
-    alternatives:
-      - Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system scope
-      - hod=operator only; a departmental admin staff role is the real platform_admin (out of chat)
-      - hod=approver; lecturers request and HOD only signs off (lecturer not in chat)
-      - Defer for student elicitation
-    recommended_default: >-
-      Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system
-      scope
-    suggested_assumption: |
-      hod is platform_admin for the TA allocation product: create/change/remove
-      course assignments, enforce budget and the hard 20h/week cap, and view
-      workload records. HR contracts and lecturer task portals remain out of
-      graded MVP. Exact admin UI screens remain elicitation.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    boundary for the TA allocation system?
 
-  - id: GAP-TA-007
-    priority: important
-    theme: exception_path
-    prompt: |
-      What should happen when the HOD tries to assign hours that would exceed
-      the hard 20h/week cap (already a hard block per DEC-TA-003)?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
-        note: Maximum 20 hours/week
-    why_it_matters: Makes the hard-block UX/exception path explicit for students.
-    alternatives:
-      - Block save and show remaining capacity; HOD must reduce hours or reassign elsewhere
-      - Block save but allow an HOD override with a recorded reason (softens hard cap)
-      - Auto-truncate hours to remaining capacity without blocking
-      - Defer for student elicitation
-    recommended_default: >-
-      Block save and show remaining capacity; HOD must reduce hours or reassign
-      elsewhere
-    suggested_assumption: |
-      Assignments that would exceed 20 planned hours/week are blocked (not
-      overridable in graded MVP). The system shows remaining capacity so the HOD
-      can reduce hours or change assignments. Exact error copy remains
-      elicitation.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
+    start: '00:01:30.591'
+    end: '00:01:35.617'
+    speaker: null
+    note: Budgetary constraints on TA count
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
+    start: '00:02:08.541'
+    end: '00:02:11.524'
+    speaker: null
+    note: Max 20 hours/week
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-0
+    start: '00:01:51.404'
+    end: '00:01:54.768'
+    speaker: null
+    note: Assign by prior course experience
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/176-2
+    start: '00:20:48.311'
+    end: '00:20:53.856'
+    speaker: null
+    note: HR approval in real hiring path
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/64-1
+    start: '00:07:13.545'
+    end: '00:07:20.705'
+    speaker: null
+    note: Progress tracking vs lecturer responsibility
+  why_it_matters: Keeps MVP to HOD-visible allocation/tracking without building HR/payroll.
+  alternatives:
+  - Allocate TAs to courses under budget/hours; record assignments and workloads visible to HOD (HR/contracts
+    out of system)
+  - Same, plus lecturer task/progress tracking inside the system
+  - Full hire-to-contract path including HR approval steps in-app
+  - Defer for student elicitation
+  recommended_default: Allocate TAs to courses under budget/hours; record assignments and workloads visible
+    to HOD (HR/contracts out of system)
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-003
+  priority: critical
+  prompt: 'Transcript states TAs are given a maximum of 20 hours a week. How hard
 
-  - id: GAP-TA-008
-    priority: important
-    theme: exception_path
-    prompt: |
-      May the HOD remove or reduce an existing TA↔course assignment mid-term
-      (reallocation), or are assignments immutable once saved in graded MVP?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
-        note: HOD allocates under changing need/budget
-    why_it_matters: Completes admin lifecycle beyond first assign.
-    alternatives:
-      - Yes — HOD may edit hours, reassign, or remove assignments; system rechecks 20h/budget
-      - Hours editable; course assignment cannot be removed once saved (only reduced to zero via elicitation)
-      - Immutable after save for graded MVP; changes are out-of-band
-      - Defer for student elicitation
-    recommended_default: >-
-      Yes — HOD may edit hours, reassign, or remove assignments; system rechecks
-      20h/budget
-    suggested_assumption: |
-      hod may create, edit hours, reassign, or remove TA↔course assignments in
-      graded MVP. Every change revalidates the hard 20h/week cap and budget
-      constraints. Exact history/audit UI remains elicitation.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    should that be in the graded system?
 
-  - id: GAP-TA-009
-    priority: important
-    theme: config_default
-    prompt: |
-      Is departmental TA budget also a hard system block (like 20h/week), or a
-      soft warning the HOD may exceed?
-    citations:
-      - file: sources/TA Allocation Project - Cathreena Paul.vtt
-        cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-0
-        note: Allocations constrained primarily by budget
-    why_it_matters: Clarifies budget enforcement vs the already-hard hour cap.
-    alternatives:
-      - Hard block — cannot save assignments that would exceed departmental TA budget
-      - Soft warning — HOD may proceed after acknowledging over-budget
-      - Budget is informational only in graded MVP (track remaining; no block)
-      - Defer for student elicitation
-    recommended_default: >-
-      Soft warning — HOD may proceed after acknowledging over-budget
-    suggested_assumption: |
-      Departmental TA budget is enforced as a soft warning in graded MVP: the
-      system shows remaining budget and warns on over-budget assignments, but
-      the HOD may still save after acknowledging. The 20h/week cap remains a
-      hard block. Exact budget units/currency remain elicitation.
-    status: decided
-    actions: [accept, modify, reject, defer]
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
+    start: '00:02:08.541'
+    end: '00:02:11.524'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/82-2
+    start: '00:09:34.825'
+    end: '00:09:41.273'
+    speaker: null
+    note: Example lab-hour accounting
+  why_it_matters: Core business rule for allocation validation and overload warnings.
+  alternatives:
+  - Hard cap — system blocks assignments that would exceed 20h/week per TA
+  - Soft warning — allow override with HOD acknowledgement
+  - Policy text only — no automated enforcement (elicitation)
+  - Defer
+  recommended_default: Hard cap — system blocks assignments that would exceed 20h/week per TA
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-004
+  priority: critical
+  prompt: 'Stakeholders prefer keeping TAs on courses they have already taught/marked,
 
+    and say HODs have stronger final selectivity than lecturers. How should
+
+    assignment preference work in the graded MVP?
+
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-1
+    start: '00:01:54.768'
+    end: '00:02:00.036'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-3
+    start: '00:02:04.542'
+    end: '00:02:08.541'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/39-0
+    start: '00:03:50.284'
+    end: '00:03:56.363'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/43-2
+    start: '00:04:20.478'
+    end: '00:04:26.865'
+    speaker: null
+    note: Final choices when it comes to the TAs
+  why_it_matters: Ranking/eligibility UX for HOD allocation decisions.
+  alternatives:
+  - Soft preference — system highlights prior course experience; HOD may assign anyone eligible under
+    hours/budget
+  - Hard filter — only TAs with prior experience on that course may be assigned (unless HOD override flag)
+  - Lecturer nominates; HOD must approve final assignment
+  - Defer for student elicitation
+  recommended_default: Soft preference — system highlights prior course experience; HOD may assign anyone
+    eligible under hours/budget
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-005
+  priority: important
+  prompt: 'DEC-TA-002 includes lecturer task/progress tracking, but the chatbot
+
+    persona is hod-only. What must the graded MVP record for TA work under a
+
+    course?
+
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/24-0
+    start: '00:02:12.764'
+    end: '00:02:20.353'
+    speaker: null
+    note: Classroom and marking work
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/54-0
+    start: '00:06:00.844'
+    end: '00:06:06.284'
+    speaker: null
+    note: Weekly assigned tasks discussed
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/64-1
+    start: '00:07:13.545'
+    end: '00:07:20.705'
+    speaker: null
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/242-0
+    start: '00:27:11.884'
+    end: '00:27:18.161'
+    speaker: null
+    note: Weekly schedule / which labs
+  why_it_matters: Defines minimum tracking entities without a lecturer chatbot persona.
+  alternatives:
+  - Per-TA weekly planned hours by task type (lab/tutorial/marking/other) + simple completion/status notes
+    visible to HOD
+  - Full timesheets with daily clock-in and student-facing TA portal
+  - Assignment to course only — no task-level tracking after all (narrow DEC-TA-002)
+  - Defer for student elicitation
+  recommended_default: Per-TA weekly planned hours by task type (lab/tutorial/marking/other) + simple
+    completion/status notes visible to HOD
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-006
+  priority: critical
+  theme: system_authority
+  prompt: 'Depth-update: the chat persona is hod only. Is the Head of Department the
+
+    platform_admin / allocating authority who creates and changes TA↔course
+
+    assignments in the graded system (budget + 20h hard cap), with HR and
+
+    lecturers outside the system?
+
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
+    note: Department allocates TAs to courses under budget
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
+    note: 20h/week maximum
+  why_it_matters: Makes understated admin authority explicit via system_role.
+  alternatives:
+  - Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system scope
+  - hod=operator only; a departmental admin staff role is the real platform_admin (out of chat)
+  - hod=approver; lecturers request and HOD only signs off (lecturer not in chat)
+  - Defer for student elicitation
+  recommended_default: Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system scope
+  suggested_assumption: 'hod is platform_admin for the TA allocation product: create/change/remove
+
+    course assignments, enforce budget and the hard 20h/week cap, and view
+
+    workload records. HR contracts and lecturer task portals remain out of
+
+    graded MVP. Exact admin UI screens remain elicitation.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-007
+  priority: important
+  theme: exception_path
+  prompt: 'What should happen when the HOD tries to assign hours that would exceed
+
+    the hard 20h/week cap (already a hard block per DEC-TA-003)?
+
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/23-4
+    note: Maximum 20 hours/week
+  why_it_matters: Makes the hard-block UX/exception path explicit for students.
+  alternatives:
+  - Block save and show remaining capacity; HOD must reduce hours or reassign elsewhere
+  - Block save but allow an HOD override with a recorded reason (softens hard cap)
+  - Auto-truncate hours to remaining capacity without blocking
+  - Defer for student elicitation
+  recommended_default: Block save and show remaining capacity; HOD must reduce hours or reassign elsewhere
+  suggested_assumption: 'Assignments that would exceed 20 planned hours/week are blocked (not
+
+    overridable in graded MVP). The system shows remaining capacity so the HOD
+
+    can reduce hours or change assignments. Exact error copy remains
+
+    elicitation.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-008
+  priority: important
+  theme: exception_path
+  prompt: 'May the HOD remove or reduce an existing TA↔course assignment mid-term
+
+    (reallocation), or are assignments immutable once saved in graded MVP?
+
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-1
+    note: HOD allocates under changing need/budget
+  why_it_matters: Completes admin lifecycle beyond first assign.
+  alternatives:
+  - Yes — HOD may edit hours, reassign, or remove assignments; system rechecks 20h/budget
+  - Hours editable; course assignment cannot be removed once saved (only reduced to zero via elicitation)
+  - Immutable after save for graded MVP; changes are out-of-band
+  - Defer for student elicitation
+  recommended_default: Yes — HOD may edit hours, reassign, or remove assignments; system rechecks 20h/budget
+  suggested_assumption: 'hod may create, edit hours, reassign, or remove TA↔course assignments in
+
+    graded MVP. Every change revalidates the hard 20h/week cap and budget
+
+    constraints. Exact history/audit UI remains elicitation.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-009
+  priority: important
+  theme: config_default
+  prompt: 'Is departmental TA budget also a hard system block (like 20h/week), or a
+
+    soft warning the HOD may exceed?
+
+    '
+  citations:
+  - file: sources/TA Allocation Project - Cathreena Paul.vtt
+    cue_id: ac26db00-3af2-479f-afc1-54b763e99dbb/19-0
+    note: Allocations constrained primarily by budget
+  why_it_matters: Clarifies budget enforcement vs the already-hard hour cap.
+  alternatives:
+  - Hard block — cannot save assignments that would exceed departmental TA budget
+  - Soft warning — HOD may proceed after acknowledging over-budget
+  - Budget is informational only in graded MVP (track remaining; no block)
+  - Defer for student elicitation
+  recommended_default: Soft warning — HOD may proceed after acknowledging over-budget
+  suggested_assumption: 'Departmental TA budget is enforced as a soft warning in graded MVP: the
+
+    system shows remaining budget and warns on over-budget assignments, but
+
+    the HOD may still save after acknowledging. The 20h/week cap remains a
+
+    hard block. Exact budget units/currency remain elicitation.
+
+    '
+  status: decided
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+- id: GAP-TA-SRS-001
+  priority: important
+  theme: srs_prescription
+  prompt: Verify Goals/Features/trace links for TA allocations.
+  citations:
+  - file: scenario.yaml
+    cue_id: srs-prescription
+    note: Structural prescription from brief + existing package facts (no single VTT cue)
+  why_it_matters: Named allocation capabilities and SATISFIES edges.
+  prescribed_fact_ids:
+  - TA-GOAL-001
+  - TA-FEAT-001
+  - TA-FEAT-002
+  - TA-FEAT-003
+  - TA-FEAT-004
+  - TA-REQ-001
+  - TA-REQ-002
+  - TA-REQ-003
+  - TA-REQ-004
+  - TA-REQ-005
+  - TA-REQ-006
+  - TA-REQ-009
+  suggested_assumption: Keep TA-GOAL-001 and TA-FEAT-001..004 with REQ links.
+  recommended_default: Keep prescriptions as written
+  alternatives:
+  - Keep as prescribed
+  - Modify statements or clustering
+  - Reject and remove prescribed facts
+  - Defer review; keep prescription in package
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
+- id: GAP-TA-SRS-002
+  priority: important
+  theme: srs_prescription
+  prompt: Verify Data/Dependency/Verification prescriptions and remaps.
+  citations:
+  - file: scenario.yaml
+    cue_id: srs-prescription
+    note: Structural prescription from brief + existing package facts (no single VTT cue)
+  why_it_matters: SRS support nodes; HR remains DEPENDS_ON external process.
+  prescribed_fact_ids:
+  - TA-DATA-001
+  - TA-DATA-002
+  - TA-DATA-003
+  - TA-DEP-001
+  - TA-VER-001
+  - TA-ASM-001
+  - TA-ASM-002
+  - TA-ASM-003
+  - TA-ASM-004
+  - TA-ASM-005
+  - TA-ASM-006
+  - TA-ASM-007
+  - TA-ASM-008
+  - TA-ASM-009
+  - TA-WF-001
+  - TA-WF-002
+  - TA-WF-003
+  suggested_assumption: Keep as prescribed including TA-DEP-001.
+  recommended_default: Keep prescriptions as written
+  alternatives:
+  - Keep as prescribed
+  - Modify statements or clustering
+  - Reject and remove prescribed facts
+  - Defer review; keep prescription in package
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
 decisions:
-  - decision_id: DEC-TA-006
-    gap_id: GAP-TA-006
-    action: accept
-    chosen: >-
-      Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system
-      scope
-    modified_text: null
-    rationale: Instructor accepted hod as platform_admin.
-    approved_by: instructor
-    approved_at: "2026-11-10T02:47:00Z"
-    resulting_fact_ids: [TA-ASM-006]
-  - decision_id: DEC-TA-007
-    gap_id: GAP-TA-007
-    action: accept
-    chosen: >-
-      Block save and show remaining capacity; HOD must reduce hours or reassign
-      elsewhere
-    modified_text: null
-    rationale: Instructor chose hard block with remaining capacity (option 1).
-    approved_by: instructor
-    approved_at: "2026-11-10T02:51:00Z"
-    resulting_fact_ids: [TA-ASM-007, TA-WF-003]
-  - decision_id: DEC-TA-008
-    gap_id: GAP-TA-008
-    action: accept
-    chosen: >-
-      Yes — HOD may edit hours, reassign, or remove assignments; system rechecks
-      20h/budget
-    modified_text: null
-    rationale: Instructor chose editable reallocations (option 1).
-    approved_by: instructor
-    approved_at: "2026-11-10T02:52:00Z"
-    resulting_fact_ids: [TA-ASM-008, TA-REQ-009]
-  - decision_id: DEC-TA-009
-    gap_id: GAP-TA-009
-    action: accept
-    chosen: >-
-      Hard block — cannot save assignments that would exceed departmental TA
-      budget
-    modified_text: null
-    rationale: Instructor chose hard budget block (option 1).
-    approved_by: instructor
-    approved_at: "2026-11-10T02:53:00Z"
-    resulting_fact_ids: [TA-ASM-009, TA-BR-005]
-  - decision_id: DEC-TA-001
-    gap_id: GAP-TA-001
-    action: accept
-    chosen: hod only
-    modified_text: null
-    rationale: Instructor chose HOD-only persona set.
-    approved_by: instructor
-    approved_at: "2026-11-03T13:50:00Z"
-    resulting_fact_ids: [TA-ASM-001]
-  - decision_id: DEC-TA-002
-    gap_id: GAP-TA-002
-    action: accept
-    chosen: >-
-      Allocate TAs to courses under budget/hours; record assignments and
-      workloads visible to HOD, plus lecturer task/progress tracking in the
-      system (HR/contracts out of system)
-    modified_text: >-
-      Superseded in part by DEC-TA-005: task/progress tracking removed from
-      graded MVP; keep allocation + workload recording; HR still out.
-    rationale: >-
-      Instructor initially accepted option 2; DEC-TA-005 later narrowed to
-      course-assignment only.
-    approved_by: instructor
-    approved_at: "2026-11-03T13:51:00Z"
-    resulting_fact_ids: [TA-ASM-002, TA-REQ-001]
-  - decision_id: DEC-TA-003
-    gap_id: GAP-TA-003
-    action: accept
-    chosen: Hard cap — system blocks assignments that would exceed 20h/week per TA
-    modified_text: null
-    rationale: Instructor accepted option 1.
-    approved_by: instructor
-    approved_at: "2026-11-03T13:52:00Z"
-    resulting_fact_ids: [TA-ASM-003, TA-BR-001]
-  - decision_id: DEC-TA-004
-    gap_id: GAP-TA-004
-    action: accept
-    chosen: >-
-      Soft preference — system highlights prior course experience; HOD may
-      assign anyone eligible under hours/budget
-    modified_text: null
-    rationale: Instructor accepted option 1.
-    approved_by: instructor
-    approved_at: "2026-11-03T14:01:00Z"
-    resulting_fact_ids: [TA-ASM-004]
-  - decision_id: DEC-TA-005
-    gap_id: GAP-TA-005
-    action: accept
-    chosen: >-
-      Assignment to course only — no task-level tracking (narrows DEC-TA-002)
-    modified_text: null
-    rationale: >-
-      Instructor accepted option 3 — graded MVP records course assignments and
-      hour budgets/caps only; lecturer task/progress tracking is out of scope.
-    approved_by: instructor
-    approved_at: "2026-11-03T14:03:00Z"
-    resulting_fact_ids: [TA-ASM-005, TA-BR-003]
+- decision_id: DEC-TA-006
+  gap_id: GAP-TA-006
+  action: accept
+  chosen: Yes — hod=platform_admin for allocations; HR/lecturers out of chat/system scope
+  modified_text: null
+  rationale: Instructor accepted hod as platform_admin.
+  approved_by: instructor
+  approved_at: '2026-11-10T02:47:00Z'
+  resulting_fact_ids:
+  - TA-ASM-006
+- decision_id: DEC-TA-007
+  gap_id: GAP-TA-007
+  action: accept
+  chosen: Block save and show remaining capacity; HOD must reduce hours or reassign elsewhere
+  modified_text: null
+  rationale: Instructor chose hard block with remaining capacity (option 1).
+  approved_by: instructor
+  approved_at: '2026-11-10T02:51:00Z'
+  resulting_fact_ids:
+  - TA-ASM-007
+  - TA-WF-003
+- decision_id: DEC-TA-008
+  gap_id: GAP-TA-008
+  action: accept
+  chosen: Yes — HOD may edit hours, reassign, or remove assignments; system rechecks 20h/budget
+  modified_text: null
+  rationale: Instructor chose editable reallocations (option 1).
+  approved_by: instructor
+  approved_at: '2026-11-10T02:52:00Z'
+  resulting_fact_ids:
+  - TA-ASM-008
+  - TA-REQ-009
+- decision_id: DEC-TA-009
+  gap_id: GAP-TA-009
+  action: accept
+  chosen: Hard block — cannot save assignments that would exceed departmental TA budget
+  modified_text: null
+  rationale: Instructor chose hard budget block (option 1).
+  approved_by: instructor
+  approved_at: '2026-11-10T02:53:00Z'
+  resulting_fact_ids:
+  - TA-ASM-009
+  - TA-BR-005
+- decision_id: DEC-TA-001
+  gap_id: GAP-TA-001
+  action: accept
+  chosen: hod only
+  modified_text: null
+  rationale: Instructor chose HOD-only persona set.
+  approved_by: instructor
+  approved_at: '2026-11-03T13:50:00Z'
+  resulting_fact_ids:
+  - TA-ASM-001
+- decision_id: DEC-TA-002
+  gap_id: GAP-TA-002
+  action: accept
+  chosen: Allocate TAs to courses under budget/hours; record assignments and workloads visible to HOD,
+    plus lecturer task/progress tracking in the system (HR/contracts out of system)
+  modified_text: 'Superseded in part by DEC-TA-005: task/progress tracking removed from graded MVP; keep
+    allocation + workload recording; HR still out.'
+  rationale: Instructor initially accepted option 2; DEC-TA-005 later narrowed to course-assignment only.
+  approved_by: instructor
+  approved_at: '2026-11-03T13:51:00Z'
+  resulting_fact_ids:
+  - TA-ASM-002
+  - TA-REQ-001
+- decision_id: DEC-TA-003
+  gap_id: GAP-TA-003
+  action: accept
+  chosen: Hard cap — system blocks assignments that would exceed 20h/week per TA
+  modified_text: null
+  rationale: Instructor accepted option 1.
+  approved_by: instructor
+  approved_at: '2026-11-03T13:52:00Z'
+  resulting_fact_ids:
+  - TA-ASM-003
+  - TA-BR-001
+- decision_id: DEC-TA-004
+  gap_id: GAP-TA-004
+  action: accept
+  chosen: Soft preference — system highlights prior course experience; HOD may assign anyone eligible
+    under hours/budget
+  modified_text: null
+  rationale: Instructor accepted option 1.
+  approved_by: instructor
+  approved_at: '2026-11-03T14:01:00Z'
+  resulting_fact_ids:
+  - TA-ASM-004
+- decision_id: DEC-TA-005
+  gap_id: GAP-TA-005
+  action: accept
+  chosen: Assignment to course only — no task-level tracking (narrows DEC-TA-002)
+  modified_text: null
+  rationale: Instructor accepted option 3 — graded MVP records course assignments and hour budgets/caps
+    only; lecturer task/progress tracking is out of scope.
+  approved_by: instructor
+  approved_at: '2026-11-03T14:03:00Z'
+  resulting_fact_ids:
+  - TA-ASM-005
+  - TA-BR-003

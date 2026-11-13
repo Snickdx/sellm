@@ -1,21 +1,19 @@
 slug: job-board
 title: Job Board
-version: "0.2.0"
+version: 0.3.0
 status: approved
-brief: >-
-  Eligible programme graduates browse and apply to jobs; employers submit
-  listings for admin approval; administrators (platform_admin) publish, reject
-  (employer must revise/resubmit), unpublish, and auto-notify subscribers on
-  publish; employers operate their own listings and application statuses;
-  admins can export applicant packages. Applications support external-link or
-  on-platform collect modes.
+brief: Eligible programme graduates browse and apply to jobs; employers submit listings for admin approval;
+  administrators (platform_admin) publish, reject (employer must revise/resubmit), unpublish, and auto-notify
+  subscribers on publish; employers operate their own listings and application statuses; admins can export
+  applicant packages. Applications support external-link or on-platform collect modes.
 source_status: transcript_received
-source_notes: >-
-  Real interview VTT under sources/Job Board Project Interview - Jacob Ramsoobhag.vtt.
-  180 cues; all speakers unlabeled (speaker: null). Confirmed knowledge from
-  university-admin answers. Personas: administrator, graduate_applicant, employer
-  (DEC-JB-001). Prior assumptions DEC-JB-002..006. Depth-update 0.2.0: system
-  roles (DEC-JB-007), reject→revise/resubmit (DEC-JB-008), auto-notify on publish
-  (DEC-JB-009), admin unpublish (DEC-JB-010).
+source_notes: 'Real interview VTT under sources/Job Board Project Interview - Jacob Ramsoobhag.vtt. 180
+  cues; all speakers unlabeled (speaker: null). Confirmed knowledge from university-admin answers. Personas:
+  administrator, graduate_applicant, employer (DEC-JB-001). Prior assumptions DEC-JB-002..006. Depth-update
+  0.2.0: system roles (DEC-JB-007), reject→revise/resubmit (DEC-JB-008), auto-notify on publish (DEC-JB-009),
+  admin unpublish (DEC-JB-010).
+
+  SRS prescribe-by-default depth-update to 0.3.0 (2026-11-13T19:42:24Z): SRS scaffolding for listings,
+  apply modes, notify/export, security. Instructor verify/change via gaps theme srs_prescription.'
 approved_by: instructor
-approved_at: "2026-11-10T02:39:30Z"
+approved_at: '2026-11-13T19:44:00Z'

@@ -1,0 +1,12 @@
+facts:
+- id: JB-VER-001
+  statement: Publish/reject/notify and application-status flows are verified by test/demo of listing and
+    apply paths.
+  category: verification
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  disclosure: when_asked

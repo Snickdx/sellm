@@ -1,0 +1,11 @@
+facts:
+- id: JB-DEP-001
+  statement: On-platform collect may use an external form backend (e.g. Airtable) as an integration dependency.
+  category: dependency
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  disclosure: when_asked

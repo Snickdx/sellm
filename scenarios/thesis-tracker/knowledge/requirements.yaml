@@ -1,150 +1,179 @@
 facts:
-  - id: TT-REQ-001
-    statement: >-
-      The postgraduate coordinator oversees that postgraduate programmes run
-      smoothly, including seminars/examination processes and thesis progress
-      visibility.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/34-0
-        start: "00:01:55.922"
-        end: "00:01:59.180"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/34-1
-        start: "00:01:59.180"
-        end: "00:02:04.172"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/41-0
-        start: "00:02:36.562"
-        end: "00:02:41.579"
-        speaker: null
-    known_by: [pg_coordinator]
-    disclosure: when_relevant
-
-  - id: TT-REQ-002
-    statement: >-
-      Students typically initiate finding a supervisor; at some point student and
-      supervisor agree to work together (pairing).
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/50-1
-        start: "00:03:53.570"
-        end: "00:03:59.118"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-1
-        start: "00:04:37.132"
-        end: "00:04:42.326"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-2
-        start: "00:04:42.326"
-        end: "00:04:46.381"
-        speaker: null
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
-
-  - id: TT-REQ-003
-    statement: >-
-      The system should support tracking student progress with documented
-      feedback/notes (not only informal hallway conversations).
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/72-2
-        start: "00:07:19.235"
-        end: "00:07:24.162"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/107-2
-        start: "00:11:02.249"
-        end: "00:11:07.412"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/234-0
-        start: "00:25:15.842"
-        end: "00:25:20.957"
-        speaker: null
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
-
-  - id: TT-REQ-004
-    statement: >-
-      Delayed supervisor feedback is a major blocker for students; the process
-      needs visibility when feedback is late.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/290-3
-        start: "00:31:32.999"
-        end: "00:31:37.703"
-        speaker: null
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
-
-  - id: TT-REQ-005
-    statement: >-
-      Coordinators need a way to produce a progress summary suitable to share
-      with grad studies without excessive manual friction.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/325-3
-        start: "00:34:40.762"
-        end: "00:34:45.382"
-        speaker: null
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/340-1
-        start: "00:36:28.739"
-        end: "00:36:34.028"
-        speaker: null
-    known_by: [pg_coordinator]
-    disclosure: when_relevant
-
-  - id: TT-REQ-006
-    statement: >-
-      Supervisors have a practical capacity limit on how many students they can
-      effectively supervise.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/Thesis Tracker Project - Brent Eversley.vtt
-        cue_id: eecbf71e-1536-4b52-8706-c48e23458026/230-1
-        start: "00:24:23.817"
-        end: "00:24:28.578"
-        speaker: null
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_asked
-
-  - id: TT-REQ-007
-    statement: >-
-      Graded product is multi-role: students submit work artefacts, supervisors
-      post in-app feedback, coordinator oversees pairings and progress.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TT-002
-    approved_by: instructor
-    approved_at: "2026-11-03T14:08:00Z"
-    rationale: Instructor required full multi-role app.
-    known_by: [pg_coordinator, supervisor]
-    disclosure: when_relevant
-    acceptance_criteria:
-      - A student role can submit work linked to their thesis record.
-      - A supervisor can attach feedback notes to a submission with a due date.
-      - A coordinator can view pairings, notes, and overdue feedback.
+- id: TT-REQ-001
+  statement: The postgraduate coordinator oversees that postgraduate programmes run smoothly, including
+    seminars/examination processes and thesis progress visibility.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/34-0
+    start: '00:01:55.922'
+    end: '00:01:59.180'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/34-1
+    start: '00:01:59.180'
+    end: '00:02:04.172'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/41-0
+    start: '00:02:36.562'
+    end: '00:02:41.579'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  disclosure: when_relevant
+  satisfies_ids:
+  - TT-FEAT-005
+  - TT-FEAT-004
+  derives_from_ids:
+  - TT-GOAL-001
+- id: TT-REQ-002
+  statement: Students typically initiate finding a supervisor; at some point student and supervisor agree
+    to work together (pairing).
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/50-1
+    start: '00:03:53.570'
+    end: '00:03:59.118'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-1
+    start: '00:04:37.132'
+    end: '00:04:42.326'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/54-2
+    start: '00:04:42.326'
+    end: '00:04:46.381'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+  satisfies_ids:
+  - TT-FEAT-001
+  derives_from_ids:
+  - TT-GOAL-001
+- id: TT-REQ-003
+  statement: The system should support tracking student progress with documented feedback/notes (not only
+    informal hallway conversations).
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/72-2
+    start: '00:07:19.235'
+    end: '00:07:24.162'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/107-2
+    start: '00:11:02.249'
+    end: '00:11:07.412'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/234-0
+    start: '00:25:15.842'
+    end: '00:25:20.957'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+  satisfies_ids:
+  - TT-FEAT-002
+  - TT-FEAT-004
+  derives_from_ids:
+  - TT-GOAL-001
+- id: TT-REQ-004
+  statement: Delayed supervisor feedback is a major blocker for students; the process needs visibility
+    when feedback is late.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/290-3
+    start: '00:31:32.999'
+    end: '00:31:37.703'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+  satisfies_ids:
+  - TT-FEAT-003
+  derives_from_ids:
+  - TT-GOAL-001
+- id: TT-REQ-005
+  statement: Coordinators need a way to produce a progress summary suitable to share with grad studies
+    without excessive manual friction.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/325-3
+    start: '00:34:40.762'
+    end: '00:34:45.382'
+    speaker: null
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/340-1
+    start: '00:36:28.739'
+    end: '00:36:34.028'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  disclosure: when_relevant
+  satisfies_ids:
+  - TT-FEAT-004
+  derives_from_ids:
+  - TT-GOAL-001
+- id: TT-REQ-006
+  statement: Supervisors have a practical capacity limit on how many students they can effectively supervise.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/Thesis Tracker Project - Brent Eversley.vtt
+    cue_id: eecbf71e-1536-4b52-8706-c48e23458026/230-1
+    start: '00:24:23.817'
+    end: '00:24:28.578'
+    speaker: null
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_asked
+  satisfies_ids:
+  - TT-FEAT-001
+  derives_from_ids:
+  - TT-GOAL-001
+- id: TT-REQ-007
+  statement: 'Graded product is multi-role: students submit work artefacts, supervisors post in-app feedback,
+    coordinator oversees pairings and progress.'
+  category: functional
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TT-002
+  approved_by: instructor
+  approved_at: '2026-11-03T14:08:00Z'
+  rationale: Instructor required full multi-role app.
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant
+  acceptance_criteria:
+  - A student role can submit work linked to their thesis record.
+  - A supervisor can attach feedback notes to a submission with a due date.
+  - A coordinator can view pairings, notes, and overdue feedback.
+  satisfies_ids:
+  - TT-FEAT-001
+  - TT-FEAT-002
+  - TT-FEAT-005
+  derives_from_ids:
+  - TT-GOAL-001

@@ -1,125 +1,152 @@
 facts:
-  - id: LIB-REQ-001
-    statement: Lecturers can request workshop bookings for their classes online.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0003
-        start: "00:00:17.500"
-        end: "00:00:26.000"
-        speaker: coordinator
-    known_by: [library_coordinator, lecturer]
-    disclosure: when_relevant
-    acceptance_criteria:
-      - A lecturer can submit a workshop booking request without using email.
-
-  - id: LIB-REQ-002
-    statement: >-
-      A booking request must include course code, expected headcount, preferred date,
-      and resources to cover.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0004
-        start: "00:00:26.500"
-        end: "00:00:35.000"
-        speaker: coordinator
-    known_by: [library_coordinator]
-    disclosure: when_relevant
-    acceptance_criteria:
-      - Invalid or incomplete requests are rejected with field-level feedback.
-
-  - id: LIB-REQ-003
-    statement: >-
-      When two classes request the same slot, the earlier request wins unless the
-      coordinator overrides for a larger cohort.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0005
-        start: "00:00:35.500"
-        end: "00:00:44.000"
-        speaker: coordinator
-    known_by: [library_coordinator]
-    disclosure: when_asked
-    acceptance_criteria:
-      - Conflict resolution records which request was accepted and whether an override occurred.
-
-  - id: LIB-REQ-004
-    statement: The coordinator currently receives booking requests by email and checks a room calendar.
-    category: contextual
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0002
-        start: "00:00:08.500"
-        end: "00:00:17.000"
-        speaker: coordinator
-    known_by: [library_coordinator]
-    disclosure: when_relevant
-
-  - id: LIB-REQ-005
-    statement: Lecturers need a confirmation they can show students after a booking is accepted.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0006
-        start: "00:00:44.500"
-        end: "00:00:52.000"
-        speaker: lecturer
-    known_by: [lecturer]
-    disclosure: when_relevant
-    acceptance_criteria:
-      - An accepted booking produces a shareable confirmation record.
-
-  - id: LIB-REQ-006
-    statement: Lecturers need a way to cancel a booking if the class is moved.
-    category: functional
-    status: confirmed
-    origin: transcript
-    source_refs:
-      - file: sources/library-synthetic.vtt
-        cue_id: cue-0006
-        start: "00:00:44.500"
-        end: "00:00:52.000"
-        speaker: lecturer
-    known_by: [lecturer]
-    disclosure: when_relevant
-
-  - id: LIB-REQ-007
-    statement: >-
-      Lecturers may cancel their own confirmed workshop booking any time before
-      the session start; the library coordinator may also cancel for operational
-      reasons.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-003
-    approved_by: instructor
-    approved_at: "2026-11-09T23:51:00Z"
-    rationale: Instructor chose cancel any time before start (option 3).
-    known_by: [lecturer, library_coordinator]
-    disclosure: when_relevant
-
-  - id: LIB-REQ-008
-    statement: >-
-      Administrator and library_coordinator may create and update workshop rooms
-      and per-room capacities used by booking checks.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-LIB-006
-    approved_by: instructor
-    approved_at: "2026-11-10T00:14:00Z"
-    rationale: Instructor allowed coordinator to edit capacities as well as administrator.
-    known_by: [administrator, library_coordinator]
-    disclosure: when_relevant
+- id: LIB-REQ-001
+  statement: Lecturers can request workshop bookings for their classes online.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0003
+    start: '00:00:17.500'
+    end: '00:00:26.000'
+    speaker: coordinator
+  known_by:
+  - library_coordinator
+  - lecturer
+  disclosure: when_relevant
+  acceptance_criteria:
+  - A lecturer can submit a workshop booking request without using email.
+  satisfies_ids:
+  - LIB-FEAT-001
+  derives_from_ids:
+  - LIB-GOAL-001
+- id: LIB-REQ-002
+  statement: A booking request must include course code, expected headcount, preferred date, and resources
+    to cover.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0004
+    start: '00:00:26.500'
+    end: '00:00:35.000'
+    speaker: coordinator
+  known_by:
+  - library_coordinator
+  disclosure: when_relevant
+  acceptance_criteria:
+  - Invalid or incomplete requests are rejected with field-level feedback.
+  satisfies_ids:
+  - LIB-FEAT-001
+  derives_from_ids:
+  - LIB-GOAL-001
+- id: LIB-REQ-003
+  statement: When two classes request the same slot, the earlier request wins unless the coordinator overrides
+    for a larger cohort.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0005
+    start: '00:00:35.500'
+    end: '00:00:44.000'
+    speaker: coordinator
+  known_by:
+  - library_coordinator
+  disclosure: when_asked
+  acceptance_criteria:
+  - Conflict resolution records which request was accepted and whether an override occurred.
+  satisfies_ids:
+  - LIB-FEAT-002
+  derives_from_ids:
+  - LIB-GOAL-001
+- id: LIB-REQ-004
+  statement: The coordinator currently receives booking requests by email and checks a room calendar.
+  category: contextual
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0002
+    start: '00:00:08.500'
+    end: '00:00:17.000'
+    speaker: coordinator
+  known_by:
+  - library_coordinator
+  disclosure: when_relevant
+- id: LIB-REQ-005
+  statement: Lecturers need a confirmation they can show students after a booking is accepted.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0006
+    start: '00:00:44.500'
+    end: '00:00:52.000'
+    speaker: lecturer
+  known_by:
+  - lecturer
+  disclosure: when_relevant
+  acceptance_criteria:
+  - An accepted booking produces a shareable confirmation record.
+  satisfies_ids:
+  - LIB-FEAT-001
+  derives_from_ids:
+  - LIB-GOAL-001
+- id: LIB-REQ-006
+  statement: Lecturers need a way to cancel a booking if the class is moved.
+  category: functional
+  status: confirmed
+  origin: transcript
+  source_refs:
+  - file: sources/library-synthetic.vtt
+    cue_id: cue-0006
+    start: '00:00:44.500'
+    end: '00:00:52.000'
+    speaker: lecturer
+  known_by:
+  - lecturer
+  disclosure: when_relevant
+  satisfies_ids:
+  - LIB-FEAT-003
+  derives_from_ids:
+  - LIB-GOAL-001
+- id: LIB-REQ-007
+  statement: Lecturers may cancel their own confirmed workshop booking any time before the session start;
+    the library coordinator may also cancel for operational reasons.
+  category: functional
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-003
+  approved_by: instructor
+  approved_at: '2026-11-09T23:51:00Z'
+  rationale: Instructor chose cancel any time before start (option 3).
+  known_by:
+  - lecturer
+  - library_coordinator
+  disclosure: when_relevant
+  satisfies_ids:
+  - LIB-FEAT-003
+  derives_from_ids:
+  - LIB-GOAL-001
+- id: LIB-REQ-008
+  statement: Administrator and library_coordinator may create and update workshop rooms and per-room capacities
+    used by booking checks.
+  category: functional
+  status: assumed
+  origin: instructor
+  decision_id: DEC-LIB-006
+  approved_by: instructor
+  approved_at: '2026-11-10T00:14:00Z'
+  rationale: Instructor allowed coordinator to edit capacities as well as administrator.
+  known_by:
+  - administrator
+  - library_coordinator
+  disclosure: when_relevant
+  satisfies_ids:
+  - LIB-FEAT-004
+  derives_from_ids:
+  - LIB-GOAL-001

@@ -1,0 +1,13 @@
+facts:
+- id: TT-GOAL-001
+  statement: Give postgraduate coordination visibility of thesis pairings, submissions, feedback due dates,
+    and progress notes so delayed feedback is actionable.
+  category: goal
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - pg_coordinator
+  - supervisor
+  disclosure: when_relevant

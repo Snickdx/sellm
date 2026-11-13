@@ -1,0 +1,29 @@
+facts:
+- id: TA-DATA-001
+  statement: TA person records eligible for allocation.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: &id001
+  - hod
+  disclosure: when_relevant
+- id: TA-DATA-002
+  statement: Course records receiving TA support.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: TA-DATA-003
+  statement: Assignment records (TA, course, planned weekly hours) and remaining capacity/budget views.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by: *id001
+  disclosure: when_relevant

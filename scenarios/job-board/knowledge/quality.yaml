@@ -1,0 +1,12 @@
+facts:
+- id: JB-SEC-001
+  statement: Applicant personal information must be encrypted and stored securely; admin review is a trust/legitimacy
+    control.
+  category: security
+  status: clarified
+  origin: instructor
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
+    verify/change.
+  known_by:
+  - administrator
+  disclosure: when_relevant

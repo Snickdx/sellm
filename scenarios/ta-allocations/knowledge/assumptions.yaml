@@ -1,133 +1,118 @@
 facts:
-  - id: TA-ASM-001
-    statement: >-
-      The only student-facing chatbot persona is hod (head of department /
-      allocating authority voice).
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-001
-    approved_by: instructor
-    approved_at: "2026-11-03T13:50:00Z"
-    rationale: Instructor chose hod-only.
-    known_by: [hod]
-    disclosure: never_student
-
-  - id: TA-ASM-002
-    statement: >-
-      Graded system supports HOD allocation of TAs to courses under budget and
-      weekly-hour constraints, with assignment records visible to the HOD; HR
-      hiring/contracts are out of system.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-002
-    approved_by: instructor
-    approved_at: "2026-11-03T13:51:00Z"
-    rationale: Instructor product-boundary decision (later narrowed by DEC-TA-005).
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-ASM-003
-    statement: >-
-      Enforcing the 20 hours/week maximum is a hard system rule (block, not
-      warn-only).
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-003
-    approved_by: instructor
-    approved_at: "2026-11-03T13:52:00Z"
-    rationale: Instructor accepted hard cap.
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-ASM-004
-    statement: >-
-      The UI/system highlights prior course experience as a soft preference when
-      the HOD assigns TAs.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-004
-    approved_by: instructor
-    approved_at: "2026-11-03T14:01:00Z"
-    rationale: Instructor accepted soft preference.
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-ASM-005
-    statement: >-
-      Graded MVP does not include lecturer task lists, progress tracking, or TA
-      timesheets — only course-level assignments and hour budgets/caps.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-005
-    approved_by: instructor
-    approved_at: "2026-11-03T14:03:00Z"
-    rationale: Instructor chose assignment-only tracking.
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-ASM-006
-    statement: >-
-      hod is platform_admin for the TA allocation product: create/change/remove
-      course assignments, enforce hard budget and hard 20h/week cap, and view
-      workload records. HR contracts and lecturer task portals remain out of
-      graded MVP.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-006
-    approved_by: instructor
-    approved_at: "2026-11-10T02:47:00Z"
-    rationale: Instructor confirmed hod platform_admin authority.
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-ASM-007
-    statement: >-
-      Assignments that would exceed 20 planned hours/week are blocked (not
-      overridable). The system shows remaining capacity so the HOD can reduce
-      hours or change assignments.
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-007
-    approved_by: instructor
-    approved_at: "2026-11-10T02:51:00Z"
-    rationale: Instructor chose hard block with remaining capacity UX.
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-ASM-008
-    statement: >-
-      hod may create, edit hours, reassign, or remove TA↔course assignments.
-      Every change revalidates the hard 20h/week cap and hard departmental
-      budget. Exact history/audit UI remains elicitation.
-    category: functional
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-008
-    approved_by: instructor
-    approved_at: "2026-11-10T02:52:00Z"
-    rationale: Instructor allowed reallocations.
-    known_by: [hod]
-    disclosure: when_relevant
-
-  - id: TA-ASM-009
-    statement: >-
-      Departmental TA budget is a hard system block: assignments that would
-      exceed remaining budget cannot be saved. Exact budget units/currency
-      remain elicitation.
-    category: constraint
-    status: assumed
-    origin: instructor
-    decision_id: DEC-TA-009
-    approved_by: instructor
-    approved_at: "2026-11-10T02:53:00Z"
-    rationale: Instructor chose hard budget block.
-    known_by: [hod]
-    disclosure: when_relevant
-
+- id: TA-ASM-001
+  statement: The only student-facing chatbot persona is hod (head of department / allocating authority
+    voice).
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-001
+  approved_by: instructor
+  approved_at: '2026-11-03T13:50:00Z'
+  rationale: Instructor chose hod-only.
+  known_by:
+  - hod
+  disclosure: never_student
+- id: TA-ASM-002
+  statement: Graded system supports HOD allocation of TAs to courses under budget and weekly-hour constraints,
+    with assignment records visible to the HOD; HR hiring/contracts are out of system.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-002
+  approved_by: instructor
+  approved_at: '2026-11-03T13:51:00Z'
+  rationale: Instructor product-boundary decision (later narrowed by DEC-TA-005).
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-ASM-003
+  statement: Enforcing the 20 hours/week maximum is a hard system rule (block, not warn-only).
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-003
+  approved_by: instructor
+  approved_at: '2026-11-03T13:52:00Z'
+  rationale: Instructor accepted hard cap.
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-ASM-004
+  statement: The UI/system highlights prior course experience as a soft preference when the HOD assigns
+    TAs.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-004
+  approved_by: instructor
+  approved_at: '2026-11-03T14:01:00Z'
+  rationale: Instructor accepted soft preference.
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-ASM-005
+  statement: Graded MVP does not include lecturer task lists, progress tracking, or TA timesheets — only
+    course-level assignments and hour budgets/caps.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-005
+  approved_by: instructor
+  approved_at: '2026-11-03T14:03:00Z'
+  rationale: Instructor chose assignment-only tracking.
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-ASM-006
+  statement: 'hod is platform_admin for the TA allocation product: create/change/remove course assignments,
+    enforce hard budget and hard 20h/week cap, and view workload records. HR contracts and lecturer task
+    portals remain out of graded MVP.'
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-006
+  approved_by: instructor
+  approved_at: '2026-11-10T02:47:00Z'
+  rationale: Instructor confirmed hod platform_admin authority.
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-ASM-007
+  statement: Assignments that would exceed 20 planned hours/week are blocked (not overridable). The system
+    shows remaining capacity so the HOD can reduce hours or change assignments.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-007
+  approved_by: instructor
+  approved_at: '2026-11-10T02:51:00Z'
+  rationale: Instructor chose hard block with remaining capacity UX.
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-ASM-008
+  statement: hod may create, edit hours, reassign, or remove TA↔course assignments. Every change revalidates
+    the hard 20h/week cap and hard departmental budget. Exact history/audit UI remains elicitation.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-008
+  approved_by: instructor
+  approved_at: '2026-11-10T02:52:00Z'
+  rationale: Instructor allowed reallocations.
+  known_by:
+  - hod
+  disclosure: when_relevant
+- id: TA-ASM-009
+  statement: 'Departmental TA budget is a hard system block: assignments that would exceed remaining budget
+    cannot be saved. Exact budget units/currency remain elicitation.'
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-TA-009
+  approved_by: instructor
+  approved_at: '2026-11-10T02:53:00Z'
+  rationale: Instructor chose hard budget block.
+  known_by:
+  - hod
+  disclosure: when_relevant
