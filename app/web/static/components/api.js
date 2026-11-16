@@ -206,9 +206,7 @@
         headers: authHeaders(),
       });
       if (!response.ok) {
-        throw new Error(
-          response.status === 404 ? "No recording available" : `Recording failed (${response.status})`,
-        );
+        throw new Error(await parseError(response));
       }
       return URL.createObjectURL(await response.blob());
     },

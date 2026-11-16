@@ -340,7 +340,14 @@ def stop_recording(
     bundle = _session_access(db, session_id, user)
     room = _get_or_create_room(db, bundle.session.id)
     room.recording_indicator = False
-    room.recording_status = VoiceRecordingStatus.processing.value
+    # If browser upload already marked ready with a file on disk, keep it.
+    already_ready = (
+        room.recording_status == VoiceRecordingStatus.ready.value
+        and bool(room.local_file_path)
+        and Path(room.local_file_path).exists()
+    )
+    if not already_ready:
+        room.recording_status = VoiceRecordingStatus.processing.value
     db.commit()
 
     if room.egress_id and settings.livekit_configured:
@@ -352,12 +359,15 @@ def stop_recording(
             db.commit()
             raise HTTPException(status_code=502, detail=f"Failed to stop recording: {exc}") from exc
 
-    local_path = Path(room.local_file_path) if room.local_file_path else local_recording_path(
-        settings, bundle.session.id
-    )
-    room.playback_url = f"/api/admin/exit-sessions/{bundle.session.id}/recording"
-    if local_path.exists():
-        room.local_file_path = str(local_path)
+    candidates = []
+    if room.local_file_path:
+        candidates.append(Path(room.local_file_path))
+    for ext in ("webm", "mp4", "mkv", "ogg"):
+        candidates.append(local_recording_path(settings, bundle.session.id, ext=ext))
+    local_path = next((p for p in candidates if p.exists()), None)
+    room.playback_url = f"/api/exit-sessions/{bundle.session.id}/recording"
+    if local_path is not None:
+        room.local_file_path = str(local_path.resolve())
         room.recording_status = VoiceRecordingStatus.ready.value
     elif settings.recordings_s3_configured:
         # File lands in S3; playback endpoint may proxy later — mark ready with API URL.
@@ -366,10 +376,14 @@ def stop_recording(
         # Browser upload may still be in flight; leave processing until upload lands.
         if room.egress_id:
             room.recording_status = VoiceRecordingStatus.ready.value
-            room.local_file_path = str(local_path)
+            room.local_file_path = str(
+                local_recording_path(settings, bundle.session.id, ext="mp4")
+            )
         else:
             room.recording_status = VoiceRecordingStatus.processing.value
-            room.local_file_path = str(local_path)
+            room.local_file_path = str(
+                local_recording_path(settings, bundle.session.id, ext="webm")
+            )
 
     db.add(
         AuditEvent(
@@ -395,9 +409,7 @@ def download_recording(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
-    # Recording download is instructor-only (admin route + student-facing alias).
-    if not user.is_instructor:
-        raise HTTPException(status_code=403, detail="Instructor role required to download recordings")
+    # Team members with session access (and instructors) can play their recordings.
     bundle = _session_access(db, session_id, user)
     room = db.exec(select(VoiceRoom).where(VoiceRoom.session_id == bundle.session.id)).first()
     if room is None:
@@ -406,20 +418,27 @@ def download_recording(
     candidates: list[Path] = []
     if room.local_file_path:
         candidates.append(Path(room.local_file_path))
-        # Older rows may store a CWD-relative path; also try resolved.
+        # Older rows may store a CWD-relative path; also try resolved / storage root.
         rel = Path(room.local_file_path)
         if not rel.is_absolute():
             candidates.append((Path.cwd() / rel).resolve())
+            candidates.append((Path(settings.storage_recordings_dir) / rel.name).resolve())
     for ext in ("webm", "mp4", "mkv", "ogg"):
         candidates.append(local_recording_path(settings, bundle.session.id, ext=ext))
 
     path = next((p for p in candidates if p.exists()), None)
     if path is None:
-        detail = "Recording file not found on disk."
-        if room.recording_status == VoiceRecordingStatus.processing.value:
-            detail = "Recording still processing — try again shortly."
+        detail = "No recording available for this interview."
+        if room.recording_status in {
+            VoiceRecordingStatus.processing.value,
+            VoiceRecordingStatus.recording.value,
+            VoiceRecordingStatus.starting.value,
+        }:
+            detail = "Recording still saving — try again shortly."
         elif room.recording_status == VoiceRecordingStatus.ready.value:
             detail = "Recording was marked ready but the file is missing on the server."
+        elif room.recording_status == VoiceRecordingStatus.failed.value:
+            detail = "Recording failed during the interview."
         raise HTTPException(status_code=404, detail=detail)
     suffix = path.suffix.lower()
     media = "video/webm" if suffix == ".webm" else "video/mp4"
