@@ -993,17 +993,23 @@
       if (!box) return;
       try {
         const status = await global.SellmApi.fetchVoiceStatus(session.id).catch(() => null);
-        if (status?.recording_status === "processing") {
-          box.innerHTML = '<p class="hint">Recording still processing — refresh in a moment.</p>';
+        const recStatus = status?.recording_status || "";
+        if (recStatus === "processing" || recStatus === "recording" || recStatus === "starting") {
+          box.innerHTML =
+            '<p class="hint">Recording still saving — refresh in a moment.</p>';
         }
         try {
           const url = await global.SellmApi.fetchRecordingObjectUrl(session.id);
           box.innerHTML = `<video class="review-video" src="${url}" controls playsinline></video>`;
         } catch (err) {
-          if (status?.recording_status === "processing") {
-            box.innerHTML = '<p class="hint">Recording still processing — refresh in a moment.</p>';
+          const msg = err instanceof Error ? err.message : "No recording available";
+          if (recStatus === "processing" || recStatus === "recording" || recStatus === "starting") {
+            box.innerHTML =
+              '<p class="hint">Recording still saving — refresh in a moment.</p>';
+          } else if (recStatus === "failed") {
+            box.innerHTML = '<p class="hint">Recording failed during the interview.</p>';
           } else {
-            box.innerHTML = `<p class="hint">${escapeHtml(err instanceof Error ? err.message : "No recording available")}</p>`;
+            box.innerHTML = `<p class="hint">${escapeHtml(msg)}</p>`;
           }
         }
       } catch (err) {
@@ -1035,9 +1041,14 @@
       viewingCurrent &&
       (session.status === "question" || session.status === "optional_probe");
 
+    // Keep the MediaRecorder alive through "closing"/audit so End interview can
+    // await stopAndUpload(). Destroying here was dropping recordings on disk.
     const needVoice = !wrappingUp && session.consent_status === "granted";
+    const keepVoiceForUpload = wrappingUp && Boolean(state.voice);
     const prevSessionId = root.dataset.voiceSession;
-    if (!needVoice || (prevSessionId && prevSessionId !== session.id)) {
+    if (prevSessionId && prevSessionId !== session.id) {
+      destroyVoice();
+    } else if (!needVoice && !keepVoiceForUpload) {
       destroyVoice();
     }
     const preservedVoice =

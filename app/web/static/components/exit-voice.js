@@ -409,12 +409,26 @@
       try {
         if (recorder && recorder.state !== "inactive") {
           const blob = await new Promise((resolve) => {
-            recorder.onstop = () => resolve(new Blob(chunks, { type: mime }));
+            let settled = false;
+            const finish = () => {
+              if (settled) return;
+              settled = true;
+              resolve(new Blob(chunks, { type: mime }));
+            };
+            recorder.onstop = finish;
+            try {
+              // Flush the current timeslice before stop so the last seconds are included.
+              if (typeof recorder.requestData === "function") recorder.requestData();
+            } catch (_) {
+              /* ignore */
+            }
             try {
               recorder.stop();
             } catch (_) {
-              resolve(new Blob(chunks, { type: mime }));
+              finish();
             }
+            // Safety timeout if onstop never fires.
+            window.setTimeout(finish, 2500);
           });
           recorder = null;
           if (badge) badge.hidden = true;
