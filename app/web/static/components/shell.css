@@ -137,6 +137,13 @@
             grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
             overflow: hidden;
         }
+        .chat-column {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+        }
         .controls-pane {
             display: flex;
             flex-direction: column;
@@ -345,11 +352,12 @@
             color: #64748b;
         }
         .chat-pane {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
             min-width: 0;
             min-height: 0;
             position: relative;
+            overflow: hidden;
         }
         .chat-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -761,7 +769,8 @@
                 flex: 1;
                 min-height: 0;
             }
-            .chat-body {
+            .chat-body,
+            .chat-pane {
                 grid-template-columns: 1fr;
             }
             /* Req: separate full screens (list | chat), not overlay drawer */
@@ -778,7 +787,14 @@
             #view-req.child-screen-list .controls-pane-toggle { display: none; }
             #view-req.child-screen-list .conversations-pane { display: flex; }
             #view-req.child-screen-chat .conversations-pane { display: none; }
-            #view-req.child-screen-chat .chat-pane { display: flex; flex-direction: column; min-height: 0; }
+            #view-req.child-screen-chat .chat-pane {
+                display: grid;
+                grid-template-columns: 1fr;
+                min-height: 0;
+            }
+            #view-req.child-screen-chat .chat-column {
+                min-height: 0;
+            }
             /* Child screens: replace hamburger with same-sized back control */
             #view-req.child-screen-chat #sideNavToggle { display: none !important; }
             #view-req.child-screen-chat #reqBackToList { display: inline-flex; }

@@ -70,19 +70,22 @@
         }
         out.push(`<li>${ulMatch[1]}</li>`);
       } else if (olMatch) {
-        if (!inList || listType !== "ol") {
+        // Render numbered markdown as unordered bullets. LLMs often emit
+        // "1." for every item; a split <ol> also restarts at 1 after blank lines.
+        if (!inList || listType !== "ul") {
           if (inList) out.push(`</${listTag}>`);
-          out.push("<ol>");
+          out.push("<ul>");
           inList = true;
-          listTag = "ol";
-          listType = "ol";
+          listTag = "ul";
+          listType = "ul";
         }
         out.push(`<li>${olMatch[1]}</li>`);
+      } else if (line.trim() === "") {
+        // Keep lists open across blank lines so items stay one list.
+        if (!inList) out.push("");
       } else {
         if (inList) { out.push(`</${listTag}>`); inList = false; listTag = null; listType = null; }
-        if (line.trim() === "") {
-          out.push("");
-        } else if (line.match(/^<h[1-6]/)) {
+        if (line.match(/^<h[1-6]/)) {
           out.push(line);
         } else {
           out.push(`<p>${line}</p>`);

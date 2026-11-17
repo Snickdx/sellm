@@ -22,7 +22,7 @@
                 <div id="conversationList" class="conversation-list" role="list"></div>
             </aside>
             <main class="chat-pane">
-                <div class="chat-body">
+                <div class="chat-column">
                     <div class="chat-messages" id="chatMessages">
                         <div class="message assistant">
                             <div class="message-content">
@@ -32,92 +32,92 @@
                             </div>
                         </div>
                     </div>
-                    <aside id="controlsPane" class="controls-pane" aria-label="Chat controls">
-                        <div class="controls-pane-header">
-                            <h2>Controls</h2>
-                            <button type="button" id="controlsPaneClose" class="controls-pane-close" aria-label="Close controls">&times;</button>
+                    <div class="chat-input-container">
+                        <div class="reflection-row" id="reflectionRow">
+                            <button type="button" id="reflectBtn" class="reflect-btn" title="Send this session to the LLM for meta-review and proposed tweak updates">Reflect on session</button>
+                            <button type="button" id="viewReflectionThreadsBtn" class="reflect-btn reflect-btn-secondary" title="Open saved reflection threads for this conversation">Open reflections</button>
+                            <span id="reflectionBusyHint" class="reflection-busy-hint" hidden aria-live="polite"></span>
+                            <span class="feedback-note">Meta-review → proposed tweak updates (confirm before save).</span>
                         </div>
-                        <div class="controls-pane-body">
-                            <div id="budgetMeter" class="budget-meter" aria-live="polite" hidden>
-                                <div class="budget-meter-top">
-                                    <span class="budget-meter-title">Shared interview budget</span>
-                                    <span id="budgetMeterBadge" class="budget-meter-badge pool">Pool</span>
-                                </div>
-                                <div class="budget-meter-track" role="progressbar" id="budgetMeterBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                                    <div id="budgetMeterFill" class="budget-meter-fill"></div>
-                                </div>
-                                <div class="budget-meter-top" style="margin-top:6px;margin-bottom:0;">
-                                    <span id="budgetMeterStats" class="budget-meter-stats">—</span>
-                                    <span id="budgetMeterPct" class="budget-meter-stats">0%</span>
-                                </div>
-                                <p id="budgetMeterHint" class="budget-meter-hint"></p>
-                            </div>
-                            <div class="controls-field">
-                                <label>Scenario</label>
-                                <div id="scenarioLockedLabel" class="scenario-locked">
-                                    No chat yet
-                                    <span class="scenario-locked-meta">Chosen when you start a new chat</span>
-                                </div>
-                            </div>
-                            <div class="controls-field" id="personaField">
-                                <label for="personaSelect">Persona</label>
-                                <select id="personaSelect" class="mode-select" title="Stakeholder persona for this scenario"></select>
-                            </div>
-                            <div class="controls-field" id="responseModeField">
-                                <label id="responseModeLabel">Mode</label>
-                                <div class="mode-multiselect" id="responseModeMultiselect">
-                                    <button type="button" class="mode-select mode-multiselect-toggle" id="responseModeToggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="responseModeLabel">
-                                        <span id="responseModeSummary">Vector RAG</span>
-                                        <span class="mode-chevron" aria-hidden="true">▾</span>
-                                    </button>
-                                    <div class="mode-multiselect-menu" id="responseModeMenu" hidden role="listbox" aria-multiselectable="true" aria-labelledby="responseModeLabel">
-                                        <label class="mode-option mode-option-all">
-                                            <input type="checkbox" data-mode="all" />
-                                            <span>All</span>
-                                        </label>
-                                        <label class="mode-option">
-                                            <input type="checkbox" data-mode="vector" checked />
-                                            <span>Vector RAG</span>
-                                        </label>
-                                        <label class="mode-option">
-                                            <input type="checkbox" data-mode="neo4j" />
-                                            <span>Neo4j RAG</span>
-                                        </label>
-                                        <label class="mode-option">
-                                            <input type="checkbox" data-mode="hybrid" />
-                                            <span>Hybrid RAG</span>
-                                        </label>
-                                        <label class="mode-option">
-                                            <input type="checkbox" data-mode="direct" />
-                                            <span>Direct Model</span>
-                                        </label>
-                                        <label class="mode-option">
-                                            <input type="checkbox" data-mode="yaml" />
-                                            <span>YAML Persona</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="controls-field hidden" id="llmModelRow">
-                                <label for="llmModelSelect">LLM model</label>
-                                <select id="llmModelSelect" class="mode-select" title="Switch model when API keys or Ollama are configured"></select>
-                                <span class="llm-hint" id="llmModelHint"></span>
-                            </div>
-                        </div>
-                    </aside>
-                </div>
-                <div class="chat-input-container">
-                    <div class="reflection-row" id="reflectionRow">
-                        <button type="button" id="reflectBtn" class="reflect-btn" title="Send this session to the LLM for meta-review and proposed tweak updates">Reflect on session</button>
-                        <button type="button" id="viewReflectionThreadsBtn" class="reflect-btn reflect-btn-secondary" title="Open saved reflection threads for this conversation">Open reflections</button>
-                        <span id="reflectionBusyHint" class="reflection-busy-hint" hidden aria-live="polite"></span>
-                        <span class="feedback-note">Meta-review → proposed tweak updates (confirm before save).</span>
+                        <form class="chat-input-form" id="chatForm">
+                            <input type="text" class="chat-input" id="chatInput" placeholder="Ask the stakeholder a requirements question…" autocomplete="off" />
+                            <button type="submit" class="send-button" id="sendButton">Send</button>
+                        </form>
                     </div>
-                    <form class="chat-input-form" id="chatForm">
-                        <input type="text" class="chat-input" id="chatInput" placeholder="Ask the stakeholder a requirements question…" autocomplete="off" />
-                        <button type="submit" class="send-button" id="sendButton">Send</button>
-                    </form>
                 </div>
+                <aside id="controlsPane" class="controls-pane" aria-label="Chat controls">
+                    <div class="controls-pane-header">
+                        <h2>Controls</h2>
+                        <button type="button" id="controlsPaneClose" class="controls-pane-close" aria-label="Close controls">&times;</button>
+                    </div>
+                    <div class="controls-pane-body">
+                        <div id="budgetMeter" class="budget-meter" aria-live="polite" hidden>
+                            <div class="budget-meter-top">
+                                <span class="budget-meter-title">Shared interview budget</span>
+                                <span id="budgetMeterBadge" class="budget-meter-badge pool">Pool</span>
+                            </div>
+                            <div class="budget-meter-track" role="progressbar" id="budgetMeterBar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                <div id="budgetMeterFill" class="budget-meter-fill"></div>
+                            </div>
+                            <div class="budget-meter-top" style="margin-top:6px;margin-bottom:0;">
+                                <span id="budgetMeterStats" class="budget-meter-stats">—</span>
+                                <span id="budgetMeterPct" class="budget-meter-stats">0%</span>
+                            </div>
+                            <p id="budgetMeterHint" class="budget-meter-hint"></p>
+                        </div>
+                        <div class="controls-field">
+                            <label>Scenario</label>
+                            <div id="scenarioLockedLabel" class="scenario-locked">
+                                No chat yet
+                                <span class="scenario-locked-meta">Chosen when you start a new chat</span>
+                            </div>
+                        </div>
+                        <div class="controls-field" id="personaField">
+                            <label for="personaSelect">Persona</label>
+                            <select id="personaSelect" class="mode-select" title="Stakeholder persona for this scenario"></select>
+                        </div>
+                        <div class="controls-field" id="responseModeField">
+                            <label id="responseModeLabel">Mode</label>
+                            <div class="mode-multiselect" id="responseModeMultiselect">
+                                <button type="button" class="mode-select mode-multiselect-toggle" id="responseModeToggle" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="responseModeLabel">
+                                    <span id="responseModeSummary">Vector RAG</span>
+                                    <span class="mode-chevron" aria-hidden="true">▾</span>
+                                </button>
+                                <div class="mode-multiselect-menu" id="responseModeMenu" hidden role="listbox" aria-multiselectable="true" aria-labelledby="responseModeLabel">
+                                    <label class="mode-option mode-option-all">
+                                        <input type="checkbox" data-mode="all" />
+                                        <span>All</span>
+                                    </label>
+                                    <label class="mode-option">
+                                        <input type="checkbox" data-mode="vector" checked />
+                                        <span>Vector RAG</span>
+                                    </label>
+                                    <label class="mode-option">
+                                        <input type="checkbox" data-mode="neo4j" />
+                                        <span>Neo4j RAG</span>
+                                    </label>
+                                    <label class="mode-option">
+                                        <input type="checkbox" data-mode="hybrid" />
+                                        <span>Hybrid RAG</span>
+                                    </label>
+                                    <label class="mode-option">
+                                        <input type="checkbox" data-mode="direct" />
+                                        <span>Direct Model</span>
+                                    </label>
+                                    <label class="mode-option">
+                                        <input type="checkbox" data-mode="yaml" />
+                                        <span>YAML Persona</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="controls-field hidden" id="llmModelRow">
+                            <label for="llmModelSelect">LLM model</label>
+                            <select id="llmModelSelect" class="mode-select" title="Switch model when API keys or Ollama are configured"></select>
+                            <span class="llm-hint" id="llmModelHint"></span>
+                        </div>
+                    </div>
+                </aside>
             </main>
                 </div>
                 </div>
