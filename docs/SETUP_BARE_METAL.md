@@ -26,7 +26,7 @@ sudo bash scripts/update
 | 2 | Python venv | Creates `/opt/sellm/venv`, installs requirements |
 | 3 | Neo4j | Installs from apt, sets password, starts on `:7687` |
 | 4 | Env config | Copies `.env.example` → `app/.env`, sets template LLM |
-| 5 | ChromaDB | Builds vector index from `data.xlsx` |
+| 5 | ChromaDB | Warms vector store; YAML scenarios indexed on app start / reindex |
 | 6 | Systemd | Registers `sellm.service` (FastAPI on `127.0.0.1:8000`) |
 | 7 | nginx | Reverse proxy to the app (if domain supplied) |
 | 8 | SSL (certbot) | Auto-provisions Let's Encrypt cert (if domain supplied) |
@@ -170,12 +170,11 @@ Edit `app/.env` to change:
 | `NEO4J_PASSWORD` | `password` | Must match the Neo4j password |
 | `OPENAI_API_KEY` | — | Required if `LLM_BACKEND=openai` |
 
-## Docker Alternative
-
-For containerized deployment:
+## After deploy
 
 ```bash
-docker compose up --build
+# Refresh vector + Neo4j from YAML scenarios
+python scripts/reindex_scenarios.py
 ```
 
-See [DEPLOY_EASYPANEL.md](DEPLOY_EASYPANEL.md) for cloud deployment.
+Graph model: [NEO4J_GRAPH_MODEL.md](NEO4J_GRAPH_MODEL.md). This host is bare-metal only — not Docker/EasyPanel.

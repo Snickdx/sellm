@@ -1,8 +1,7 @@
-"""Legacy Excel scenario pack path.
+"""Stakeholder prompt helpers + optional Excel ScenarioPack tooling.
 
-Prefer YAML packages under ``app.scenarios`` for new work. This module remains
-as a compatibility layer for Excel-backed RAG / direct modes until the importer
-fully replaces ``data.xlsx``.
+Primary knowledge is YAML under ``app.scenarios``. Excel workbooks are optional
+exports from ``app.scenarios.excel_export`` (scenario-author), not runtime ground truth.
 """
 
 from app.scenario.scenario_pack import ScenarioPack, load_scenario_pack

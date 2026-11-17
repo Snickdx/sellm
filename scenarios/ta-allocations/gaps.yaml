@@ -1,4 +1,20 @@
 open_questions:
+- id: GAP-TAALLO-VERIFIED-BY-001
+  priority: important
+  prompt: Confirm VERIFIED_BY links from verification facts (TA-VER-001) to the listed FRs are correct for classroom graph/neo4j mode.
+  why_it_matters: Without these links Neo4j cannot emit VERIFIED_BY edges; hybrid/graph modes lose verification traversal.
+  alternatives:
+  - Keep prescribed FR links
+  - Retarget VER depends_on_ids to a different FR set
+  - Defer VERIFIED_BY for this package
+  recommended_default: Keep prescribed FR links
+  theme: srs_prescription
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
 - id: GAP-TA-001
   priority: critical
   prompt: 'Stakeholders are Doctor Vijay and Ms Srida Mohammed (TA workload /

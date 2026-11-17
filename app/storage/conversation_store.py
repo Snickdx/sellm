@@ -1,5 +1,5 @@
 """
-Conversation storage using SQLModel — SQLite locally or PostgreSQL in production (e.g. EasyPanel).
+Conversation storage using SQLModel — SQLite locally or PostgreSQL in production.
 """
 
 from __future__ import annotations

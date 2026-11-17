@@ -13,6 +13,9 @@ facts:
   known_by:
   - library_coordinator
   - lecturer
+  depends_on_ids:
+  - LIB-IF-001
+  - LIB-DATA-001
   disclosure: when_relevant
   acceptance_criteria:
   - A lecturer can submit a workshop booking request without using email.

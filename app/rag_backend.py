@@ -30,8 +30,9 @@ import re
 from app.embeddings import get_embedding_model
 
 class RequirementsRAG:
-    def __init__(self, excel_file: str, persist_directory: str = "./chroma_db_v2"):
-        self.excel_file = excel_file
+    def __init__(self, excel_file: Optional[str] = None, persist_directory: str = "./chroma_db_v2"):
+        # Optional legacy workbook. Primary knowledge is YAML scenario_facts via reindex.
+        self.excel_file = (excel_file or "").strip() or None
         self.persist_directory = persist_directory
         
         # Shared embedding singleton (avoid dual SentenceTransformer loads)
@@ -51,22 +52,28 @@ class RequirementsRAG:
             name="requirements",
             metadata={"hnsw:space": "cosine"}
         )
-        # Persona-scoped YAML scenario facts (separate from Excel workbook)
+        # Persona-scoped YAML scenario facts (primary retrieval corpus)
         self.scenario_collection = self.client.get_or_create_collection(
             name="scenario_facts",
             metadata={"hnsw:space": "cosine"},
         )
         
-        # Load data if collection is empty
+        # Optional Excel seed only when a workbook path is configured and present
         if self.collection.count() == 0:
-            print("Loading requirements from Excel...")
-            self._load_requirements()
+            if self.excel_file and os.path.isfile(self.excel_file):
+                print("Loading optional Excel workbook into legacy requirements collection...")
+                self._load_requirements()
+            else:
+                print("No Excel workbook configured — legacy requirements collection left empty")
         else:
             print(f"Found {self.collection.count()} existing documents in database")
         print(f"Scenario fact collection: {self.scenario_collection.count()} documents")
     
     def _load_requirements(self):
-        """Load requirements from Excel file and create embeddings"""
+        """Load requirements from an optional Excel workbook (legacy / export mirror)."""
+        if not self.excel_file or not os.path.isfile(self.excel_file):
+            print("Skipping Excel load — workbook not configured")
+            return
         try:
             xls = pd.ExcelFile(self.excel_file, engine='openpyxl')
             
@@ -1014,8 +1021,8 @@ class SimpleLLM:
 
 
 if __name__ == "__main__":
-    # Test the RAG system
-    rag = RequirementsRAG("data.xlsx")
+    # Smoke-test empty/scenario-first RAG (no workbook required)
+    rag = RequirementsRAG(excel_file=None)
     
     test_queries = [
         "What are the main features?",

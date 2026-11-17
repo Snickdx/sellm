@@ -1,8 +1,7 @@
-from pathlib import Path
-
 from app.rag_backend import RequirementsRAG, SimpleLLM
 
-rag = RequirementsRAG(str(Path(__file__).resolve().parents[2] / "data.xlsx"))
+# Scenario-first: no root data.xlsx. Queries without a persona hit the empty legacy collection.
+rag = RequirementsRAG(excel_file=None)
 llm = SimpleLLM(rag)
 for q in [
     "Who is involved in this project",

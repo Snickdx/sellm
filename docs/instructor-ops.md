@@ -4,7 +4,7 @@ sellm-hosted COMP 3613 pilot ops. Prefer `docs/EXIT_INTERVIEWS.md` for the exit-
 
 ## Before Week 1
 
-- [ ] Deploy sellm (bare-metal `scripts/update` / systemd, or Docker / EasyPanel from this repo).
+- [ ] Deploy sellm (bare-metal `scripts/update` / systemd — see `docs/SETUP_BARE_METAL.md`).
 - [ ] Confirm `/api/health` is OK; scenarios seed from `scenarios/`.
 - [ ] Create admin user; seed cohort credentials (`setup/users/`).
 - [ ] Create teams in **Admin → Teams**; attach owner cohort usernames + scenario slugs.

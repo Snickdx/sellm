@@ -507,12 +507,13 @@
     }
   }
 
-  function isExcelScenario(slug) {
-    return !slug || slug === "excel" || slug === "__excel__" || slug === "powerpay";
+  function isLegacyWorkbookScenario(slug) {
+    return slug === "excel" || slug === "__excel__" || slug === "powerpay";
   }
 
   function scenarioDisplayName(slug) {
-    if (isExcelScenario(slug)) return "Excel (PowerPay workbook)";
+    if (!slug) return "No scenario";
+    if (isLegacyWorkbookScenario(slug)) return "Retired Excel workbook (recreate chat)";
     const scen = yamlScenarios.find((s) => s.slug === slug);
     return scen ? `${scen.title}` : slug;
   }
@@ -520,8 +521,8 @@
   function fillPersonaOptions(slug, preferredPersona) {
     if (!personaSelect) return;
     personaSelect.innerHTML = "";
-    if (isExcelScenario(slug)) {
-      personaSelect.innerHTML = '<option value="">(Excel — no persona)</option>';
+    if (!slug || isLegacyWorkbookScenario(slug)) {
+      personaSelect.innerHTML = '<option value="">Select a scenario first</option>';
       personaSelect.disabled = true;
       if (personaField) personaField.classList.add("hidden");
       return;
@@ -551,12 +552,12 @@
     if (!scenarioLockedLabel) return;
     if (!lockedScenarioSlug) {
       scenarioLockedLabel.innerHTML = `No chat yet<span class="scenario-locked-meta">Chosen when you start a new chat</span>`;
-      fillPersonaOptions("excel");
+      fillPersonaOptions(null);
       return;
     }
     const name = scenarioDisplayName(lockedScenarioSlug);
-    const meta = isExcelScenario(lockedScenarioSlug)
-      ? "Locked for this chat"
+    const meta = isLegacyWorkbookScenario(lockedScenarioSlug)
+      ? "Retired — start a new chat with a YAML scenario"
       : `Locked · ${lockedScenarioSlug}`;
     scenarioLockedLabel.innerHTML = `${name}<span class="scenario-locked-meta">${meta}</span>`;
     fillPersonaOptions(lockedScenarioSlug);
@@ -1546,7 +1547,7 @@
       if (!r.ok) throw new Error("Could not load conversation");
       const data = await r.json();
       currentConversationId = data.id;
-      applyLockedScenario(data.scenario_slug || "excel");
+      applyLockedScenario(data.scenario_slug || null);
       conversationHistory.length = 0;
       chatMessages.innerHTML = "";
       if (!data.messages?.length) {
@@ -1747,7 +1748,7 @@
           conversation_id: currentConversationId,
           llm_choice: selectedLlmChoice || llmModelSelect?.value || null,
           scenario_slug: lockedScenarioSlug,
-          persona_key: isExcelScenario(lockedScenarioSlug) ? null : (personaSelect?.value || null),
+          persona_key: isLegacyWorkbookScenario(lockedScenarioSlug) ? null : (personaSelect?.value || null),
         }),
       });
       if (!r.ok) {

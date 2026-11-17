@@ -22,17 +22,20 @@ class RouteDecision:
     reasons: List[str]
 
 
-# Graph / relationship / structured traversal signals
+# Graph / relationship / structured traversal signals (scenario + legacy Excel)
 _NEO4J_PATTERNS: List[Tuple[str, float]] = [
     (r"\b(related|relationship|connected|connection|link|linked)\b", 0.35),
     (r"\b(depends? on|dependency|dependencies)\b", 0.4),
+    (r"\b(satisfies|satisfy|satisfying|trace(?:ability)?|derives? from)\b", 0.55),
+    (r"\b(verif(?:y|ies|ied|ication)|acceptance criteria|test(?:able)?)\b", 0.35),
     (r"\b(between|path|traverse|upstream|downstream)\b", 0.3),
-    (r"\b(who (owns|reports|depends)|stakeholder of|owned by)\b", 0.35),
-    (r"\b(timeline|milestone|sequence|order of|before|after)\b", 0.25),
-    (r"\b(associated with|parent|child|neighbor)\b", 0.3),
+    (r"\b(who (owns|reports|depends|knows)|stakeholder of|owned by|responsible for)\b", 0.4),
+    (r"\b(timeline|milestone|sequence|order of|before|after|workflow)\b", 0.25),
+    (r"\b(associated with|parent|child|neighbor|interface|external)\b", 0.3),
+    (r"\b(assumption|assumptions|constraint|limitation)\b", 0.25),
     (r"\b(node id|node_id|id [A-Za-z0-9_-]+)\b", 0.35),
     (r"\b(how (is|are) .+ (connected|related))\b", 0.4),
-    (r"\b(which .+ (depend|relate|connect))\b", 0.35),
+    (r"\b(which .+ (depend|relate|connect|satisfy|verify))\b", 0.35),
     (r"\b(graph|cypher|traverse)\b", 0.45),
 ]
 
@@ -49,13 +52,19 @@ _CHROMA_PATTERNS: List[Tuple[str, float]] = [
     (r"\b(stakeholders?|clients?|users?)\b", 0.15),
 ]
 
+# Prefer Neo4j when the question names domain relationship concepts.
 _SHEET_NEO4J_HINTS = {
     "timeline",
     "milestone",
     "task",
     "relationship",
     "project",
-    "line_item",
+    "dependency",
+    "assumption",
+    "verification",
+    "interface",
+    "workflow",
+    "use case",
 }
 
 _SHEET_CHROMA_HINTS = {

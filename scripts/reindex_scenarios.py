@@ -34,7 +34,8 @@ def main() -> int:
 
     vector_rag = None
     neo4j_rag = None
-    excel = os.getenv("EXCEL_FILE") or str(ROOT / "data.xlsx")
+    excel_raw = (os.getenv("EXCEL_FILE") or "").strip()
+    excel = excel_raw if excel_raw and Path(excel_raw).is_file() else None
     chroma = os.getenv("CHROMA_PERSIST_DIRECTORY") or str(ROOT / "storage" / "chroma")
     neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
     neo4j_user = os.getenv("NEO4J_USER", "neo4j")
@@ -43,8 +44,7 @@ def main() -> int:
     try:
         from app.rag_backend import RequirementsRAG
 
-        if Path(excel).is_file():
-            vector_rag = RequirementsRAG(excel, persist_directory=chroma)
+        vector_rag = RequirementsRAG(excel, persist_directory=chroma)
     except Exception as exc:  # noqa: BLE001 — best-effort offline index
         print(f"⚠ vector backend unavailable: {exc}")
 
@@ -52,7 +52,7 @@ def main() -> int:
         from app.rag_backend_neo4j import RequirementsRAGNeo4j
 
         neo4j_rag = RequirementsRAGNeo4j(
-            excel if Path(excel).is_file() else excel,
+            excel,
             neo4j_uri=neo4j_uri,
             neo4j_user=neo4j_user,
             neo4j_password=neo4j_password,

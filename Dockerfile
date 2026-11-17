@@ -1,3 +1,5 @@
+# NOT production. sellm prod is bare-metal (docs/SETUP_BARE_METAL.md).
+# Optional local image experiments only — do not deploy as EasyPanel/uwista-panel.
 # ── Build stage: install deps ──────────────────────────────
 FROM python:3.12-slim-bookworm AS builder
 
@@ -28,7 +30,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
     PORT=8000 \
-    EXCEL_FILE=/app/data.xlsx \
     CHROMA_PERSIST_DIRECTORY=/app/storage/chroma_db_v2 \
     SCENARIOS_ROOT=/app/scenarios \
     STORAGE_RECORDINGS_DIR=/app/storage/recordings

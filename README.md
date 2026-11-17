@@ -19,15 +19,14 @@ This system is designed for **requirements gathering training**. It simulates a 
 ## Features
 
 - **Stakeholder simulation**: Role-plays as a non-technical stakeholder with plain, informal language
-- **Comparison modes**: Vector RAG, Neo4j RAG, Hybrid RAG, **Direct Model** (Excel pack in prompt), **YAML Scenario** (COMP 3613 persona packages), and **Compare All**
+- **Comparison modes**: Vector RAG, Neo4j RAG, Hybrid RAG, **Direct Model** (YAML persona pack in prompt), **YAML Scenario**, and **Compare All**
 - **Dual RAG**: ChromaDB (vector) and Neo4j (vector + graph), usable separately or via **hybrid** auto-routing
-- **YAML scenarios**: Seven packages under `scenarios/` (canonical authoring home) — pick scenario + persona like choosing Vector vs Neo4j; YAML edits must be reindexed into vector + Neo4j and refresh yaml/direct preprompt packs
+- **YAML scenarios**: Packages under `scenarios/` are ground truth — pick scenario + persona; YAML edits must be reindexed into vector + Neo4j and refresh yaml/direct preprompt packs
 - **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Gemini, Groq, OpenRouter); RAG/direct chat requires a real LLM; YAML mode defaults to heuristic persona replies
-- **Scenario pack**: `data.xlsx` compiled into structured context for direct mode and optional RAG prompt enrichment
+- **Optional Excel mirrors**: scenario-author / `scripts/export_scenario_excel.py` can emit Excel-shaped workbooks under `scenarios/<slug>/exports/` (not required at runtime)
 - **Multi-page student UI**: Jinja templates + cookie sessions for claim/login (`/`), group (`/group`), requirements chat (`/req`), and exit interviews (`/exit`)
 - **Auth + persistence**: Group claim or login, per-user conversations (SQLite/Postgres), reflection threads for meta-review
 - **Responsive UI**: Collapsible side nav on mobile (conversations, new chat, API config)
-- **Excel knowledge base**: `data.xlsx` is ground truth for retrieval (not cited in stakeholder answers)
 
 ## Installation
 
@@ -58,29 +57,29 @@ The `.env` file allows you to configure:
 
 **Cloud provider API keys** (OpenAI, Anthropic, Gemini, Groq, OpenRouter) are configured **per user** through the settings UI — never via environment variables.
 
-See [`.env.example`](.env.example) for all options (local paths, Docker `/app` paths, Neo4j, MCP/hybrid).
+See [`.env.example`](app/.env.example) for options (paths, Neo4j, hybrid routing).
 
-**Important**: `app/.env` and `.env` are git-ignored. Copy from `.env.example` only — never commit secrets.
+**Important**: `app/.env` and `.env` are git-ignored. Copy from `app/.env.example` only — never commit secrets.
 
 The app loads **`app/.env` first**, then project-root **`.env`** (later files do not override earlier keys).
 
-## Deployment (Docker / EasyPanel)
+## Deployment (bare-metal)
 
-Production deployment uses the repo-root **`Dockerfile`** (Chroma index is built into the image; empty volume mounts are re-seeded at startup). See **[docs/DEPLOY_EASYPANEL.md](docs/DEPLOY_EASYPANEL.md)** for EasyPanel steps (build, proxy port `8000`, PostgreSQL, volume on `/app/storage`, and environment variables).
+**Production is bare-metal only** (systemd + nginx + Neo4j on the sellm host). See **[docs/SETUP_BARE_METAL.md](docs/SETUP_BARE_METAL.md)** (`scripts/update`). Do not use Docker, EasyPanel, or the `uwista-panel` remote for sellm prod ops.
 
-Local smoke test:
+Local run:
 
 ```bash
-docker compose up --build
+python -m app.main
 ```
 
-Use `docker compose --profile postgres up --build` with `CONVERSATION_DB_URL=postgresql+psycopg2://sellm:sellm@postgres:5432/sellm` for a Postgres-backed stack.
+After scenario YAML edits: `python scripts/reindex_scenarios.py` (or admin reindex). Graph shape: **[docs/NEO4J_GRAPH_MODEL.md](docs/NEO4J_GRAPH_MODEL.md)**.
 
 **Hybrid mode** routes each question to Chroma (semantic) or Neo4j (graph/relationships), or blends both.
 
 ## Usage
 
-1. Make sure your Excel file `data.xlsx` is in the project directory. This file contains the stakeholder knowledge base.
+1. Ensure YAML packages exist under `scenarios/` (canonical knowledge). Optionally export Excel mirrors with `python scripts/export_scenario_excel.py`.
 2. **Configure your environment** (optional but recommended):
   - Copy `.env.example` to `app/.env`
   - Edit `app/.env` (Neo4j password, LLM model, etc.)
@@ -179,7 +178,7 @@ Keys are encrypted at rest using Fernet (AES-128-CBC) before storage. The model 
 
 ### System overview
 
-The app is a **FastAPI** service with a Jinja2 + vanilla JS student shell (no separate SPA build). Each chat message goes through **auth → mode selection → retrieve or compile scenario pack → stakeholder prompt → LLM generation → persistence**. See **[docs/REFACTOR_NOTES.md](docs/REFACTOR_NOTES.md)** for the comparison-mode refactor and **[docs/EXIT_INTERVIEWS.md](docs/EXIT_INTERVIEWS.md)** for exit interviews.
+The app is a **FastAPI** service with a Jinja2 + vanilla JS student shell (no separate SPA build). Each chat message goes through **auth → mode selection → retrieve or compile persona pack → stakeholder prompt → LLM generation → persistence**. See **[docs/EXIT_INTERVIEWS.md](docs/EXIT_INTERVIEWS.md)** for exit interviews and **[docs/NEO4J_GRAPH_MODEL.md](docs/NEO4J_GRAPH_MODEL.md)** for the Neo4j graph.
 
 ```mermaid
 flowchart TB
@@ -210,7 +209,7 @@ flowchart TB
     LLM[LLMWrapper + llm_registry]
   end
 
-  KB[(data.xlsx)]
+  KB[(scenarios YAML)]
 
   Pages --> Claim
   Pages --> ChatUI
@@ -238,7 +237,7 @@ flowchart TB
 
 **At startup** (`app/api/app.py` lifespan):
 
-1. Load `data.xlsx` into **Chroma** (`app/rag_backend.py`) and optionally **Neo4j** (`app/rag_backend_neo4j.py`).
+1. Index YAML scenarios into **Chroma** (`app/rag_backend.py` / `app/indexing.py`) and optionally **Neo4j** (`app/rag_backend_neo4j.py`).
 2. Wire **HybridKnowledgeService** (`app/mcp/hybrid.py`) with both engines when available.
 3. Initialize **LLMWrapper** via `llm_registry` (Ollama / OpenAI / Anthropic / template).
 4. Seed default users and open the conversation database.
@@ -261,7 +260,7 @@ Hybrid routing uses `app/mcp/router.py` in-process (no separate MCP sidecar). Ne
 | **Secrets** | `app/security/secret_store.py` | Fernet-encrypted API key storage (no env vars) |
 | **Tweaks** | `app/tweaks/behavior_tweaks.py`, `config/behavior/behavior_tweaks.json` | Optional reflection/feedback only (not applied to normal chat) |
 | **Reflection** | `app/reflection.py` | Session meta-review and tweak draft proposals |
-| **Knowledge** | `data.xlsx` | Source workbook (Goals, Features, Stakeholders, etc.) |
+| **Knowledge** | `scenarios/` | YAML packages (personas, facts, gaps); optional Excel exports |
 
 ### How the chat works
 
@@ -275,11 +274,11 @@ End-to-end flow for `POST /api/chat`:
    - `vector` — Chroma retrieval → stakeholder LLM
    - `neo4j` — Neo4j retrieval → stakeholder LLM
    - `hybrid` — Auto-route to **chroma**, **neo4j**, or **blend**
-   - `direct` — Full Excel scenario pack in prompt (no retrieval) — baseline for comparison
+   - `direct` — Full YAML persona pack in prompt (no retrieval) — baseline for comparison
    - `yaml` — Persona chat from a COMP 3613 YAML package (`scenario_slug` + `persona_key`)
    - `compare` — Vector / Neo4j / Hybrid / Direct side by side in one message
 
-4. **Context** — RAG modes retrieve top-k workbook chunks; direct mode uses the compiled scenario pack from `app/scenario/scenario_pack.py`. All modes share `app/scenario/stakeholder_prompt.py`.
+4. **Context** — RAG modes retrieve top-k scenario facts (Chroma / Neo4j); direct mode uses `pack_from_persona`. All modes share `app/scenario/stakeholder_prompt.py` and require a YAML scenario + persona.
 
 5. **Generate** — `LLMWrapper` calls Ollama (default) or a user-configured API key. Stakeholder chat fails clearly if no LLM is available (no template fallback).
 
@@ -323,7 +322,7 @@ The system uses a **row-based chunking strategy** optimized for structured Excel
 
 ### Supported Sheets
 
-The system processes the following sheet types from the Excel knowledge base:
+Vector/graph indexing uses Excel-shaped sheet labels derived from YAML facts. Optional exported workbooks use the same sheet types:
 
 - **People**: `Stakeholder`, `Client`, `Role`
 - **Requirements**: `Requirement`, `Feature`, `FunctioFFnal_Requirement`
@@ -592,20 +591,18 @@ Popular alternatives:
 │           └── shell.css
 ├── config/behavior/behavior_tweaks.json
 ├── setup/                      # chroma / neo4j / users / eval CLIs
-├── docker/entrypoint.sh
-├── docker-compose.yml
 ├── docs/
+│   ├── SETUP_BARE_METAL.md     # Production deploy (systemd)
+│   ├── NEO4J_GRAPH_MODEL.md    # Scenario Neo4j graph
 │   ├── SETUP_LLM.md
-│   ├── DEPLOY_EASYPANEL.md
 │   ├── EXIT_INTERVIEWS.md
 │   ├── LEGACY_UI.md            # Student UI layout notes
 │   └── known-limitations.md
 ├── instructor/private/<slug>/  # Defect manifests (not student-facing)
 ├── scenarios/                  # COMP 3613 YAML packages
-├── scripts/                    # update, reindex_scenarios, sync-scenarios
+├── scripts/                    # update, reindex_scenarios, sync-scenarios, export_scenario_excel
 ├── requirements.txt            # Python only (no Node/SPA build)
-├── .env.example
-├── data.xlsx
+├── app/.env.example
 └── README.md
 ```
 
@@ -768,7 +765,7 @@ Your Excel file has a **Relationships sheet** with 48 explicit relationships (HA
 
 ### Current Neo4j Model Structure
 
-The current implementation in `app/rag_backend_neo4j.py` loads the Excel workbook into a graph with:
+The current implementation in `app/rag_backend_neo4j.py` indexes YAML `ScenarioPack` nodes into a graph with:
 
 1. **Node identity**
   - `node_id` from each row's `id` column (required)

@@ -87,8 +87,11 @@ EXCEL_PARITY_GAPS: list[dict[str, str]] = [
     },
     {
         "excel": "Explicit Relationships sheet (OWNED_BY, HAS_CONSTRAINT, …)",
-        "scenario_provides": "KNOWS + IN_CATEGORY / IN_FAMILY / HAS_CRITERION + SATISFIES / DERIVES_FROM / DEPENDS_ON",
-        "status": "partial",
+        "scenario_provides": (
+            "KNOWS + OWNED_BY + IN_CATEGORY / IN_FAMILY / HAS_CRITERION "
+            "+ SATISFIES / DERIVES_FROM / DEPENDS_ON / VERIFIED_BY"
+        ),
+        "status": "mapped",
     },
     {
         "excel": "Stakeholder / Role / Client typed actors",
@@ -103,6 +106,14 @@ EXCEL_PARITY_GAPS: list[dict[str, str]] = [
     {
         "excel": "Acceptance criteria as free text in requirement rows",
         "scenario_provides": "acceptance_criteria list on facts",
+        "status": "mapped",
+    },
+    {
+        "excel": "VERIFIED_BY (requirement → verification method)",
+        "scenario_provides": (
+            "VERIFIED_BY when a verification fact links via satisfies/derives_from/depends_on, "
+            "or a fact depends_on a VER-* target"
+        ),
         "status": "mapped",
     },
 ]
@@ -460,6 +471,45 @@ def build_scenario_graph_plan(package: ScenarioPackage) -> ScenarioGraphPlan:
             )
         )
 
+        # Verification methods: target -[:VERIFIED_BY]-> VerificationMethod
+        link_ids = (
+            list(getattr(fact, "satisfies_ids", None) or [])
+            + list(getattr(fact, "derives_from_ids", None) or [])
+            + list(getattr(fact, "depends_on_ids", None) or [])
+        )
+        if kind == "verification":
+            for target_id in link_ids:
+                target = visible_facts.get(target_id)
+                if target is None:
+                    continue
+                _, target_label, _ = fact_kind_and_label(target)
+                plan.edges.append(
+                    GraphEdge(
+                        rel_type="VERIFIED_BY",
+                        from_labels=_pack_labels(target_label),
+                        from_key={"node_id": fact_node_id(slug, target_id)},
+                        to_labels=_pack_labels(label),
+                        to_key={"node_id": node_id},
+                    )
+                )
+        else:
+            for target_id in list(getattr(fact, "depends_on_ids", None) or []):
+                target = visible_facts.get(target_id)
+                if target is None:
+                    continue
+                target_kind, target_label, _ = fact_kind_and_label(target)
+                if target_kind != "verification":
+                    continue
+                plan.edges.append(
+                    GraphEdge(
+                        rel_type="VERIFIED_BY",
+                        from_labels=_pack_labels(label),
+                        from_key={"node_id": node_id},
+                        to_labels=_pack_labels(target_label),
+                        to_key={"node_id": fact_node_id(slug, target_id)},
+                    )
+                )
+
         for ref in fact.source_refs or []:
             cue_id = getattr(ref, "cue_id", None) or ""
             file_name = getattr(ref, "file", None) or ""
@@ -561,17 +611,28 @@ def build_scenario_graph_plan(package: ScenarioPackage) -> ScenarioGraphPlan:
         for fact_id in sorted(persona_fact_ids.get(persona.id, set())):
             fact = visible_facts[fact_id]
             _, label, _ = fact_kind_and_label(fact)
+            stakeholder_key = {
+                "key": persona.id,
+                "scenario_slug": slug,
+                "scenario_version": version,
+            }
             plan.edges.append(
                 GraphEdge(
                     rel_type="KNOWS",
                     from_labels=_pack_labels("Stakeholder"),
-                    from_key={
-                        "key": persona.id,
-                        "scenario_slug": slug,
-                        "scenario_version": version,
-                    },
+                    from_key=stakeholder_key,
                     to_labels=_pack_labels(label),
                     to_key={"node_id": fact_node_id(slug, fact_id)},
+                )
+            )
+            # Excel-style ownership direction (fact → stakeholder) for "who owns" traversal.
+            plan.edges.append(
+                GraphEdge(
+                    rel_type="OWNED_BY",
+                    from_labels=_pack_labels(label),
+                    from_key={"node_id": fact_node_id(slug, fact_id)},
+                    to_labels=_pack_labels("Stakeholder"),
+                    to_key=stakeholder_key,
                 )
             )
 

@@ -1,0 +1,12 @@
+---
+description: sellm production is bare-metal only — never EasyPanel, Docker-as-prod, or uwista-panel SSH
+alwaysApply: true
+---
+
+# sellm deployment & remote access
+
+- **Production is bare-metal** on the sellm host: `docs/SETUP_BARE_METAL.md`, `scripts/update`, systemd, nginx. That is the only production target.
+- **Do not** treat Docker, `docker-compose.yml`, Dockerfile, or EasyPanel as production. Those paths are not how this course server runs.
+- **Do not** SSH, SCP, or use the `user-uwista-panel` MCP (or any other remote panel) for sellm ops unless the user **explicitly** asks to touch that host in this turn.
+- Prefer local repo commands (`python -m app.main`, `scripts/reindex_scenarios.py`, `scripts/update` docs) and files in this workspace.
+- Knowledge ground truth is YAML under `scenarios/`. Graph shape: `docs/NEO4J_GRAPH_MODEL.md`.

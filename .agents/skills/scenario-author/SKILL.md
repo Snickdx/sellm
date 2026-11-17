@@ -44,7 +44,11 @@ Keep this skill aligned with `skill-library/skills/scenario-author` when changin
    - **yaml / direct (preprompt)** — in-memory registry + `scenario_pack_adapter.pack_from_persona`
    - **vector** — Chroma docs via `index_packages_to_vector` (Excel-aligned `sheet` / `kind`; no `yaml:` ids)
    - **graph** — Neo4j `ScenarioPack` subgraph via `index_packages_to_neo4j`
-     (`Project`, `Stakeholder`, `Requirement` / `Feature` / `Goal` / …; see `docs/YAML_GRAPH_MODEL.md`)
+     (`Project`, `Stakeholder`, `Requirement` / `Feature` / `Goal` / …; see `docs/NEO4J_GRAPH_MODEL.md`)
+   - **Excel mirror (optional)** — when an instructor wants Excel-shaped artifacts (typed sheets + Relationships), export with:
+     `python scripts/export_scenario_excel.py <slug>`
+     → `scenarios/<slug>/exports/<slug>-workbook.xlsx`
+     Runtime chat does **not** read these files; YAML + reindex remain ground truth. Do not revive a root `data.xlsx`.
 
    - Run `POST /api/admin/scenarios/reindex` (server up) or `python scripts/reindex_scenarios.py`
    - Do not leave YAML ahead of indexes; students in vector/neo4j/hybrid/direct must see the same facts
@@ -194,6 +198,9 @@ Prefer invoking **scenario-validator**. Then **always reindex**:
 
 # or offline:
 python scripts/reindex_scenarios.py
+
+# optional Excel-shaped mirror for instructor tooling:
+python scripts/export_scenario_excel.py <slug>
 ```
 
 Fix failures before claiming readiness. YAML-only edits without reindex are incomplete.
@@ -214,6 +221,7 @@ Instructor must explicitly approve. Set `status: approved` only after sign-off. 
 - [ ] Evaluation oracle expects admin-aware elicitation where relevant
 - [ ] Brief in `scenario.yaml` reflects operator reality, not title-only framing
 - [ ] Vector + graph + yaml/direct reindexed after YAML patches
+- [ ] Optional Excel export refreshed when the instructor asked for workbook parity (`exports/<slug>-workbook.xlsx`)
 
 ## SRS coverage checklist (create + depth-update)
 

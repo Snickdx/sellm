@@ -29,7 +29,7 @@ LIVEKIT_URL=wss://your-project.livekit.cloud
 LIVEKIT_API_KEY=...
 LIVEKIT_API_SECRET=...
 
-# Local recording sink (EasyPanel: mount under /app/storage)
+# Local recording sink (bare-metal: e.g. ./storage/recordings)
 STORAGE_RECORDINGS_DIR=./storage/recordings
 
 # Optional S3-compatible sink for LiveKit Cloud egress

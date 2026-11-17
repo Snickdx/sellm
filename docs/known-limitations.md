@@ -7,7 +7,7 @@ the sibling [comp3613-templates](https://github.com/Snickdx/comp3613-templates) 
 ## M0
 
 - Auth is local username/password (cohort credentials + admin users), not institutional SSO.
-- sellm is a single FastAPI app with Jinja multi-page UI + static JS; production is bare-metal systemd or Docker/EasyPanel from this repo.
+- sellm is a single FastAPI app with Jinja multi-page UI + static JS; production is **bare-metal** (`docs/SETUP_BARE_METAL.md` / systemd). Not Docker or EasyPanel.
 - Object storage and Redis are not required. LiveKit is optional via env (see M6 / `docs/EXIT_INTERVIEWS.md`).
 - Skills under `.agents/skills/` are local to sellm (scenario-author/validator, competency-judge, interview-designer).
 - Student starters live in [Snickdx/comp3613-templates](https://github.com/Snickdx/comp3613-templates) (sibling checkout `templates/`), with seven private GitHub submodules (`comp3613-<slug>`). All seven flawed baselines (**0.2.0**) are built on [uwidcit/faststart](https://github.com/uwidcit/faststart) (`96ccfce`): **`job-board`** (State apps), **`library`** (Strategy conflict), **`uwi-connect`** (Observer), **`thesis-tracker`** (Command/audit), **`student-accommodation`** (State listings), **`ta-allocations`** (Strategy auto-alloc), **`career-advising`** (Template Method exploration). Domain APIs live under `/api`; private defect manifests under **`sellm/instructor/private/<slug>/`**, never in student trees. Runtime judge gold: `app/examiner/knowledge/<slug>.yaml`.
@@ -17,7 +17,7 @@ the sibling [comp3613-templates](https://github.com/Snickdx/comp3613-templates) 
 - `scenarios/library` approved package `0.1.0` is still grounded on the **synthetic** pilot; a real library VTT is present but not yet re-authored into facts.
 - The other six scenarios are `approved` with real VTTs; re-check `READINESS.md` before treating every fact as classroom-final.
 - Gap batches are orchestrated via the `scenario-author` skill + `gaps.yaml` (no dedicated web UI).
-- Host-side backend venv should use **Python 3.12** (see `docs/setup.md`); Python 3.14 may fail to install binary wheels (e.g. PyYAML).
+- Host-side backend venv should use **Python 3.12** (see `docs/SETUP_BARE_METAL.md`); Python 3.14 may fail to install binary wheels (e.g. PyYAML).
 - Instructor scenario admin UI is import + preview only (no full CRUD editor).
 
 ## M2
@@ -57,10 +57,9 @@ the sibling [comp3613-templates](https://github.com/Snickdx/comp3613-templates) 
 
 ## M7
 
-- Production target is an **Easypanel App** built from the root `Dockerfile`, with `DATABASE_URL` supplied in env (separate Postgres service). No production Compose stack.
-- This repo may still lack a git remote — Easypanel Git/GitHub source needs a reachable repository (or upload).
-- Production image serves SPA + API on one service; TLS terminates at the Easypanel domain proxy on port **8000**.
-- Usage quotas are daily UTC counters in Postgres; budget USD estimates are approximate (not invoice-grade).
+- Production target is **bare-metal** on the sellm host (`scripts/update`, systemd, nginx). Do not deploy via Docker/EasyPanel or SSH to `uwista-panel` for this app.
+- Prefer Postgres in production over SQLite on ephemeral disk (`CONVERSATION_DB_URL` / `DATABASE_URL`).
+- Usage quotas are daily UTC counters; budget USD estimates are approximate (not invoice-grade).
 - Retention days are **policy notices** plus checklist guidance; automated purge jobs are not yet scheduled.
 - Monitoring counters are in-process (reset on deploy); wire an external APM when the pilot grows.
 - Examiner calibration is a human worksheet (`docs/examiner-calibration.md`), not an automated agreement metric.

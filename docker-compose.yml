@@ -1,7 +1,6 @@
-# Local / staging stack. EasyPanel: use the Dockerfile + Environment + Mounts tabs instead.
-# Usage:
-#   docker compose up --build
-#   docker compose --profile postgres up --build
+# NOT production. sellm prod is bare-metal (docs/SETUP_BARE_METAL.md).
+# This compose file is optional local experimentation only — do not deploy with it
+# and do not treat EasyPanel/uwista-panel as the sellm host.
 #
 # Security: do not ship default Neo4j/Postgres passwords on networked hosts.
 # Set NEO4J_PASSWORD / POSTGRES_PASSWORD in the environment (see docs/OPS_LOCKDOWN.md).
@@ -13,7 +12,6 @@ services:
       - "${HOST_PORT:-8000}:${PORT:-8000}"
     environment:
       PORT: ${PORT:-8000}
-      EXCEL_FILE: ${EXCEL_FILE:-/app/data.xlsx}
       CHROMA_PERSIST_DIRECTORY: ${CHROMA_PERSIST_DIRECTORY:-/app/storage/chroma_db_v2}
       SCENARIOS_ROOT: ${SCENARIOS_ROOT:-/app/scenarios}
       CONVERSATION_DB_URL: ${CONVERSATION_DB_URL:-sqlite:////app/storage/conversations.db}

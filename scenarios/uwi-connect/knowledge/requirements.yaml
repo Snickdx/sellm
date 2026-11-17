@@ -53,6 +53,8 @@ facts:
     speaker: null
   known_by:
   - alumni_admin
+  depends_on_ids:
+  - UC-IF-001
   disclosure: when_relevant
   satisfies_ids:
   - UC-FEAT-001
@@ -146,6 +148,9 @@ facts:
     speaker: null
   known_by:
   - alumni_admin
+  depends_on_ids:
+  - UC-IF-002
+  - UC-DATA-001
   disclosure: when_relevant
   satisfies_ids:
   - UC-FEAT-004

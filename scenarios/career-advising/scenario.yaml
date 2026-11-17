@@ -1,6 +1,6 @@
 slug: career-advising
 title: Career Based Advising
-version: 0.3.0
+version: 0.3.1
 status: approved
 brief: 'Advisor/admin-guided career tool for enrolled university students: courses are selected from a
   pre-populated catalogue; jobs and courses are linked via skills and competency levels; students explore
@@ -9,7 +9,9 @@ brief: 'Advisor/admin-guided career tool for enrolled university students: cours
   Admin defines skills (mainly bulk edit/upload); advisors may update job/course mappings; usage visibility
   is aggregated only. High-school scope is out (DEC-CA-001).'
 source_status: transcript_received
-source_notes: 'VTT: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt (stakeholder
+source_notes: 'Graph depth-update to 0.3.1: wired VER depends_on_ids → FRs for VERIFIED_BY; added sparse REQ depends_on where missing for graph traversal.
+
+  VTT: sources/Career Based Advising Project Interview - Preity Ramlochan.vtt (stakeholder
   Dr Terry Mohammed). 899 cues; speakers unlabeled. Persona: career_advisor (DEC-CA-001). Assumptions:
   enrolled university end users (DEC-CA-002), both exploration modes in MVP (DEC-CA-003), non-absolute
   ranked recommendations (DEC-CA-004), identify-only missing courses (DEC-CA-005). Depth-update 0.2.0:

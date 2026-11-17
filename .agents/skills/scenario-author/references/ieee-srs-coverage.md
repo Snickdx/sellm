@@ -4,7 +4,7 @@ Author knowledge so the package can populate a domain graph close to an SRS
 outline (29148 §9.6 / classic IEEE 830). Do **not** invent transcript quotes;
 use `confirmed` only with cues.
 
-Canonical gap list also lives in `docs/YAML_GRAPH_MODEL.md`.
+Canonical gap list also lives in `docs/NEO4J_GRAPH_MODEL.md`.
 
 ## Prescribe by default (create + depth-update)
 

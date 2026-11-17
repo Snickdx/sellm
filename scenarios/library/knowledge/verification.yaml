@@ -5,9 +5,13 @@ facts:
   category: verification
   status: clarified
   origin: instructor
-  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
-    verify/change.
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor verify/change. Linked FRs via depends_on_ids for VERIFIED_BY graph edges.
   known_by:
   - library_coordinator
   - administrator
+  depends_on_ids:
+  - LIB-REQ-002
+  - LIB-REQ-003
+  - LIB-REQ-005
+  - LIB-REQ-008
   disclosure: when_asked

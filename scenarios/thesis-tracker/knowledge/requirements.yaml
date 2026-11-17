@@ -105,6 +105,9 @@ facts:
   known_by:
   - pg_coordinator
   - supervisor
+  depends_on_ids:
+  - TT-IF-001
+  - TT-DATA-001
   disclosure: when_relevant
   satisfies_ids:
   - TT-FEAT-003

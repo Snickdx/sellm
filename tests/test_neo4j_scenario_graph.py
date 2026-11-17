@@ -99,7 +99,14 @@ def test_library_plan_uses_domain_labels_not_yaml():
     assert any(str(n.key.get("node_id", "")).startswith("scenario:") for n in fact_nodes)
 
     rel_types = {e.rel_type for e in plan.edges}
-    assert {"HAS_FACT", "KNOWS", "IN_CATEGORY", "IN_FAMILY", "HAS_CRITERION"} <= rel_types
+    assert {
+        "HAS_FACT",
+        "KNOWS",
+        "OWNED_BY",
+        "IN_CATEGORY",
+        "IN_FAMILY",
+        "HAS_CRITERION",
+    } <= rel_types
     assert any("Stakeholder" in n.labels for n in plan.nodes)
     assert any("Project" in n.labels for n in plan.nodes)
     assert any("AcceptanceCriterion" in n.labels for n in plan.nodes)
@@ -131,7 +138,7 @@ def test_excel_parity_gaps_documented():
     assert any("Feature" in g["excel"] for g in EXCEL_PARITY_GAPS)
 
 
-def test_trace_links_emit_satisfies_derives_depends():
+def test_trace_links_emit_satisfies_derives_depends_verified_owned():
     from app.scenarios.models import (
         Persona,
         ScenarioMeta,
@@ -164,6 +171,15 @@ def test_trace_links_emit_satisfies_derives_depends():
         origin=FactOrigin.instructor,
         disclosure=Disclosure.when_relevant,
     )
+    ver = KnowledgeFact(
+        id="DEMO-VER-001",
+        statement="Booking rules verified by demo.",
+        category="verification",
+        status=FactStatus.confirmed,
+        origin=FactOrigin.instructor,
+        disclosure=Disclosure.when_asked,
+        depends_on_ids=["DEMO-REQ-001"],
+    )
     req = KnowledgeFact(
         id="DEMO-REQ-001",
         statement="Lecturers can request a room.",
@@ -180,7 +196,13 @@ def test_trace_links_emit_satisfies_derives_depends():
         display_name="Alice",
         role="Coordinator",
         system_role=SystemRole.operator,
-        known_fact_ids=["DEMO-REQ-001", "DEMO-FEAT-001", "DEMO-GOAL-001", "DEMO-DEP-001"],
+        known_fact_ids=[
+            "DEMO-REQ-001",
+            "DEMO-FEAT-001",
+            "DEMO-GOAL-001",
+            "DEMO-DEP-001",
+            "DEMO-VER-001",
+        ],
     )
     package = ScenarioPackage(
         meta=ScenarioMeta(
@@ -191,13 +213,13 @@ def test_trace_links_emit_satisfies_derives_depends():
             brief="Demo package",
         ),
         personas=[persona],
-        facts=[req, feat, goal, dep],
+        facts=[req, feat, goal, dep, ver],
     )
     plan = build_scenario_graph_plan(package)
     rel_types = {e.rel_type for e in plan.edges}
-    assert {"SATISFIES", "DERIVES_FROM", "DEPENDS_ON"} <= rel_types
+    assert {"SATISFIES", "DERIVES_FROM", "DEPENDS_ON", "VERIFIED_BY", "OWNED_BY"} <= rel_types
     labels = {label for n in plan.nodes for label in n.labels}
-    assert {"Feature", "Goal", "Dependency", "Requirement"} <= labels
+    assert {"Feature", "Goal", "Dependency", "Requirement", "VerificationMethod"} <= labels
     sat = [
         e
         for e in plan.edges
@@ -206,3 +228,48 @@ def test_trace_links_emit_satisfies_derives_depends():
         and e.to_key.get("node_id") == "scenario:demo:DEMO-FEAT-001"
     ]
     assert len(sat) == 1
+    verified = [
+        e
+        for e in plan.edges
+        if e.rel_type == "VERIFIED_BY"
+        and e.from_key.get("node_id") == "scenario:demo:DEMO-REQ-001"
+        and e.to_key.get("node_id") == "scenario:demo:DEMO-VER-001"
+    ]
+    assert len(verified) == 1
+    owned = [
+        e
+        for e in plan.edges
+        if e.rel_type == "OWNED_BY"
+        and e.from_key.get("node_id") == "scenario:demo:DEMO-REQ-001"
+        and e.to_key.get("key") == "alice"
+    ]
+    assert len(owned) == 1
+
+
+def test_format_retrieved_context_includes_related_edges():
+    from app.scenario.stakeholder_prompt import format_retrieved_context
+
+    text = format_retrieved_context(
+        [
+            {
+                "document": "Statement: Lecturers can request rooms.\nCategory: functional",
+                "metadata": {
+                    "related": [
+                        {"rel_type": "DEPENDS_ON", "text": "Campus SSO must be available."},
+                        {"rel_type": "OWNED_BY", "text": "Alice"},
+                    ]
+                },
+            }
+        ]
+    )
+    assert "DEPENDS_ON" in text
+    assert "OWNED_BY" in text
+    assert "Campus SSO" in text
+
+
+def test_hybrid_router_prefers_neo4j_for_dependency_questions():
+    from app.mcp.router import QueryRoute, route_query
+
+    decision = route_query("Which requirements depend on campus SSO?")
+    assert decision.route in (QueryRoute.NEO4J, QueryRoute.BLEND)
+    assert decision.neo4j_score >= decision.chroma_score

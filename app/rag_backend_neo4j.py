@@ -18,6 +18,7 @@ warnings.filterwarnings(
 )
 
 import hashlib
+import os
 import pandas as pd
 from typing import List, Dict, Optional
 import numpy as np
@@ -39,7 +40,7 @@ class RequirementsRAGNeo4j:
     - Graph traversal for relationship-based queries
     """
     
-    def __init__(self, excel_file: str,
+    def __init__(self, excel_file: Optional[str] = None,
                  neo4j_uri: str = "bolt://localhost:7687",
                  neo4j_user: str = "neo4j",
                  neo4j_password: str = "password"):
@@ -47,7 +48,7 @@ class RequirementsRAGNeo4j:
         Initialize Neo4j RAG system
         
         Args:
-            excel_file: Path to Excel file
+            excel_file: Optional legacy/export workbook path (not required)
             neo4j_uri: Neo4j connection URI
             neo4j_user: Neo4j username
             neo4j_password: Neo4j password
@@ -55,9 +56,10 @@ class RequirementsRAGNeo4j:
         if not NEO4J_AVAILABLE:
             raise ImportError("neo4j package required. Install with: pip install neo4j")
         
-        self.excel_file = excel_file
+        self.excel_file = (excel_file or "").strip() or None
         self._scenario_graph_hash: Optional[str] = None
         self._vector_index_ready = False
+        self._scenario_vector_index_ready = False
         
         # Shared embedding singleton (avoid dual SentenceTransformer loads)
         print("Loading embedding model...")
@@ -79,11 +81,14 @@ class RequirementsRAGNeo4j:
 
         self._ensure_vector_index()
         
-        # Load data if database is empty
+        # Optional Excel seed only when a workbook is configured; ScenarioPack graph comes from reindex
         node_count = self._count_nodes()
         if node_count == 0:
-            print("Loading requirements from Excel into Neo4j...")
-            self._load_requirements()
+            if self.excel_file and os.path.isfile(self.excel_file):
+                print("Loading optional Excel workbook into Neo4j...")
+                self._load_requirements()
+            else:
+                print("No Excel workbook configured — Neo4j left empty until scenario reindex")
         else:
             print(f"Found {node_count} existing nodes in Neo4j")
     
@@ -116,7 +121,10 @@ class RequirementsRAGNeo4j:
         return mapping.get(sheet_name, "RequirementNode")
     
     def _load_requirements(self):
-        """Load nodes and relationships from Excel into Neo4j"""
+        """Load nodes and relationships from an optional Excel workbook (legacy / export mirror)."""
+        if not self.excel_file or not os.path.isfile(self.excel_file):
+            print("Skipping Excel Neo4j load — workbook not configured")
+            return
         try:
             xls = pd.ExcelFile(self.excel_file, engine="openpyxl")
             
@@ -356,8 +364,10 @@ class RequirementsRAGNeo4j:
                     }
                     """
                 )
+            self._scenario_vector_index_ready = True
             print("✓ Neo4j vector index scenario_pack_embeddings ready")
         except Exception as exc:  # noqa: BLE001
+            self._scenario_vector_index_ready = False
             print(f"⚠ Neo4j scenario_pack vector index unavailable: {exc}")
 
     def search(
@@ -373,6 +383,7 @@ class RequirementsRAGNeo4j:
         When scenario_slug + persona_key are set, search ScenarioPack facts that persona KNOWS.
         """
         query_embedding = self.embedding_model.encode([query]).tolist()[0]
+        related_limit = 4 if (scenario_slug and persona_key) else 2
 
         if scenario_slug and persona_key:
             results = self._vector_search_scenario(
@@ -385,7 +396,7 @@ class RequirementsRAGNeo4j:
             for result in results[:n_results]:
                 node_id = result["metadata"].get("node_id")
                 if node_id:
-                    related = self._get_related_nodes(node_id, limit=2)
+                    related = self._get_related_nodes(node_id, limit=related_limit)
                     result["metadata"]["related"] = related
                 enhanced.append(result)
             return enhanced
@@ -398,11 +409,29 @@ class RequirementsRAGNeo4j:
         for result in results[:n_results]:
             node_id = result["metadata"].get("node_id")
             if node_id:
-                related = self._get_related_nodes(node_id, limit=2)
+                related = self._get_related_nodes(node_id, limit=related_limit)
                 result["metadata"]["related"] = related
             enhanced_results.append(result)
 
         return enhanced_results
+
+    def _scenario_hit(self, node, *, persona_key: str, distance: float) -> Dict:
+        return {
+            "document": node.get("text", ""),
+            "metadata": {
+                "node_id": node.get("node_id"),
+                "sheet": node.get("sheet", "Requirement"),
+                "sheet_type": node.get("sheet_type") or node.get("kind") or "requirement",
+                "category": node.get("category"),
+                "kind": node.get("kind"),
+                "family": node.get("family"),
+                "scenario_slug": node.get("scenario_slug"),
+                "fact_id": node.get("fact_id"),
+                "persona_key": persona_key,
+                "source": "scenario",
+            },
+            "distance": distance,
+        }
 
     def _vector_search_scenario(
         self,
@@ -414,6 +443,54 @@ class RequirementsRAGNeo4j:
     ) -> List[Dict]:
         """Vector search over ScenarioPack knowledge nodes known by a stakeholder."""
         with self.driver.session() as session:
+            # Prefer Neo4j vector index, then filter to persona KNOWS set.
+            if self._scenario_vector_index_ready:
+                try:
+                    known = session.run(
+                        """
+                        MATCH (p:ScenarioPack:Stakeholder {
+                            key: $persona_key,
+                            scenario_slug: $scenario_slug
+                        })-[:KNOWS]->(n:ScenarioPack)
+                        WHERE n.embedding IS NOT NULL AND n.node_id IS NOT NULL
+                        RETURN n.node_id AS node_id
+                        """,
+                        persona_key=persona_key,
+                        scenario_slug=scenario_slug,
+                    )
+                    known_ids = {record["node_id"] for record in known if record.get("node_id")}
+                    if known_ids:
+                        result = session.run(
+                            """
+                            CALL db.index.vector.queryNodes(
+                                'scenario_pack_embeddings', $k, $embedding
+                            )
+                            YIELD node, score
+                            WHERE node.node_id IN $known_ids
+                            RETURN node AS n, score
+                            LIMIT $k
+                            """,
+                            k=max(n_results * 4, n_results),
+                            embedding=query_embedding,
+                            known_ids=list(known_ids),
+                        )
+                        hits = []
+                        for record in result:
+                            hits.append(
+                                self._scenario_hit(
+                                    record["n"],
+                                    persona_key=persona_key,
+                                    distance=1.0 - float(record["score"]),
+                                )
+                            )
+                            if len(hits) >= n_results:
+                                break
+                        if hits:
+                            return hits
+                except Exception as exc:  # noqa: BLE001
+                    print(f"⚠ Scenario vector index query failed, using cosine fallback: {exc}")
+                    self._scenario_vector_index_ready = False
+
             result = session.run(
                 """
                 MATCH (p:ScenarioPack:Stakeholder {
@@ -429,36 +506,19 @@ class RequirementsRAGNeo4j:
             similarities = []
             for record in result:
                 node = record["n"]
-                if "embedding" not in node:
+                node_embedding = node.get("embedding")
+                if not node_embedding:
                     continue
-                node_embedding = node["embedding"]
                 similarity = np.dot(query_embedding, node_embedding) / (
                     np.linalg.norm(query_embedding) * np.linalg.norm(node_embedding) + 1e-9
                 )
                 similarities.append((similarity, node))
 
             similarities.sort(key=lambda x: x[0], reverse=True)
-            results = []
-            for similarity, node in similarities[:n_results]:
-                results.append(
-                    {
-                        "document": node.get("text", ""),
-                        "metadata": {
-                            "node_id": node.get("node_id"),
-                            "sheet": node.get("sheet", "Requirement"),
-                            "sheet_type": node.get("sheet_type") or node.get("kind") or "requirement",
-                            "category": node.get("category"),
-                            "kind": node.get("kind"),
-                            "family": node.get("family"),
-                            "scenario_slug": node.get("scenario_slug"),
-                            "fact_id": node.get("fact_id"),
-                            "persona_key": persona_key,
-                            "source": "scenario",
-                        },
-                        "distance": 1 - similarity,
-                    }
-                )
-            return results
+            return [
+                self._scenario_hit(node, persona_key=persona_key, distance=1 - similarity)
+                for similarity, node in similarities[:n_results]
+            ]
 
     def _vector_search(self, query_embedding: List[float], detected_sheets: List[str], n_results: int) -> List[Dict]:
         """Vector search via Neo4j index when available; otherwise capped Python cosine."""
@@ -548,54 +608,122 @@ class RequirementsRAGNeo4j:
 
     def _related_record(self, node, rel_type: str) -> Dict:
         labels = list(node.labels) if hasattr(node, "labels") else []
+        raw = (
+            node.get("text")
+            or node.get("chosen")
+            or node.get("display_name")
+            or node.get("cue_id")
+            or ""
+        )
+        # Prefer the Statement: line from embedded fact text when present.
+        text = str(raw)
+        for line in text.splitlines():
+            if line.lower().startswith("statement:"):
+                text = line.split(":", 1)[1].strip()
+                break
         return {
             "node_id": (
                 node.get("node_id")
                 or node.get("criterion_id")
                 or node.get("decision_id")
                 or node.get("cue_id")
+                or node.get("key")
             ),
             "sheet": node.get("sheet", ""),
             "rel_type": rel_type,
             "labels": labels,
-            "text": (node.get("text") or node.get("chosen") or node.get("cue_id") or "")[:100],
+            "text": text[:220],
         }
 
-    def _get_related_nodes(self, node_id: str, limit: int = 2) -> List[Dict]:
-        """Get related nodes via graph traversal (Excel + YAML scenario edges)."""
+    def _get_related_nodes(self, node_id: str, limit: int = 4) -> List[Dict]:
+        """Expand neighbors: domain edges first, then criteria/category, then generic."""
         with self.driver.session() as session:
             related: List[Dict] = []
             seen: set = set()
 
             def _consume(records, rel_type: Optional[str] = None) -> None:
                 for record in records:
+                    if len(related) >= limit:
+                        return
                     node = record["related"]
                     item = self._related_record(
                         node, rel_type or record.get("rel_type") or "RELATED"
                     )
                     rid = item.get("node_id")
-                    if not rid or rid in seen:
+                    if not rid or rid in seen or rid == node_id:
                         continue
                     seen.add(rid)
                     related.append(item)
-                    if len(related) >= limit:
-                        return
 
-            # Domain-style scenario expansion (closer to Excel relationship enrichment).
-            _consume(
-                session.run(
-                    """
-                    MATCH (n:ScenarioPack {node_id: $node_id})-[:IN_CATEGORY]->(:Category)
-                          <-[:IN_CATEGORY]-(related:ScenarioPack)
-                    WHERE related.node_id <> $node_id AND related.embedding IS NOT NULL
-                    RETURN related
-                    LIMIT $limit
-                    """,
-                    node_id=node_id,
-                    limit=limit,
-                ),
-                "SAME_CATEGORY",
-            )
+            # 1) Semantic domain edges that differentiate graph mode from Chroma.
+            for rel_type in (
+                "DEPENDS_ON",
+                "SATISFIES",
+                "DERIVES_FROM",
+                "VERIFIED_BY",
+                "OWNED_BY",
+            ):
+                if len(related) >= limit:
+                    break
+                remaining = limit - len(related)
+                _consume(
+                    session.run(
+                        f"""
+                        MATCH (n:ScenarioPack {{node_id: $node_id}})-[:{rel_type}]->(related:ScenarioPack)
+                        RETURN related
+                        LIMIT $limit
+                        """,
+                        node_id=node_id,
+                        limit=remaining,
+                    ),
+                    rel_type,
+                )
+                if len(related) >= limit:
+                    break
+                _consume(
+                    session.run(
+                        f"""
+                        MATCH (n:ScenarioPack {{node_id: $node_id}})<-[:{rel_type}]-(related:ScenarioPack)
+                        RETURN related
+                        LIMIT $limit
+                        """,
+                        node_id=node_id,
+                        limit=remaining,
+                    ),
+                    rel_type,
+                )
+
+            # 2) Acceptance criteria.
+            if len(related) < limit:
+                _consume(
+                    session.run(
+                        """
+                        MATCH (n:ScenarioPack {node_id: $node_id})-[:HAS_CRITERION]->(related:AcceptanceCriterion)
+                        RETURN related
+                        LIMIT $limit
+                        """,
+                        node_id=node_id,
+                        limit=limit - len(related),
+                    ),
+                    "HAS_CRITERION",
+                )
+
+            # 3) Same category / family only as filler.
+            if len(related) < limit:
+                _consume(
+                    session.run(
+                        """
+                        MATCH (n:ScenarioPack {node_id: $node_id})-[:IN_CATEGORY]->(:Category)
+                              <-[:IN_CATEGORY]-(related:ScenarioPack)
+                        WHERE related.node_id <> $node_id AND related.embedding IS NOT NULL
+                        RETURN related
+                        LIMIT $limit
+                        """,
+                        node_id=node_id,
+                        limit=limit - len(related),
+                    ),
+                    "SAME_CATEGORY",
+                )
             if len(related) < limit:
                 _consume(
                     session.run(
@@ -607,27 +735,15 @@ class RequirementsRAGNeo4j:
                         LIMIT $limit
                         """,
                         node_id=node_id,
-                        limit=limit,
+                        limit=limit - len(related),
                     ),
                     "SAME_FAMILY",
                 )
-            if len(related) < limit:
-                _consume(
-                    session.run(
-                        """
-                        MATCH (n:ScenarioPack {node_id: $node_id})-[:HAS_CRITERION]->(related:AcceptanceCriterion)
-                        RETURN related
-                        LIMIT $limit
-                        """,
-                        node_id=node_id,
-                        limit=limit,
-                    ),
-                    "HAS_CRITERION",
-                )
+
             if related:
                 return related[:limit]
 
-            # Excel Relationships sheet / generic one-hop neighbors (non-pack nodes).
+            # 4) Legacy Excel / non-pack neighbors.
             _consume(
                 session.run(
                     """
@@ -675,11 +791,13 @@ class RequirementsRAGNeo4j:
             
             context_parts.append(doc)
             
-            # Add related context from graph
             if related:
                 context_parts.append("\nRelated:")
                 for rel in related:
-                    context_parts.append(f"  - {rel.get('text', '')[:100]}")
+                    rel_type = rel.get("rel_type") or "RELATED"
+                    snippet = (rel.get("text") or "")[:180]
+                    if snippet:
+                        context_parts.append(f"  - {rel_type}: {snippet}")
         
         return "\n".join(context_parts)
     

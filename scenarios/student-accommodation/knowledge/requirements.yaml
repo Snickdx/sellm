@@ -56,6 +56,9 @@ facts:
   known_by:
   - campus_admin
   - student_seeker
+  depends_on_ids:
+  - SA-IF-001
+  - SA-DATA-001
   disclosure: when_relevant
   satisfies_ids:
   - SA-FEAT-001

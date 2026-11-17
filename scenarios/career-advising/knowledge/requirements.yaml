@@ -277,6 +277,9 @@ facts:
   rationale: Instructor specified skills/competency mapping method.
   known_by:
   - career_advisor
+  depends_on_ids:
+  - CA-DATA-001
+  - CA-IF-001
   disclosure: when_relevant
   acceptance_criteria:
   - A job can have associated skills with competency levels.

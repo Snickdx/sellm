@@ -1,18 +1,16 @@
-# Scenario domain graph + vector model (Neo4j / Chroma)
+# Neo4j scenario graph model
 
-Generalized domain model used by **neo4j** / **hybrid** / **vector** modes when a scenario package + persona is selected. Excel RAG nodes remain separate; reindex replaces only nodes marked `ScenarioPack` (and clears legacy `Yaml*` labels if present).
+Domain graph used by **neo4j** and **hybrid** modes when a YAML scenario package + persona is selected. Packages under `scenarios/` are ground truth; reindex materializes (and replaces) nodes marked `ScenarioPack`.
 
-Stored names intentionally avoid `Yaml*` / `yaml:` prefixes — labels and sheet metadata align with the traditional Excel model.
+Authoring taxonomy / SRS coverage: `.agents/skills/scenario-author/references/ieee-srs-coverage.md`.
 
-Authoring taxonomy and SRS coverage rules: `.agents/skills/scenario-author/references/ieee-srs-coverage.md`.
-
-## Translation workflow (package facts → stores)
+## Package → graph
 
 ```text
 ScenarioPackage
   ├─ personas / known_fact_ids
-  ├─ knowledge facts (category, acceptance_criteria, source_refs,
-  │                   satisfies_ids / derives_from_ids / depends_on_ids)
+  ├─ facts (category, acceptance_criteria, source_refs,
+  │         satisfies_ids / derives_from_ids / depends_on_ids)
   └─ gaps.decisions
         │
         ▼
@@ -38,11 +36,12 @@ app.scenarios.neo4j_graph.fact_kind_and_label()
   reference|REF      → Reference
   contextual         → RequirementNode
         │
-        ├─► Neo4j: ScenarioPack + typed label, domain hubs/edges, embeddings
-        └─► Chroma: scenario_facts docs with Excel sheet/kind metadata
+        └─► Neo4j: ScenarioPack + typed label, hubs, edges, embeddings
 ```
 
-## Neo4j node types
+Vector mode uses Chroma `scenario_facts` (same kind/sheet labels) via `app/indexing.py` — not this graph.
+
+## Node types
 
 | Label(s) | Key | Purpose |
 | --- | --- | --- |
@@ -64,9 +63,10 @@ Instructor-only open questions and `evaluation.yaml` are **not** indexed.
 | Type | From → To | Meaning |
 | --- | --- | --- |
 | `HAS_PERSONA` | Project → Stakeholder | Persona belongs to package |
-| `HAS_FACT` | Project → knowledge node | Fact belongs to package |
+| `HAS_FACT` | Project → knowledge | Fact belongs to package |
 | `HAS_DECISION` | Project → Decision | Decision recorded for package |
 | `KNOWS` | Stakeholder → knowledge | Persona may disclose this fact |
+| `OWNED_BY` | knowledge → Stakeholder | Reverse ownership for “who owns” traversal |
 | `HAS_ROLE` | Stakeholder → Role | In-system authority class |
 | `CAN` | Stakeholder → Capability | Concrete admin verb |
 | `IN_CATEGORY` | knowledge → Category | Domain grouping |
@@ -75,66 +75,34 @@ Instructor-only open questions and `evaluation.yaml` are **not** indexed.
 | `SATISFIES` | Requirement/NFR → Feature | From `satisfies_ids` |
 | `DERIVES_FROM` | Requirement → Goal (etc.) | From `derives_from_ids` |
 | `DEPENDS_ON` | knowledge → knowledge | From `depends_on_ids` |
+| `VERIFIED_BY` | knowledge → VerificationMethod | From VER link fields or `depends_on` → VER-* |
 | `FROM_DECISION` / `PRODUCED` | Fact ↔ Decision | Provenance |
 | `CITED_FROM` | knowledge → SourceCue | Transcript citation |
 
-## Vector store (Chroma `scenario_facts`)
+### Retrieval expansion order
 
-Each `(persona, fact)` document uses the same kind/sheet mapping:
+Neo4j search expands related nodes in this priority (then fills to limit):
 
-| Metadata | Example |
+1. `DEPENDS_ON` / `SATISFIES` / `DERIVES_FROM` / `VERIFIED_BY` / `OWNED_BY`
+2. `HAS_CRITERION`
+3. Same `Category` / `FactFamily` (filler only)
+
+Scenario vector hits prefer `scenario_pack_embeddings` (when the Neo4j server supports vector indexes), filtered to the persona `KNOWS` set; otherwise cosine over known embeddings.
+
+## Coverage gaps (authoring)
+
+| Desired | Status |
 | --- | --- |
-| `source` | `scenario` |
-| `sheet` | `Requirement`, `Feature`, `Constraint`, `Assumption`, `Qual_Scenario`, … |
-| `sheet_type` / `kind` | `requirement`, `feature`, `constraint`, `assumption`, … |
-| `family` | `REQ`, `FEAT`, `GOAL`, `BR`, `ASM`, … |
-| `node_id` | `scenario:{slug}:{fact_id}` |
-| doc id | `scenario:{slug}:{version}:{persona}:{fact_id}` |
+| Typed Requirement / Feature / Goal / Constraint / … | Mapped via category + id prefix |
+| Acceptance criteria | Mapped |
+| Stakeholder disclosure / ownership | `KNOWS` + `OWNED_BY` |
+| Trace links | `SATISFIES` / `DERIVES_FROM` / `DEPENDS_ON` / `VERIFIED_BY` |
+| Risk / Budget / Milestone entities | Not modeled |
+| `UserClass` beyond Stakeholder/Role | Partial |
 
-Document text includes project, stakeholder, sheet/kind, statement, and acceptance criteria — not `yaml` tokens.
-
-## Gaps vs traditional Excel Neo4j model
-
-| Excel model | What scenario packages provide | Status |
-| --- | --- | --- |
-| `Requirement` / `Constraint` typed rows | `KnowledgeFact.category` + id prefix | **Mapped** |
-| Acceptance criteria on rows | `acceptance_criteria[]` | **Mapped** |
-| Stakeholder ownership (`OWNED_BY`) | Persona `KNOWS` | **Partial** |
-| Explicit `Relationships` sheet | `SATISFIES` / `DERIVES_FROM` / `DEPENDS_ON` + hubs | **Partial** |
-| `Feature` + `SATISFIES` | Optional `FEAT-*` + `satisfies_ids` | **Mapped** |
-| `Goal` sheet | Optional `GOAL-*` | **Mapped** |
-| `Risk` / `Budget` / `Milestone` | Not modeled | **Gap** |
-
-## IEEE / ISO/IEC/IEEE 29148 SRS coverage
-
-Relative to a typical SRS (29148 §9.6 / classic IEEE 830-style outline). Runtime labels exist when authors use the taxonomy in `ieee-srs-coverage.md`; thin packages may still omit records.
-
-| IEEE SRS portion (29148) | Suggested node(s) | Status now |
-| --- | --- | --- |
-| Purpose / Scope | props on `Project` (`brief`) | **Partial** — free-text brief; author via scenario-author |
-| Definitions / acronyms | `GlossaryTerm` | **Mapped** when `GLOSS-*` authored |
-| References | `Reference` | **Mapped** when `REF-*` authored (`SourceCue` remains interview provenance) |
-| Product perspective / context | `ExternalInterface` / contextual facts | **Partial** |
-| Product functions | `Feature` | **Mapped** when `FEAT-*` authored |
-| User characteristics | `UserClass` | **Partial** — `Stakeholder` / `Role` only |
-| Limitations | `Limitation` | **Mapped** when `LIM-*` / `limitation` |
-| Assumptions and dependencies | `Assumption`, `Dependency` | **Mapped** when `ASM`/`DEP` + categories |
-| Apportioning (deferred/allocated) | status / gaps | **Partial** — via gaps + fact status |
-| External interfaces | `ExternalInterface` | **Mapped** when `IF-*` authored |
-| Functions (detailed FR) | `Requirement` (+ `SATISFIES` → Feature) | **Mapped** |
-| Usability / performance | `UsabilityRequirement`, `PerformanceRequirement` | **Mapped** when authored |
-| Logical database requirements | `DataEntity` | **Mapped** when `DATA-*` authored |
-| Design constraints / standards | `DesignConstraint`, `Standard` | **Mapped** when authored |
-| Software system attributes | `QualityAttribute` | **Mapped** when `NFR`/`SEC`/quality authored |
-| Verification | `VerificationMethod` | **Mapped** when `VER-*` authored (`VERIFIED_BY` edge not yet emitted) |
-| Supporting info / use cases | `UseCase` (+ `Task` for workflows) | **Mapped** when `UC-*` authored |
-| Traceability matrix edges | `SATISFIES`, `DERIVES_FROM`, `DEPENDS_ON` | **Mapped** from fact link fields (`VERIFIED_BY` still missing) |
-
-Authoring skill closes package gaps; reindex materializes the graph. Prefer remapping existing facts before inventing new ones.
+Author tip: link `VER-*` facts with `depends_on_ids` / `satisfies_ids` / `derives_from_ids` to the FRs they cover so `VERIFIED_BY` is emitted.
 
 ## Visual map
-
-Circular nodes, straight directed edges:
 
 ```mermaid
 %%{init: {"flowchart": {"curve": "linear"}}}%%
@@ -163,6 +131,7 @@ flowchart LR
     SC -->|HAS_FACT| FA
     SC -->|HAS_DECISION| DE
     PE -->|KNOWS| FA
+    FA -->|OWNED_BY| PE
     PE -->|HAS_ROLE| SR
     PE -->|CAN| CP
     FA -->|IN_CATEGORY| CAT
@@ -171,6 +140,7 @@ flowchart LR
     FA -->|SATISFIES| FE
     FA -->|DERIVES_FROM| GO
     FA -->|DEPENDS_ON| FA
+    FA -->|VERIFIED_BY| FA
     FA -->|FROM_DECISION| DE
     DE -->|PRODUCED| FA
     FA -->|CITED_FROM| CU

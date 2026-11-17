@@ -1,2 +1,0 @@
-invalid type: string "Sheet: Qual_Scenario\nid: QS3\nname: Unauthorized Salary Change Attempt\nsource: Unauthorized Staff\nstimulus: Attempts to modify salary data\nenvironment: Normal operations\nartefact: Payroll database and access control system\nresponse: Access denied, attempt logged\nresponse_measure: 100% of unauthorized attempts blocked, audit trail recorded", expected i64&ÿk
-ÿÿÿÿÿÿÿÿÿÿÿÿ

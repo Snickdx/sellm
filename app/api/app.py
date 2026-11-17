@@ -101,7 +101,6 @@ from app.llm_registry import (
     stakeholder_llm_available,
     validate_choice_id,
 )  # list_llm_choices used for BYOK model preference
-from app.scenario.scenario_pack import ScenarioPack, load_scenario_pack
 from app.scenario.stakeholder_prompt import STAKEHOLDER_LLM_REQUIRED_MSG
 from app.security.secret_store import (
     decrypt_secret,
@@ -255,8 +254,16 @@ app.state.templates = templates
 app.state.render_template = _render_template
 app.include_router(pages_router)
 
-excel_file = os.getenv("EXCEL_FILE", "data.xlsx")
-print(f"Using Excel file: {excel_file}")
+# Optional legacy workbook only. Primary knowledge is YAML scenarios under SCENARIOS_ROOT.
+_excel_raw = (os.getenv("EXCEL_FILE") or "").strip()
+excel_file: Optional[str] = _excel_raw or None
+if excel_file and not Path(excel_file).is_file():
+    print(f"⚠ EXCEL_FILE set but missing ({excel_file}); ignoring")
+    excel_file = None
+if excel_file:
+    print(f"Optional Excel workbook configured: {excel_file}")
+else:
+    print("Excel workbook not configured — using YAML scenarios only")
 chroma_persist_directory = os.getenv("CHROMA_PERSIST_DIRECTORY", "./storage/chroma_db_v2")
 neo4j_uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
 neo4j_user = os.getenv("NEO4J_USER", "neo4j")
@@ -292,7 +299,9 @@ if _rag_backend in ("neo4j", "hybrid", "compare"):
         engine_status["neo4j"] = f"error: {e}"
 
 if _rag_backend == "hybrid":
-    rag_systems["vector"] = rag_systems["vector"] or RequirementsRAG(excel_file, persist_directory=chroma_persist_directory)
+    rag_systems["vector"] = rag_systems["vector"] or RequirementsRAG(
+        excel_file, persist_directory=chroma_persist_directory
+    )
     rag_systems["neo4j"] = rag_systems["neo4j"] or RequirementsRAGNeo4j(
         excel_file,
         neo4j_uri=neo4j_uri,
@@ -325,13 +334,6 @@ tweak_mode_enabled = _tweak_raw.strip().lower() in (
 )
 behavior_tweaks_file = os.getenv("BEHAVIOR_TWEAKS_FILE", "config/behavior/behavior_tweaks.json")
 behavior_tweaks = BehaviorTweaksStore(behavior_tweaks_file) if tweak_mode_enabled else None
-
-scenario_pack: Optional[ScenarioPack] = None
-try:
-    scenario_pack = load_scenario_pack(excel_file)
-    print(f"✓ Scenario pack compiled ({len(scenario_pack.sections)} sections)")
-except Exception as e:
-    print(f"⚠ Scenario pack compilation failed: {e}")
 
 print("RAG system ready!")
 
@@ -587,6 +589,9 @@ def _debug_chunks(results: Optional[List[Dict]]) -> List[Dict[str, Any]]:
     return chunks
 
 
+_LEGACY_EXCEL_SLUGS = frozenset({"excel", "__excel__", "powerpay"})
+
+
 def _resolve_persona_scope(
     scenario_slug: Optional[str],
     persona_key: Optional[str],
@@ -595,8 +600,12 @@ def _resolve_persona_scope(
     """Return (slug, persona_key, package) when YAML persona knowledge should drive RAG/direct."""
     slug = (scenario_slug or "").strip()
     persona = (persona_key or "").strip()
-    if not slug or slug in ("excel", "__excel__", "powerpay"):
+    if not slug:
         return None, None, None
+    if slug.lower() in _LEGACY_EXCEL_SLUGS:
+        raise ValueError(
+            "Excel workbook mode is removed. Select a YAML scenario and persona."
+        )
     if not persona:
         raise ValueError("Select a persona for the chosen YAML scenario")
     package = scenario_registry.get(slug, scenario_version)
@@ -697,11 +706,11 @@ def _generate_rag_response(
         scenario_slug=scenario_slug,
         persona_key=persona_key,
     )
-    active_pack = scenario_pack
+    active_pack = None
     if scenario_slug and persona_key:
         package = scenario_registry.get(scenario_slug)
         if package is not None:
-            active_pack = pack_from_persona(package, persona_key) or scenario_pack
+            active_pack = pack_from_persona(package, persona_key)
     response = llm.generate_stakeholder_from_results(
         message,
         results,
@@ -744,11 +753,11 @@ def _generate_hybrid_response(
         scenario_slug=scenario_slug,
         persona_key=persona_key,
     )
-    active_pack = scenario_pack
+    active_pack = None
     if scenario_slug and persona_key:
         package = scenario_registry.get(scenario_slug)
         if package is not None:
-            active_pack = pack_from_persona(package, persona_key) or scenario_pack
+            active_pack = pack_from_persona(package, persona_key)
     response = llm.generate_stakeholder_from_results(
         message,
         handoff.results,
@@ -779,19 +788,15 @@ def _generate_direct_response(
     scenario_slug: Optional[str] = None,
     persona_key: Optional[str] = None,
 ) -> tuple[str, str, str, Optional[Dict[str, Any]]]:
-    active_pack = scenario_pack
-    mode_label = "direct"
-    if scenario_slug and persona_key:
-        package = scenario_registry.get(scenario_slug)
-        if package is None:
-            raise ValueError(f"Scenario '{scenario_slug}' not loaded")
-        yaml_pack = pack_from_persona(package, persona_key)
-        if yaml_pack is None:
-            raise ValueError(f"Persona '{persona_key}' not found in scenario '{scenario_slug}'")
-        active_pack = yaml_pack
-        mode_label = f"direct:{scenario_slug}:{persona_key}"
-    if not active_pack:
-        raise ValueError("Direct mode requires Excel data.xlsx or a YAML scenario persona")
+    if not scenario_slug or not persona_key:
+        raise ValueError("Direct mode requires a YAML scenario and persona")
+    package = scenario_registry.get(scenario_slug)
+    if package is None:
+        raise ValueError(f"Scenario '{scenario_slug}' not loaded")
+    active_pack = pack_from_persona(package, persona_key)
+    if active_pack is None:
+        raise ValueError(f"Persona '{persona_key}' not found in scenario '{scenario_slug}'")
+    mode_label = f"direct:{scenario_slug}:{persona_key}"
     _require_stakeholder_llm(user)
     llm, resolved_choice, user_override = _resolve_llm_for_user(
         user, llm_choice, mode="direct"
@@ -1171,6 +1176,8 @@ def chat(request: ChatRequest, req: Request):
             request.persona_key,
             request.scenario_version,
         )
+        if not scope_slug or not scope_persona:
+            raise ValueError("Select a YAML scenario and persona before chatting")
         scope_kw = {"scenario_slug": scope_slug, "persona_key": scope_persona}
 
         if len(selected_modes) > 1:
@@ -1408,18 +1415,17 @@ async def modes():
                 (rag_systems["vector"] is not None or rag_systems["neo4j"] is not None)
                 and (llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None)
             ),
-            "direct": scenario_pack is not None and (
+            "direct": scenario_registry.count > 0 and (
                 llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None
             ),
-            "compare": (
-                scenario_pack is not None
-                and (llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None)
+            "compare": scenario_registry.count > 0 and (
+                llm_by_mode["vector"] is not None or llm_by_mode["neo4j"] is not None
             ),
             "yaml": scenario_registry.count > 0,
         },
         "engine_status": engine_status,
         "hybrid_routing": "neo4j | chroma | blend per query",
-        "direct_mode": "full scenario pack in prompt (no retrieval)",
+        "direct_mode": "full YAML persona pack in prompt (no retrieval)",
         "yaml_mode": "persona chat grounded in YAML scenario packages",
         "yaml_scenarios": scenario_registry.count,
     }
@@ -1577,7 +1583,8 @@ def config(request: Request):
     picker_mode = defaults.get("default_response_mode") or "vector"
     # Non-sensitive flags only — never return DB URLs, Neo4j credentials, or .env paths.
     return {
-        "excel_configured": bool(excel_file),
+        "excel_configured": bool(excel_file),  # optional legacy/export workbook only
+        "scenarios_configured": scenario_registry.count > 0,
         "has_neo4j": engine_status.get("neo4j") == "ready",
         "has_vector": engine_status.get("vector") == "ready",
         "engines": engine_status,

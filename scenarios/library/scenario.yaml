@@ -1,6 +1,6 @@
 slug: library
 title: Library Workshop Booking
-version: 0.3.0
+version: 0.3.1
 status: approved
 brief: Lecturers request workshop sessions on library resources from a booking system operated by the
   library coordinator (explicit approve/confirm; conflict preference with larger-cohort override; cancellations
@@ -8,7 +8,9 @@ brief: Lecturers request workshop sessions on library resources from a booking s
   configure rooms/capacities (default 30); administrator escalates capacity-policy disputes. Lecturers
   need shareable confirmations after acceptance.
 source_status: transcript_received_plus_synthetic_pilot
-source_notes: 'Real interview VTT present: sources/Library Project Interview - Kriston Latoo.vtt. Package
+source_notes: 'Graph depth-update to 0.3.1: wired VER depends_on_ids → FRs for VERIFIED_BY; added sparse REQ depends_on where missing for graph traversal.
+
+  Real interview VTT present: sources/Library Project Interview - Kriston Latoo.vtt. Package
   0.2.0 remains grounded on the SYNTHETIC pilot (library-synthetic.vtt) plus instructor depth decisions
   DEC-LIB-002..006. Re-author against the real transcript in a later version before treating facts as
   real-interview ground truth.

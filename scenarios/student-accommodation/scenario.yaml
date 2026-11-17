@@ -1,6 +1,6 @@
 slug: student-accommodation
 title: Student Accommodation
-version: 0.3.0
+version: 0.3.1
 status: approved
 brief: 'Closed campus referral platform for off-campus housing near St. Augustine / Mount Hope: eligible
   students browse/filter active fully approved listings; landlords submit units for campus verification
@@ -8,7 +8,9 @@ brief: 'Closed campus referral platform for off-campus housing near St. Augustin
   full approval); landlords manage active/inactive; campus_admin may force-deactivate. Optional in-app
   messaging; not a sales/payments marketplace.'
 source_status: transcript_received
-source_notes: 'VTT: sources/Student Accommodation Project - Sy''rai Simon.vtt (Kevin Snaggs, Kobe Sandy).
+source_notes: 'Graph depth-update to 0.3.1: wired VER depends_on_ids → FRs for VERIFIED_BY; added sparse REQ depends_on where missing for graph traversal.
+
+  VTT: sources/Student Accommodation Project - Sy''rai Simon.vtt (Kevin Snaggs, Kobe Sandy).
   536 cues; speakers unlabeled. Personas: campus_admin, student_seeker, landlord (DEC-SA-001). Prior DEC-SA-002..005.
   Depth-update 0.2.0: roles (DEC-SA-006), reject/provisional (DEC-SA-007), dual takedown (DEC-SA-008),
   provisional hidden until full approval (DEC-SA-009).

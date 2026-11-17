@@ -5,8 +5,11 @@ facts:
   category: verification
   status: clarified
   origin: instructor
-  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
-    verify/change.
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor verify/change. Linked FRs via depends_on_ids for VERIFIED_BY graph edges.
   known_by:
   - career_advisor
+  depends_on_ids:
+  - CA-REQ-002
+  - CA-REQ-005
+  - CA-REQ-012
   disclosure: when_asked

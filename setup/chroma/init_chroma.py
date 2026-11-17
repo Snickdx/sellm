@@ -1,5 +1,5 @@
 """
-Initialize/warm the local ChromaDB store from Excel data.
+Initialize/warm the local ChromaDB store (scenario-first; Excel optional).
 """
 
 import os
@@ -17,16 +17,20 @@ from app.rag_backend import RequirementsRAG
 
 def main() -> int:
     load_dotenv()
-    excel_file = os.getenv("EXCEL_FILE", "data.xlsx")
+    excel_raw = (os.getenv("EXCEL_FILE") or "").strip()
+    excel_file = excel_raw if excel_raw and Path(excel_raw).is_file() else None
     chroma_path = os.getenv("CHROMA_PERSIST_DIRECTORY", "./storage/chroma_db_v2")
     os.makedirs(chroma_path, exist_ok=True)
 
     print("Initializing ChromaDB...")
-    print(f"Excel file: {excel_file}")
+    print(f"Excel file: {excel_file or '(none — YAML scenarios only)'}")
     print(f"Persist path: {chroma_path}")
 
     rag = RequirementsRAG(excel_file=excel_file, persist_directory=chroma_path)
-    print(f"ChromaDB ready. Document count: {rag.collection.count()}")
+    print(
+        f"ChromaDB ready. Legacy docs: {rag.collection.count()}; "
+        f"scenario_facts: {rag.scenario_collection.count()}"
+    )
     return 0
 
 

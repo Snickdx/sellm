@@ -1,4 +1,20 @@
 open_questions:
+- id: GAP-LIBRAR-VERIFIED-BY-001
+  priority: important
+  prompt: Confirm VERIFIED_BY links from verification facts (LIB-VER-001) to the listed FRs are correct for classroom graph/neo4j mode.
+  why_it_matters: Without these links Neo4j cannot emit VERIFIED_BY edges; hybrid/graph modes lose verification traversal.
+  alternatives:
+  - Keep prescribed FR links
+  - Retarget VER depends_on_ids to a different FR set
+  - Defer VERIFIED_BY for this package
+  recommended_default: Keep prescribed FR links
+  theme: srs_prescription
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
 - id: GAP-LIB-001
   priority: important
   prompt: How late may a lecturer cancel a confirmed workshop booking?

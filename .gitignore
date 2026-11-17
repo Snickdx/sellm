@@ -23,7 +23,8 @@ __pycache__/
 *.pyc
 .env
 data/
-!data.xlsx
+# Optional per-scenario Excel mirrors from scenario-author / export script
+scenarios/**/exports/
 
 # Optional Neo4j local dump artifacts
 *.dump

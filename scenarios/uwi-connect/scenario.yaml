@@ -1,13 +1,15 @@
 slug: uwi-connect
 title: UWI Connect
-version: 0.3.0
+version: 0.3.1
 status: approved
 brief: 'Alumni reconnect MVP with alumni_admin chatbot only (platform_admin): UWI-email verification gate;
   alumni browse jobs/events and submit listings for admin publish; admin rejects/unpublishes with in-system
   notify, revokes accounts, and sends campaigns to all verified non-revoked alumni. Directory, mentorship,
   messaging, and groups are out of graded MVP (or student elicitation).'
 source_status: transcript_received
-source_notes: 'VTT: sources/UWI Connect Project Interview - Adrian Chatoor.vtt (Miss Sophia Francis /
+source_notes: 'Graph depth-update to 0.3.1: wired VER depends_on_ids → FRs for VERIFIED_BY; added sparse REQ depends_on where missing for graph traversal.
+
+  VTT: sources/UWI Connect Project Interview - Adrian Chatoor.vtt (Miss Sophia Francis /
   fundraising & alumni). DEC-UC-001 alumni_admin only; DEC-UC-002 MVP core; DEC-UC-003 UWI email verification
   (transcript tension: many alumni leave student email); DEC-UC-004 alumni submit → admin publish; DEC-UC-005
   full email campaign builder. Depth 0.2.0: DEC-UC-006 platform_admin; DEC-UC-007 reject/unpublish + notify;

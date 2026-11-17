@@ -4,8 +4,11 @@ facts:
   category: verification
   status: clarified
   origin: instructor
-  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor
-    verify/change.
+  rationale: Prescribed during authoring; inferred from brief + existing package facts. Open for instructor verify/change. Linked FRs via depends_on_ids for VERIFIED_BY graph edges.
   known_by:
   - hod
+  depends_on_ids:
+  - TA-REQ-001
+  - TA-REQ-003
+  - TA-REQ-009
   disclosure: when_asked

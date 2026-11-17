@@ -1,4 +1,8 @@
-"""Compile full project scenario from data.xlsx for direct-model mode."""
+"""Legacy Excel → ScenarioPack compiler (optional offline tooling).
+
+Runtime direct mode uses YAML packages via ``app.scenario_pack_adapter``.
+This module remains for inspecting exported workbooks only.
+"""
 
 from __future__ import annotations
 

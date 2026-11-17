@@ -59,8 +59,14 @@ def format_retrieved_context(results: List[dict], *, max_items: int = 6) -> str:
             value = value.strip()
             if value and value.lower() not in ("nan", "none", ""):
                 parts.append(f"{key.strip()}: {value}")
+        related = (result.get("metadata") or {}).get("related") or []
+        for rel in related[:4]:
+            rel_type = (rel.get("rel_type") or "RELATED").strip()
+            snippet = (rel.get("text") or "").strip()
+            if snippet:
+                parts.append(f"{rel_type}: {snippet[:160]}")
         if parts:
-            blocks.append(" · ".join(parts[:10]))
+            blocks.append(" · ".join(parts[:12]))
     if not blocks:
         return "No specific supporting details were retrieved for this question."
     return "\n".join(f"- {block}" for block in blocks)
