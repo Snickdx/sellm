@@ -628,7 +628,8 @@
         .send-button { padding: 12px 22px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; cursor: pointer; font-size: 14px; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; flex-shrink: 0; }
         .send-button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
         .send-button:disabled { opacity: 0.6; cursor: not-allowed; }
-        .reflection-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+        /* Above conversations-pane (1600) / mobile drawers (1700) so New chat & settings aren't clipped */
+        .reflection-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45); display: none; align-items: center; justify-content: center; z-index: 2500; padding: 16px; }
         .reflection-backdrop.visible { display: flex; }
         .reflection-modal { background: #fff; border-radius: 16px; max-width: 980px; width: 100%; max-height: 90vh; overflow: auto; padding: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25); }
         .reflection-modal h3 { margin-bottom: 12px; font-size: 18px; color: #1f2937; }
