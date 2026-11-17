@@ -1,0 +1,22 @@
+{% extends "admin_base.html" %}
+{% block admin_heading %}Transcript{% endblock %}
+{% block admin_subheading %}{{ conversation.title or conversation.id }}{% endblock %}
+{% block admin_main %}
+<section class="list-pane" style="grid-column:1 / -1;padding:16px">
+  <p><a href="/admin/users/{{ target.id }}">← {{ target.username }}</a></p>
+  <p class="hint">Scenario: {{ conversation.scenario_slug or '—' }}</p>
+  <div class="surface" style="padding:16px;max-width:800px">
+    {% for m in messages %}
+    <div style="margin-bottom:12px">
+      <strong>{{ m.role }}</strong>
+      <div style="white-space:pre-wrap">{{ m.content }}</div>
+    </div>
+    {% else %}
+    <p class="hint">No messages</p>
+    {% endfor %}
+  </div>
+  <p style="margin-top:12px">
+    <a href="/api/admin/users/{{ target.id }}/conversations/{{ conversation.id }}/download">Download</a>
+  </p>
+</section>
+{% endblock %}

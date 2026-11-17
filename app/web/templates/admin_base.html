@@ -1,0 +1,101 @@
+{% extends "shell.html" %}
+{% block title %}Admin · sellm{% endblock %}
+{% block description %}Instructor admin for sellm course operations.{% endblock %}
+{% block head_extra %}
+<link rel="stylesheet" href="/static/components/admin.css?v=2" />
+<style>
+  /* Embed classic admin workbench inside the shared course shell */
+  #adminShell.admin-embed {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+    background: #fff;
+  }
+  #adminShell.admin-embed .master-detail {
+    grid-template-columns: minmax(0, 1fr);
+    height: 100%;
+  }
+  #adminShell.admin-embed .nav-pane { display: none; }
+  #adminShell.admin-embed .main-pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+  }
+  #adminShell.admin-embed .main-header .nav-toggle { display: none; }
+  @media (max-width: 900px) {
+    #adminShell.admin-embed .main-header .side-nav-toggle-admin {
+      display: inline-flex;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block main %}
+<div id="adminShell" class="admin-embed" data-embedded="1" data-initial-view="{{ initial_view|default('users') }}">
+  <div class="master-detail">
+    <div class="main-pane">
+      <header class="main-header">
+        <button type="button" class="side-nav-toggle nav-toggle side-nav-toggle-admin" aria-label="Open menu" aria-expanded="false" aria-controls="appNavPane">&#9776;</button>
+        <div class="main-header-text">
+          <h1>Admin</h1>
+          <p>Users, teams, tokens, and app defaults{% if user %} · <span id="adminWho">{{ user.username }} · admin</span>{% else %} · <span id="adminWho"></span>{% endif %}</p>
+        </div>
+      </header>
+      <div class="child-tab-bar" role="tablist" aria-label="Admin sections">
+        <button type="button" data-view="users" class="active" role="tab" aria-selected="true">Users</button>
+        <button type="button" data-view="roster" role="tab" aria-selected="false">Class roster</button>
+        <button type="button" data-view="teams" role="tab" aria-selected="false">Teams</button>
+        <button type="button" data-view="tokens" role="tab" aria-selected="false">Token monitor</button>
+        <button type="button" data-view="appkeys" role="tab" aria-selected="false">App-wide keys</button>
+        <button type="button" data-view="defaults" role="tab" aria-selected="false">Role defaults</button>
+      </div>
+      <div class="admin-work">
+        <section class="list-pane">
+          <div class="pane-header">
+            <h2 id="listTitle">Users</h2>
+            <div class="toolbar" id="listToolbar"></div>
+          </div>
+          <div id="listBody"></div>
+        </section>
+        <section class="detail-pane">
+          <div class="pane-header">
+            <h2 id="detailTitle">Details</h2>
+          </div>
+          <div class="detail-body" id="detailBody">
+            <p style="color:#64748b;font-size:14px;">Select a section to begin.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="userDetailModal" class="admin-modal-backdrop" aria-hidden="true">
+  <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="userDetailModalTitle">
+    <div class="admin-modal-header">
+      <h3 id="userDetailModalTitle">User details</h3>
+      <button type="button" id="userDetailModalClose" class="admin-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="userDetailModalBody"></div>
+  </div>
+</div>
+
+<div id="teamCreateModal" class="admin-modal-backdrop" aria-hidden="true">
+  <div class="admin-modal admin-modal-sm" role="dialog" aria-modal="true" aria-labelledby="teamCreateModalTitle">
+    <div class="admin-modal-header">
+      <h3 id="teamCreateModalTitle">Create group</h3>
+      <button type="button" id="teamCreateModalClose" class="admin-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="teamCreateModalBody"></div>
+  </div>
+</div>
+
+<button type="button" id="createTeamFab" class="fab-labeled" hidden>+ Create group</button>
+{% endblock %}
+
+{% block page_scripts %}
+<script src="/static/components/admin.js?v=28"></script>
+{% endblock %}

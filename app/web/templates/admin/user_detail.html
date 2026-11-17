@@ -1,0 +1,44 @@
+{% extends "admin_base.html" %}
+{% block admin_heading %}{{ target.username }}{% endblock %}
+{% block admin_subheading %}User detail{% endblock %}
+{% block admin_main %}
+<section class="list-pane" style="grid-column:1 / -1;padding:16px">
+  <p><a href="/admin/users">← Users</a></p>
+  {% if flash %}<p class="hint">{{ flash }}</p>{% endif %}
+  {% if new_password %}<p class="status"><strong>New password (once):</strong> <code>{{ new_password }}</code></p>{% endif %}
+  <form method="post" action="/admin/users/{{ target.id }}" class="auth-form" style="max-width:520px">
+    <label>Username <input name="username" value="{{ target.username }}" required /></label>
+    <label>Role
+      <select name="role">
+        {% for r in ['student','tester','admin'] %}
+        <option value="{{ r }}" {% if target.role == r %}selected{% endif %}>{{ r }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Group name <input name="group_name" value="{{ target.group_name or '' }}" /></label>
+    <label>Token limit <input name="token_limit" type="number" value="{{ target.token_limit or 0 }}" /></label>
+    <label><input type="checkbox" name="reset_tokens" value="1" /> Reset tokens used</label>
+    <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+  </form>
+  <form method="post" action="/admin/users/{{ target.id }}/reset-password" style="margin-top:12px">
+    <button type="submit" class="btn btn-secondary">Reset password</button>
+  </form>
+  <form method="post" action="/admin/users/{{ target.id }}/delete" style="margin-top:8px" onsubmit="return confirm('Delete this user?')">
+    <button type="submit" class="btn btn-secondary">Delete user</button>
+  </form>
+
+  <h2 style="margin:24px 0 8px;font-size:1rem">Conversations</h2>
+  <ul class="consent-checklist">
+    {% for c in conversations %}
+    <li>
+      <a href="/admin/users/{{ target.id }}/conversations/{{ c.id }}">{{ c.title or c.id }}</a>
+      <span class="hint">· {{ c.message_count }} msgs · {{ c.updated_at }}</span>
+    </li>
+    {% else %}
+    <li class="hint">No conversations</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

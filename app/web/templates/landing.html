@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}sellm · Sign in{% endblock %}
+{% block body %}
+<div class="view-pane landing-shell" id="view-landing" aria-hidden="false">
+  <div class="landing-grid">
+    <section class="auth-panel landing-panel">
+      <div class="brand-lockup">
+        <img src="/static/brand/logo-horizontal-dark.svg" width="168" height="45" alt="sellm" />
+      </div>
+      <p class="eyebrow">SWEN · course</p>
+      <h1 id="claimTitle">Form a group</h1>
+      <div id="claimFormWrap">
+        <p class="lede">
+          Search classmates by name, pick yourself plus 2 or 3 others, choose a group name,
+          then claim a shared login. Student IDs are never shown here.
+        </p>
+        <form id="claimForm" class="auth-form">
+          <label>
+            Search classmates
+            <input id="claimSearch" type="text" placeholder="Type a first or last name" autocomplete="off" />
+          </label>
+          <div id="claimHits"></div>
+          <div class="claim-selected">
+            <p class="hint" id="claimSelectedCount" style="margin:0 0 8px">Selected 0/4 (need 3–4)</p>
+            <div id="claimSelected"><p class="hint">No members selected yet.</p></div>
+          </div>
+          <label>
+            Group name
+            <input id="claimGroupName" type="text" placeholder="e.g. ByteForce" required minlength="2" maxlength="80" />
+          </label>
+          <p id="claimError" class="error" hidden></p>
+          <button type="submit" id="claimSubmit" disabled>Claim shared credentials</button>
+        </form>
+      </div>
+      <div id="claimResultWrap" hidden></div>
+    </section>
+    <section class="auth-panel landing-panel landing-login">
+      <div class="brand-lockup">
+        <img src="/static/brand/logo-mark.svg" class="brand-mark" width="28" height="28" alt="" />
+        <p class="eyebrow" style="margin:0">already claimed?</p>
+      </div>
+      <h1>Sign in</h1>
+      <p class="lede">Use your group&apos;s shared username and password to open the course workspace.</p>
+      {% if error %}
+      <p class="error">{{ error }}</p>
+      {% endif %}
+      <form id="landingLoginForm" class="auth-form" method="post" action="/login">
+        <label>
+          Username
+          <input id="landingUsername" name="username" class="login-input" required autocomplete="username" />
+        </label>
+        <label>
+          Password
+          <input id="landingPassword" name="password" class="login-input" type="password" required autocomplete="current-password" />
+        </label>
+        <p id="landingLoginError" class="error" hidden></p>
+        <button type="submit" id="landingLoginBtn">Log in</button>
+      </form>
+      <p class="hint" style="margin-top:14px"><a href="/req">Requirements chat</a></p>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/components/api.js?v=6"></script>
+<script src="/static/components/claim.js?v=3"></script>
+<script>
+  if (window.SellmClaim) SellmClaim.mount();
+</script>
+{% endblock %}

@@ -38,7 +38,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -84,6 +84,7 @@ from app.api.exit_interviews import router as exit_interviews_router
 from app.api.roster import router as roster_router
 from app.api.voice import router as voice_router
 from app.api.policy import router as policy_router
+from app.api.pages import router as pages_router
 from app.indexing import index_all_scenarios
 from app.scenario_pack_adapter import pack_from_persona
 import app.models  # noqa: F401 — register course SQLModel tables
@@ -113,6 +114,7 @@ from app.settings import get_settings
 from app.ops.request_context import RequestIdMiddleware
 from app.services.auth_service import AuthService
 from app.services.quota_service import QuotaService
+from app.web.session_cookie import clear_session_cookie, set_session_cookie
 from app.rag_backend import RequirementsRAG
 from app.rag_backend_neo4j import RequirementsRAGNeo4j
 from app.mcp.hybrid import HybridKnowledgeService
@@ -249,6 +251,9 @@ app.include_router(exit_interviews_router, prefix="/api")
 app.include_router(roster_router, prefix="/api")
 app.include_router(voice_router, prefix="/api")
 app.include_router(policy_router, prefix="/api")
+app.state.templates = templates
+app.state.render_template = _render_template
+app.include_router(pages_router)
 
 excel_file = os.getenv("EXCEL_FILE", "data.xlsx")
 print(f"Using Excel file: {excel_file}")
@@ -961,7 +966,7 @@ def login(request: LoginRequest, req: Request):
     quota = _token_quota_payload(user)
     defaults = _effective_defaults(user)
     role = defaults["role"]
-    return LoginResponse(
+    payload = LoginResponse(
         token=token,
         user_id=user.id,
         username=user.username,
@@ -980,13 +985,18 @@ def login(request: LoginRequest, req: Request):
         quota_exhausted=quota["quota_exhausted"],
         billing_mode=quota["billing_mode"],
     )
+    response = JSONResponse(content=payload.model_dump(mode="json"))
+    set_session_cookie(response, token)
+    return response
 
 @app.post("/api/auth/logout")
 def logout(request: Request):
     token = _get_token_from_header(request)
     if token:
         conversation_store.delete_session(token)
-    return {"status": "ok"}
+    response = JSONResponse(content={"status": "ok"})
+    clear_session_cookie(response)
+    return response
 
 @app.get("/api/auth/me")
 def me(request: Request):
@@ -1060,51 +1070,6 @@ async def set_user_config(request: Request, body: UserConfigSetRequest):
     return {"status": "ok"}
 
 # ── App endpoints ─────────────────────────────────────────────
-
-def _chat_page(request: Request) -> HTMLResponse:
-    user = _get_current_user(request)
-    return _render_template(
-        request,
-        "index.html",
-        {
-            "authenticated": user is not None,
-            "username": user.username if user else None,
-            "is_admin": bool(getattr(user, "is_admin", False)) if user else False,
-        },
-    )
-
-
-@app.get("/", response_class=HTMLResponse)
-@app.get("/req", response_class=HTMLResponse)
-@app.get("/login", response_class=HTMLResponse)
-@app.get("/claim", response_class=HTMLResponse)
-@app.get("/exit", response_class=HTMLResponse)
-@app.get("/policy", response_class=HTMLResponse)
-@app.get("/teams/{team_id}/exit", response_class=HTMLResponse)
-async def student_shell(request: Request, team_id: str | None = None):
-    """Unified student shell (claim/login, req chat, exit interviews)."""
-    return _chat_page(request)
-
-
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request):
-    user = _get_current_user(request)
-    if not user:
-        return _render_template(
-            request,
-            "admin.html",
-            {"authenticated": False, "username": None, "is_admin": False},
-        )
-    return _render_template(
-        request,
-        "admin.html",
-        {
-            "authenticated": True,
-            "username": user.username,
-            "is_admin": bool(getattr(user, "is_admin", False)),
-        },
-    )
-
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest, req: Request):

@@ -1,0 +1,73 @@
+{% extends "admin_base.html" %}
+{% block admin_heading %}Users{% endblock %}
+{% block admin_subheading %}Accounts, roles, budgets{% endblock %}
+{% block admin_work_class %}users-wide{% endblock %}
+{% block admin_main %}
+<section class="list-pane" style="grid-column:1 / -1">
+  <div class="pane-header">
+    <h2>Users</h2>
+    <div class="toolbar">
+      <form method="get" action="/admin/users" style="display:flex;gap:8px;align-items:center;margin:0">
+        <select name="group" onchange="this.form.submit()">
+          <option value="">All groups</option>
+          <option value="(ungrouped)" {% if group_filter == '(ungrouped)' %}selected{% endif %}>(ungrouped)</option>
+          {% for g in groups %}
+          <option value="{{ g }}" {% if group_filter == g %}selected{% endif %}>{{ g }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+  </div>
+  {% if flash %}<p class="hint">{{ flash }}</p>{% endif %}
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Group</th>
+          <th>Tokens</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td><a href="/admin/users/{{ u.id }}">{{ u.username }}</a></td>
+          <td>{{ u.role }}</td>
+          <td>{{ u.group_name or '—' }}</td>
+          <td>{{ u.tokens_used }}{% if u.token_limit %} / {{ u.token_limit }}{% endif %}</td>
+          <td><a href="/admin/users/{{ u.id }}">Edit</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5">No users</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <details class="surface" style="margin:16px;padding:16px">
+    <summary>Create user</summary>
+    <form method="post" action="/admin/users" class="auth-form" style="margin-top:12px;max-width:420px">
+      <label>Username <input name="username" required /></label>
+      <label>Password <input name="password" type="password" required /></label>
+      <label>Role
+        <select name="role">
+          <option value="student">student</option>
+          <option value="tester">tester</option>
+          <option value="admin">admin</option>
+        </select>
+      </label>
+      <label>Group name <input name="group_name" /></label>
+      <label>Token limit <input name="token_limit" type="number" value="50000" /></label>
+      <button type="submit" class="btn btn-primary">Create</button>
+    </form>
+  </details>
+</section>
+{% endblock %}
+{% block page_scripts %}
+<style>
+.data-table { width:100%; border-collapse:collapse; font-size:14px; }
+.data-table th, .data-table td { padding:10px 12px; border-bottom:1px solid #e2e8f0; text-align:left; }
+.table-wrap { overflow:auto; }
+</style>
+{% endblock %}

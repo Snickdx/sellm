@@ -1,6 +1,6 @@
 # sellm brand
 
-Canonical colours from the live shell (`shell-extra.css`):
+Canonical colours from the live shell (`shell.css`):
 
 | Token | Hex | Use |
 | --- | --- | --- |

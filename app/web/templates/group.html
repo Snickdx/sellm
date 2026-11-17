@@ -1,0 +1,116 @@
+{% extends "shell.html" %}
+{% block title %}Group · sellm{% endblock %}
+{% block main %}
+<div class="view-pane" id="view-group" aria-hidden="false">
+  <div class="chat-header">
+    <button type="button" id="sideNavToggleGroup" class="side-nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="appNavPane">&#9776;</button>
+    <div class="chat-header-text">
+      <h1>Group</h1>
+      <p class="chat-header-subtitle">Scenario, members, and repository</p>
+    </div>
+  </div>
+  <div class="group-body">
+    {% if flash %}<p class="hint" id="groupHint">{{ flash }}</p>{% endif %}
+    <p id="groupError" class="error" {% if error %}{% else %}hidden{% endif %}>{% if error %}{{ error }}{% endif %}</p>
+
+    {% if not group %}
+    <div class="surface group-card">
+      <p class="lede">No group yet. <a href="/">Claim classmates</a> from the landing page.</p>
+    </div>
+    {% else %}
+    <section class="surface group-card" id="groupAccountCard">
+      <h2 style="margin:0 0 8px;font-size:1rem">Shared login</h2>
+      <p class="hint" style="margin-top:0">This username is shared by your group. Reset the password if anyone loses it — the new password is shown only once.</p>
+      <div class="auth-form group-form">
+        <div class="form-row form-row-repo">
+          <div class="form-grow">
+            <label style="display:block;margin-bottom:4px">Username</label>
+            <code id="groupLoginUsername">{{ group.account_username or user.username }}</code>
+          </div>
+          <form method="post" action="/group/reset-password" style="margin:0">
+            <button type="submit" id="groupResetPassword" class="form-row-action">Reset password</button>
+          </form>
+        </div>
+      </div>
+      {% if new_password %}
+      <div id="groupPasswordOnce" class="group-status">
+        <strong>New password (shown once):</strong> <code>{{ new_password }}</code>
+      </div>
+      {% endif %}
+    </section>
+
+    <section class="surface group-card">
+      <h2 style="margin:0 0 8px;font-size:1rem">Group settings</h2>
+      <p class="hint" style="margin-top:0">Pick your scenario and GitHub repo for exit interviews. Indexing starts after save.</p>
+      <form class="auth-form group-form" id="groupRepoForm" method="post" action="/group/setup">
+        <div class="form-row form-row-2">
+          <label>
+            Group name
+            <input id="groupNameInput" name="group_name" value="{{ group.group_name }}" placeholder="Alpha Testers" required />
+          </label>
+          <label>
+            Scenario
+            <select id="groupScenario" name="scenario_slug" required>
+              {% for s in scenarios %}
+              <option value="{{ s.slug }}" {% if s.slug == group.scenario_slug %}selected{% endif %}>{{ s.title or s.slug }}</option>
+              {% else %}
+              <option value="{{ group.scenario_slug }}">{{ group.scenario_slug }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+        <div class="form-row form-row-repo">
+          <label class="form-grow">
+            Repository URL
+            <input id="groupGithubUrl" name="github_url" value="{{ group.repository.github_url if group.repository else '' }}" placeholder="https://github.com/org/repo" required />
+          </label>
+          <button type="submit" id="groupRepoSave" class="form-row-action">Save settings</button>
+        </div>
+      </form>
+      <div id="groupRepoStatus" class="group-status">
+        {% if group.repository %}
+        Status: {{ group.repository.index_status or group.repository.status or 'saved' }}
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="surface group-card" id="groupMembersPanel">
+      <h2 style="margin:0 0 8px;font-size:1rem">Group members</h2>
+      {% if group.can_edit_members %}
+      <p class="hint" style="margin-top:0">Keep 3–4 classmates. Use search to add ungrouped students; save to apply.</p>
+      <ul class="consent-checklist">
+        {% for m in group.members %}
+        <li>{{ m.display_name }} <span class="hint">· {{ m.email }}</span></li>
+        {% endfor %}
+      </ul>
+      <p class="hint">Member edits still use the interactive editor below.</p>
+      <form class="auth-form group-form" id="groupMembersForm">
+        <p id="groupSelectedCount" class="hint" style="margin:0"></p>
+        <div id="groupSelected" class="claim-selected"></div>
+        <div class="form-row form-row-repo">
+          <label class="form-grow">
+            Search ungrouped classmates
+            <input id="groupSearch" type="search" placeholder="Name or email" autocomplete="off" />
+          </label>
+          <button type="submit" id="groupMembersSave" class="form-row-action" disabled>Save members</button>
+        </div>
+        <div id="groupHits"></div>
+      </form>
+      {% else %}
+      <ul class="consent-checklist">
+        {% for name in group.participant_names %}
+        <li>{{ name }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/components/group.js?v=4"></script>
+<script>
+  if (window.SellmGroup) SellmGroup.mount({ serverRendered: true });
+</script>
+{% endblock %}

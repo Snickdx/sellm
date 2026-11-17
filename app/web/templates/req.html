@@ -1,0 +1,19 @@
+{% extends "shell.html" %}
+{% block title %}Req interviews · sellm{% endblock %}
+{% block main %}
+{% include "_req_fragment.html" %}
+{% if conversations %}
+<script type="application/json" id="ssr-conversations">{{ conversations | tojson }}</script>
+{% endif %}
+{% endblock %}
+{% block modals %}
+{% include "_req_modals.html" %}
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/components/chat.js?v=30"></script>
+<script>
+  if (window.SellmChat && typeof SellmChat.activate === "function") {
+    SellmChat.activate({ serverRendered: true });
+  }
+</script>
+{% endblock %}

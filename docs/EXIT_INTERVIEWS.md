@@ -1,6 +1,6 @@
 # Exit interviews (text + video + STT)
 
-Exit interviews run inside the **unified student shell** at `/exit` (same `index.html` as claim/login and `/req`). Old `/course/*` URLs redirect into these paths.
+Exit interviews run at `/exit` and `/teams/{id}/exit` as server-rendered Jinja pages (shared student shell layout). Old `/course/*` URLs redirect into these paths.
 
 **Admin** creates teams and attaches them to a cohort credential (shared login), or students **claim a group** from the landing page at `/`. Teammates share that login and type each person’s **real name** when starting an exit session.
 

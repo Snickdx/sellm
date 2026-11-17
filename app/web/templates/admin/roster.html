@@ -1,0 +1,43 @@
+{% extends "admin_base.html" %}
+{% block admin_heading %}Class roster{% endblock %}
+{% block admin_subheading %}Claims and class list{% endblock %}
+{% block admin_main %}
+<section class="list-pane" style="grid-column:1 / -1;padding:16px">
+  {% if flash %}<p class="hint">{{ flash }}</p>{% endif %}
+  <p>Students: {{ summary.total if summary else 0 }} · Available: {{ summary.available if summary else 0 }} · Claimed: {{ summary.claimed if summary else 0 }} · Groups: {{ summary.groups if summary else 0 }}</p>
+  <form method="post" action="/admin/roster/import" enctype="multipart/form-data" class="auth-form" style="max-width:480px;margin:12px 0">
+    <label>Import class list CSV <input type="file" name="file" accept=".csv,text/csv" required /></label>
+    <button type="submit" class="btn btn-primary">Import</button>
+  </form>
+  <h2 style="font-size:1rem;margin:16px 0 8px">Groups</h2>
+  <table class="data-table">
+    <thead><tr><th>Name</th><th>Username</th><th>Members</th><th></th></tr></thead>
+    <tbody>
+      {% for g in claims %}
+      <tr>
+        <td>{{ g.group_name }}</td>
+        <td><code>{{ g.account_username }}</code></td>
+        <td>{{ (g.member_names or []) | join(', ') }}</td>
+        <td style="white-space:nowrap">
+          <form method="post" action="/admin/roster/{{ g.claim_id }}/reset-password" style="display:inline">
+            <button type="submit" class="ghost">Reset pw</button>
+          </form>
+          <form method="post" action="/admin/roster/{{ g.claim_id }}/delete" style="display:inline" onsubmit="return confirm('Delete claim?')">
+            <button type="submit" class="ghost">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">No claimed groups</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if new_password %}
+  <p class="status"><strong>Password (once):</strong> <code>{{ new_password }}</code> for {{ password_username }}</p>
+  {% endif %}
+</section>
+<style>
+.data-table { width:100%; border-collapse:collapse; font-size:14px; }
+.data-table th, .data-table td { padding:10px 12px; border-bottom:1px solid #e2e8f0; text-align:left; }
+</style>
+{% endblock %}

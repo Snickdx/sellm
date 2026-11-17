@@ -1,0 +1,38 @@
+{% extends "shell.html" %}
+{% block title %}Policy · sellm{% endblock %}
+{% block main %}
+<div class="view-pane" id="view-policy" aria-hidden="false">
+  <div class="chat-header">
+    <button type="button" class="side-nav-toggle" aria-label="Open menu">&#9776;</button>
+    <div class="chat-header-text">
+      <h1>{{ policy.consent.title }}</h1>
+      <p class="chat-header-subtitle">Course policy · {{ policy.version }}</p>
+    </div>
+  </div>
+  <div class="group-body">
+    <section class="surface group-card">
+      <p class="lede">{{ policy.consent.summary }}</p>
+      <ul class="consent-checklist">
+        {% for b in policy.consent.bullets %}
+        <li>{{ b }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    <section class="surface group-card">
+      <h2 style="margin:0 0 8px;font-size:1rem">Retention</h2>
+      <p>{{ policy.retention.summary }}</p>
+      <p class="hint">{{ policy.retention.deletion }}</p>
+    </section>
+    <section class="surface group-card">
+      <h2 style="margin:0 0 8px;font-size:1rem">Accessibility</h2>
+      <p>{{ policy.accessibility.low_bandwidth }}</p>
+      <ul class="consent-checklist">
+        {% for n in policy.accessibility.notes %}
+        <li>{{ n }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    <p class="hint"><a href="/exit">Back to exit interviews</a></p>
+  </div>
+</div>
+{% endblock %}

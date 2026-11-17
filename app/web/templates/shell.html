@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block body %}
+<div id="sideNavBackdrop" class="side-nav-backdrop" aria-hidden="true"></div>
+<div class="shell" id="appShell">
+  <div class="master-detail chat-container">
+    <aside id="appNavPane" class="app-nav-pane" aria-label="Primary navigation">
+      <div class="app-nav-pane-header">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <div class="app-nav-brand">
+            <img src="/static/brand/logo-mark.svg" class="brand-mark" width="28" height="28" alt="" />
+            <div class="brand-copy">
+              <div class="kicker">SWEN · sellm</div>
+              <h2>Course</h2>
+            </div>
+          </div>
+          <button type="button" id="appNavClose" class="app-nav-close" aria-label="Close menu">&times;</button>
+        </div>
+      </div>
+      <nav class="app-nav" aria-label="Primary">
+        <a href="/group" {% if page == 'group' %}class="active" aria-current="page"{% endif %}>Group</a>
+        <a href="/req" {% if page == 'req' %}class="active" aria-current="page"{% endif %}>Req Interviews</a>
+        <a href="/exit" {% if page in ('exit', 'exit_session') %}class="active" aria-current="page"{% endif %}>Exit interviews</a>
+        {% if is_admin %}
+        <a id="adminLink" href="/admin/users" {% if page and page.startswith('admin') %}class="active" aria-current="page"{% endif %}>Admin</a>
+        {% endif %}
+      </nav>
+      <div class="app-nav-footer">
+        <form method="post" action="/logout" style="margin:0">
+          <button type="submit" id="logoutBtn" class="logout-btn" style="width:100%;border:none;border-radius:10px;padding:8px 12px;background:transparent;color:#64748b;font-size:12px;cursor:pointer;">Sign out</button>
+        </form>
+      </div>
+    </aside>
+    <div class="chats-main">
+      {% block main %}{% endblock %}
+    </div>
+  </div>
+</div>
+{% block modals %}{% endblock %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/components/api.js?v=6"></script>
+<script src="/static/components/shell-nav.js?v=1"></script>
+{% block page_scripts %}{% endblock %}
+{% endblock %}

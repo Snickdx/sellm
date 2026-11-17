@@ -122,10 +122,14 @@
     return authToken ? { Authorization: `Bearer ${authToken}` } : {};
   }
 
+  function chatFetch(url, opts = {}) {
+    const headers = Object.assign({}, authHeaders(), opts.headers || {});
+    return fetch(url, Object.assign({}, opts, { credentials: "include", headers }));
+  }
+
   async function checkAuth() {
-    if (!authToken) return false;
     try {
-      const r = await fetch("/api/auth/me", { headers: authHeaders() });
+      const r = await chatFetch("/api/auth/me");
       if (!r.ok) { setAuth(null, null); isAdmin = false; return false; }
       const data = await r.json();
       currentUser = data.username;
@@ -490,7 +494,7 @@
 
   async function loadYamlScenarios() {
     try {
-      const r = await fetch("/api/scenarios", { headers: authHeaders() });
+      const r = await chatFetch("/api/scenarios", { headers: authHeaders() });
       if (!r.ok) return;
       yamlScenarios = await r.json();
       populateScenarioSelect(newChatScenarioSelect, yamlScenarios[0]?.slug);
@@ -558,9 +562,7 @@
   // ── Login / Logout ──────────────────────────────────────────
   function showLogin() {
     if (UNIFIED) {
-      if (window.SellmRouter && typeof window.SellmRouter.requireAuth === "function") {
-        window.SellmRouter.requireAuth();
-      }
+      location.href = "/";
       return;
     }
     if (loginOverlay) {
@@ -696,7 +698,7 @@
     }
     if (newChatStart) newChatStart.disabled = true;
     try {
-      const r = await fetch("/api/conversations", {
+      const r = await chatFetch("/api/conversations", {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ scenario_slug: slug }),
@@ -725,7 +727,7 @@
     if (loginBtn) loginBtn.disabled = true;
     if (loginError) loginError.hidden = true;
     try {
-      const r = await fetch("/api/auth/login", {
+      const r = await chatFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -868,7 +870,7 @@
 
   async function refreshQuotaFromMe() {
     try {
-      const r = await fetch("/api/auth/me", { headers: authHeaders() });
+      const r = await chatFetch("/api/auth/me", { headers: authHeaders() });
       if (!r.ok) return;
       const data = await r.json();
       applyQuotaState(data);
@@ -878,7 +880,7 @@
   }
 
   async function doLogout() {
-    await fetch("/api/auth/logout", { method: "POST", headers: authHeaders() });
+    await chatFetch("/api/auth/logout", { method: "POST" });
     setAuth(null, null);
     currentUser = null;
     chatActivated = false;
@@ -891,9 +893,7 @@
     if (loginError) loginError.hidden = true;
     userApiKeys = {};
     if (UNIFIED) {
-      if (window.SellmRouter && typeof window.SellmRouter.requireAuth === "function") {
-        window.SellmRouter.requireAuth();
-      }
+      location.href = "/";
       return;
     }
     showLogin();
@@ -902,7 +902,7 @@
   // ── User API Config ─────────────────────────────────────────
   async function loadUserConfig() {
     try {
-      const r = await fetch("/api/user/config", { headers: authHeaders() });
+      const r = await chatFetch("/api/user/config", { headers: authHeaders() });
       if (!r.ok) return;
       const data = await r.json();
       userApiKeys = {};
@@ -950,7 +950,7 @@
     if (settingsStatus) settingsStatus.textContent = "Saving…";
     const keys = _gatherProviderKeys();
     try {
-      const r = await fetch("/api/user/config", {
+      const r = await chatFetch("/api/user/config", {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ keys }),
@@ -1021,7 +1021,7 @@
   // ── Config ──────────────────────────────────────────────────
   async function loadRuntimeConfig() {
     try {
-      const response = await fetch("/api/config", { headers: authHeaders() });
+      const response = await chatFetch("/api/config", { headers: authHeaders() });
       if (!response.ok) return;
       const config = await response.json();
       if (
@@ -1250,7 +1250,7 @@
       return;
     }
     try {
-      const r = await fetch(`/api/conversations/${conversationId}/reflections`, { headers: authHeaders() });
+      const r = await chatFetch(`/api/conversations/${conversationId}/reflections`, { headers: authHeaders() });
       if (!r.ok) return;
       reflectionThreads = await r.json();
       renderReflectionThreadList();
@@ -1260,7 +1260,7 @@
   async function openReflectionThread(threadId) {
     if (!threadId) return;
     try {
-      const r = await fetch(`/api/reflections/${threadId}`, { headers: authHeaders() });
+      const r = await chatFetch(`/api/reflections/${threadId}`, { headers: authHeaders() });
       if (!r.ok) throw new Error("Could not load reflection thread");
       const data = await r.json();
       currentReflectionThreadId = data.id;
@@ -1303,7 +1303,7 @@
     lockReflectionWorkspace();
     openReflectionModal({ loading: true, loadingMessage: "Starting reflection. The meta-LLM is analyzing your conversation — this can take up to a minute." });
     try {
-      const r = await fetch(`/api/conversations/${currentConversationId}/reflections/start`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" } });
+      const r = await chatFetch(`/api/conversations/${currentConversationId}/reflections/start`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" } });
       let data = {};
       try { data = await r.json(); } catch { data = {}; }
       if (!r.ok) { closeReflectionModal(); window.alert(typeof data.detail === "string" ? data.detail : "Reflection failed"); return; }
@@ -1327,7 +1327,7 @@
     reflectionApply.textContent = "Applying…";
     try {
       if (!currentReflectionThreadId) { reflectionStatus.textContent = "No reflection thread selected."; return; }
-      const r = await fetch(`/api/reflections/${currentReflectionThreadId}/apply`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ reflection }) });
+      const r = await chatFetch(`/api/reflections/${currentReflectionThreadId}/apply`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ reflection }) });
       let data = {};
       try { data = await r.json(); } catch { data = {}; }
       if (!r.ok) { reflectionStatus.textContent = typeof data.detail === "string" ? data.detail : "Apply failed"; return; }
@@ -1348,7 +1348,7 @@
     try {
       let draft = {};
       try { draft = JSON.parse(reflectionJson.value || "{}"); } catch { draft = {}; }
-      const r = await fetch(`/api/reflections/${currentReflectionThreadId}/chat`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ message: msg, reflection: draft }) });
+      const r = await chatFetch(`/api/reflections/${currentReflectionThreadId}/chat`, { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ message: msg, reflection: draft }) });
       const data = await r.json();
       if (!r.ok) { reflectionStatus.textContent = typeof data.detail === "string" ? data.detail : "Reflection chat failed"; return; }
       if (data.thread?.messages) renderReflectionMessages(data.thread.messages);
@@ -1476,7 +1476,7 @@
   async function deleteConversation(conversationId) {
     if (!window.confirm("Delete this conversation?")) return;
     try {
-      const r = await fetch(`/api/conversations/${conversationId}`, { method: "DELETE", headers: authHeaders() });
+      const r = await chatFetch(`/api/conversations/${conversationId}`, { method: "DELETE", headers: authHeaders() });
       if (!r.ok) throw new Error("Delete failed");
       if (currentConversationId === conversationId) resetConversationUi();
       await loadConversations();
@@ -1485,7 +1485,7 @@
 
   async function loadConversations() {
     try {
-      const r = await fetch("/api/conversations", { headers: authHeaders() });
+      const r = await chatFetch("/api/conversations", { headers: authHeaders() });
       if (!r.ok) return;
       const conversations = await r.json();
       if (!conversationList) return;
@@ -1539,7 +1539,7 @@
   async function openConversation(conversationId) {
     if (!conversationId) { resetConversationUi(); return; }
     try {
-      const r = await fetch(`/api/conversations/${conversationId}`, { headers: authHeaders() });
+      const r = await chatFetch(`/api/conversations/${conversationId}`, { headers: authHeaders() });
       if (!r.ok) throw new Error("Could not load conversation");
       const data = await r.json();
       currentConversationId = data.id;
@@ -1571,7 +1571,7 @@
 
   // ── Chat ────────────────────────────────────────────────────
   async function submitFeedback(meta, fb, desired = "") {
-    return fetch("/api/feedback", { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ prompt: meta?.prompt || "", response: meta?.response || "", feedback: fb, mode_used: meta?.mode || null, desired_response: desired || null }) });
+    return chatFetch("/api/feedback", { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ prompt: meta?.prompt || "", response: meta?.response || "", feedback: fb, mode_used: meta?.mode || null, desired_response: desired || null }) });
   }
 
   function formatRoutingBadge(modeUsed, routing, llmUsed) {
@@ -1729,7 +1729,7 @@
     const startedAt = performance.now();
     addTypingIndicator(startedAt);
     try {
-      const r = await fetch("/api/chat", {
+      const r = await chatFetch("/api/chat", {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,0 +1,31 @@
+{% extends "admin_base.html" %}
+{% block admin_heading %}Token monitor{% endblock %}
+{% block admin_subheading %}Shared budget usage{% endblock %}
+{% block admin_main %}
+<section class="list-pane" style="grid-column:1 / -1;padding:16px">
+  <p>
+    Users: {{ summary.user_count }} ·
+    Used: {{ summary.total_tokens_used }} /
+    Limit: {{ summary.total_token_limit }} ·
+    Exhausted: {{ summary.exhausted_users }}
+  </p>
+  <table class="data-table">
+    <thead><tr><th>Username</th><th>Group</th><th>Used</th><th>Limit</th><th>Remaining</th></tr></thead>
+    <tbody>
+      {% for u in summary.users %}
+      <tr>
+        <td><a href="/admin/users/{{ u.id }}">{{ u.username }}</a></td>
+        <td>{{ u.group_name or '—' }}</td>
+        <td>{{ u.tokens_used }}</td>
+        <td>{{ u.token_limit }}</td>
+        <td>{{ u.tokens_remaining if u.tokens_remaining is not none else '∞' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+<style>
+.data-table { width:100%; border-collapse:collapse; font-size:14px; }
+.data-table th, .data-table td { padding:10px 12px; border-bottom:1px solid #e2e8f0; text-align:left; }
+</style>
+{% endblock %}

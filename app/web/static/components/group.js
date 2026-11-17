@@ -178,10 +178,7 @@
 
   function loginUsername() {
     return String(
-      state.group?.account_username ||
-        global.SellmRouter?.getUser?.()?.username ||
-        state.fallbackUsername ||
-        "",
+      state.group?.account_username || state.fallbackUsername || "",
     ).trim();
   }
 
@@ -488,8 +485,26 @@
     });
   }
 
-  async function mount() {
+  async function mount({ serverRendered } = {}) {
     bind();
+    if (serverRendered) {
+      // Password reset / repo setup use HTML forms; keep JS for member editor only.
+      try {
+        state.group = await global.SellmApi.myGroup();
+      } catch (_) {
+        state.group = null;
+      }
+      if (state.group?.can_edit_members) {
+        state.selected = (state.group.members || []).map((m) => ({
+          id: m.id,
+          display_name: m.display_name,
+          email: m.email,
+        }));
+        renderSelected();
+        syncMemberSaveEnabled();
+      }
+      return;
+    }
     await load();
   }
 

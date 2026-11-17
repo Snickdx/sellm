@@ -88,9 +88,8 @@ def main() -> int:
         else:
             fail(f"missing {name}")
 
-    index = (ROOT / "app" / "web" / "templates" / "index.html").read_text(encoding="utf-8")
-    admin = (ROOT / "app" / "web" / "templates" / "admin.html").read_text(encoding="utf-8")
-    for label, html in (("index.html", index), ("admin.html", admin)):
+    base = (ROOT / "app" / "web" / "templates" / "base.html").read_text(encoding="utf-8")
+    for label, html in (("base.html", base),):
         if 'href="/manifest.json"' not in html:
             fail(f"{label} missing manifest link")
         else:

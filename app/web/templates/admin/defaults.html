@@ -1,0 +1,23 @@
+{% extends "admin_base.html" %}
+{% block admin_heading %}Role defaults{% endblock %}
+{% block admin_subheading %}Mode, model, and budgets by role{% endblock %}
+{% block admin_main %}
+<section class="list-pane" style="grid-column:1 / -1;padding:16px;max-width:640px">
+  {% if flash %}<p class="hint">{{ flash }}</p>{% endif %}
+  <form method="post" action="/admin/defaults" class="auth-form">
+    <h3 style="font-size:1rem">Student</h3>
+    <label>Default mode <input name="student_default_response_mode" value="{{ settings.student_default_response_mode or '' }}" /></label>
+    <label>Default LLM <input name="student_default_llm_choice" value="{{ settings.student_default_llm_choice or '' }}" /></label>
+    <label>Token limit <input name="student_token_limit" type="number" value="{{ settings.student_token_limit or 50000 }}" /></label>
+    <h3 style="font-size:1rem;margin-top:16px">Tester</h3>
+    <label>Default mode <input name="tester_default_response_mode" value="{{ settings.tester_default_response_mode or '' }}" /></label>
+    <label>Default LLM <input name="tester_default_llm_choice" value="{{ settings.tester_default_llm_choice or '' }}" /></label>
+    <label>Token limit <input name="tester_token_limit" type="number" value="{{ settings.tester_token_limit or 50000 }}" /></label>
+    <h3 style="font-size:1rem;margin-top:16px">Admin</h3>
+    <label>Default mode <input name="admin_default_response_mode" value="{{ settings.admin_default_response_mode or '' }}" /></label>
+    <label>Default LLM <input name="admin_default_llm_choice" value="{{ settings.admin_default_llm_choice or '' }}" /></label>
+    <label>Token limit <input name="admin_token_limit" type="number" value="{{ settings.admin_token_limit or 50000 }}" /></label>
+    <button type="submit" class="btn btn-primary" style="margin-top:12px">Save defaults</button>
+  </form>
+</section>
+{% endblock %}

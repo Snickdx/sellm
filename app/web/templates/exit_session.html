@@ -1,0 +1,59 @@
+{% extends "shell.html" %}
+{% block title %}Exit session · sellm{% endblock %}
+{% block main %}
+<div class="view-pane" id="view-exit" aria-hidden="false">
+  <div class="chat-header exit-header">
+    <button type="button" id="sideNavToggleExit" class="side-nav-toggle" aria-label="Open menu">&#9776;</button>
+    <a href="/exit" id="exitBackBtn" class="side-nav-toggle" aria-label="Back">←</a>
+    <div class="chat-header-text">
+      <h1 id="exitHeaderTitle">Exit interview</h1>
+      <p class="chat-header-subtitle" id="exitHeaderSubtitle">{{ session.status if session else 'Session' }}</p>
+    </div>
+  </div>
+  <div class="exit-body">
+    <p id="exitError" class="error" hidden></p>
+    <div id="exitMain" class="view-pane" style="position:relative;"
+         data-team-id="{{ team_id }}"
+         data-session-id="{{ session.id if session else '' }}">
+      {% if not session %}
+      <section class="surface group-card">
+        <p class="lede">Session not found. <a href="/exit">Back to hub</a></p>
+      </section>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block modals %}
+<div id="exitConsentModal" class="modal-backdrop" hidden>
+  <div class="modal-panel modal-panel-wide" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h3>Consent</h3>
+      <button type="button" class="modal-close" id="exitConsentClose" aria-label="Close">&times;</button>
+    </div>
+    <p class="hint" id="exitConsentSummary" style="margin-top:0"></p>
+    <ul class="consent-checklist" id="exitConsentBullets"></ul>
+    <label class="consent-check">
+      <input type="checkbox" id="exitConsentCheck" />
+      <span>I give consent for this exit interview and any recording.</span>
+    </label>
+    <div class="live-actions" style="margin-top:14px">
+      <button type="button" id="exitConsentStart" disabled>Start interview</button>
+      <button type="button" class="ghost" id="exitConsentCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/components/exit-voice.js?v=8"></script>
+<script src="/static/components/exit.js?v=37"></script>
+<script>
+  if (window.SellmExit) {
+    SellmExit.mount({
+      teamId: {{ team_id | tojson }},
+      sessionId: {{ (session.id if session else none) | tojson }},
+      serverRendered: true,
+    });
+  }
+</script>
+{% endblock %}

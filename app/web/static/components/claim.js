@@ -207,8 +207,12 @@
         btn.textContent = "Signing in…";
       }
       try {
-        const token = await global.SellmApi.login(username, password);
-        await global.SellmRouter.onLoggedIn(token);
+        const data = await global.SellmApi.request("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({ username, password }),
+        });
+        if (data && data.token) global.SellmApi.setToken(data.token);
+        location.href = "/group";
       } catch (e) {
         if (err) {
           err.hidden = false;

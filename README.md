@@ -24,7 +24,7 @@ This system is designed for **requirements gathering training**. It simulates a 
 - **YAML scenarios**: Seven packages under `scenarios/` (canonical authoring home) — pick scenario + persona like choosing Vector vs Neo4j; YAML edits must be reindexed into vector + Neo4j and refresh yaml/direct preprompt packs
 - **LLM backends**: Ollama (local) or per-user API keys (OpenAI, Anthropic, Gemini, Groq, OpenRouter); RAG/direct chat requires a real LLM; YAML mode defaults to heuristic persona replies
 - **Scenario pack**: `data.xlsx` compiled into structured context for direct mode and optional RAG prompt enrichment
-- **Unified student shell**: One `index.html` for claim/login (`/`), requirements chat (`/req`), and exit interviews (`/exit`) — History-API routing, shared nav/auth
+- **Multi-page student UI**: Jinja templates + cookie sessions for claim/login (`/`), group (`/group`), requirements chat (`/req`), and exit interviews (`/exit`)
 - **Auth + persistence**: Group claim or login, per-user conversations (SQLite/Postgres), reflection threads for meta-review
 - **Responsive UI**: Collapsible side nav on mobile (conversations, new chat, API config)
 - **Excel knowledge base**: `data.xlsx` is ground truth for retrieval (not cited in stakeholder answers)
@@ -184,15 +184,15 @@ The app is a **FastAPI** service with a Jinja2 + vanilla JS student shell (no se
 ```mermaid
 flowchart TB
   subgraph client [Browser]
-    Shell[index.html shell]
-    Router[router.js]
+    Pages[Jinja pages]
     Claim[claim.js]
-    ChatUI[chat.js req view]
+    ChatUI[chat.js]
     ExitUI[exit.js + exit-voice.js]
   end
 
-  subgraph api [FastAPI app/api/app.py]
-    Auth[Bearer session auth]
+  subgraph api [FastAPI app/api]
+    Auth[Cookie or Bearer session]
+    PagesAPI[pages.py HTML routes]
     Chat[POST /api/chat]
     ExitAPI["/api/teams /api/exit-sessions"]
     Store[(ConversationStore SQLite or Postgres)]
@@ -212,10 +212,10 @@ flowchart TB
 
   KB[(data.xlsx)]
 
-  Shell --> Router
-  Router --> Claim
-  Router --> ChatUI
-  Router --> ExitUI
+  Pages --> Claim
+  Pages --> ChatUI
+  Pages --> ExitUI
+  Pages --> PagesAPI
   Claim --> Auth
   ChatUI --> Auth
   ExitUI --> Auth
@@ -249,8 +249,8 @@ Hybrid routing uses `app/mcp/router.py` in-process (no separate MCP sidecar). Ne
 
 | Layer | Module(s) | Role |
 |-------|-----------|------|
-| **Student UI** | `app/web/templates/index.html`, `app/web/static/components/{router,claim,chat,exit,exit-voice,api}.js` | Unified shell: claim/login, req chat, exit interviews |
-| **Admin UI** | `app/web/templates/admin.html`, `admin.js` | Users, teams, roster, transcripts |
+| **Student UI** | `app/web/templates/{landing,group,req,exit,policy}.html`, `static/components/{claim,chat,exit,exit-voice,api,group}.js` | SSR pages + interactive JS |
+| **Admin UI** | `app/web/templates/admin/*.html` | Flat `/admin/*` pages (users, teams, roster, …) |
 | **API** | `app/api/app.py`, `app/api/schemas.py`, `exit_interviews.py`, `roster.py`, `teams.py` | Routes, auth, chat, exit sessions, group claim |
 | **Auth & history** | `app/storage/conversation_store.py` | Users, sessions, conversations, messages, reflection threads |
 | **Vector RAG** | `app/rag_backend.py` | Embeddings, Chroma search, sheet-intent filtering, `SimpleLLM` template fallback |
@@ -574,24 +574,22 @@ Popular alternatives:
 │   ├── rag_backend.py / rag_backend_neo4j.py
 │   ├── mcp/                    # In-process hybrid router (Chroma + Neo4j)
 │   ├── api/
-│   │   ├── app.py              # FastAPI app; serves student shell HTML routes
+│   │   ├── app.py              # FastAPI app + JSON APIs
+│   │   ├── pages.py            # SSR HTML routes (Jinja)
 │   │   ├── admin.py / roster.py / teams.py / exit_interviews.py / …
 │   │   └── schemas.py
 │   ├── storage/conversation_store.py
 │   ├── tweaks/behavior_tweaks.py
 │   └── web/
-│       ├── templates/
-│       │   ├── index.html      # Unified student shell (claim / req / exit)
-│       │   └── admin.html
+│       ├── templates/          # base, shell, landing, group, req, exit, admin/*
 │       └── static/components/
-│           ├── api.js          # Shared fetch + auth_token helpers
-│           ├── router.js       # History-API view switching
+│           ├── api.js          # Shared fetch + cookie credentials
 │           ├── claim.js        # Group claim + login landing
 │           ├── chat.js         # Requirements chat
 │           ├── exit.js         # Exit hub / live / review
 │           ├── exit-voice.js   # MediaRecorder + speech recognition
-│           ├── admin.js
-│           └── shell-extra.css
+│           ├── group.js
+│           └── shell.css
 ├── config/behavior/behavior_tweaks.json
 ├── setup/                      # chroma / neo4j / users / eval CLIs
 ├── docker/entrypoint.sh

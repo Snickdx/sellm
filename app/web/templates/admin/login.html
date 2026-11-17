@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Admin sign-in · sellm{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="/static/components/shell.css?v=2" />
+{% endblock %}
+{% block body %}
+<div class="login-gate">
+  <div class="card">
+    <h2>Admin sign-in</h2>
+    <p>Sign in with an admin account to manage users, tokens, and app defaults.</p>
+    {% if error %}<div class="status err">{{ error }}</div>{% endif %}
+    <form method="post" action="/admin/login" class="auth-form">
+      <div class="field"><label>Username</label><input name="username" autocomplete="username" required /></div>
+      <div class="field"><label>Password</label><input name="password" type="password" autocomplete="current-password" required /></div>
+      <div class="actions"><button type="submit" class="btn btn-primary">Sign in</button></div>
+    </form>
+    <p class="hint" style="margin-top:12px"><a href="/">Back to course</a></p>
+  </div>
+</div>
+{% endblock %}

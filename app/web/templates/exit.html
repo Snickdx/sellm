@@ -1,0 +1,123 @@
+{% extends "shell.html" %}
+{% block title %}Exit interviews · sellm{% endblock %}
+{% block main %}
+<div class="view-pane" id="view-exit" aria-hidden="false">
+  <div class="chat-header exit-header">
+    <button type="button" id="sideNavToggleExit" class="side-nav-toggle" aria-label="Open menu">&#9776;</button>
+    <div class="chat-header-text">
+      <h1 id="exitHeaderTitle">Exit interviews</h1>
+      <p class="chat-header-subtitle" id="exitHeaderSubtitle">Start interview and review past sessions</p>
+    </div>
+  </div>
+  <div class="exit-body">
+    <p id="exitError" class="error" hidden></p>
+    <div id="exitMain" class="view-pane" style="position:relative;">
+      {% if not teams %}
+      <section class="surface group-card">
+        <p class="lede">No team yet. Set up your <a href="/group">group</a> first.</p>
+      </section>
+      {% else %}
+      <section class="surface group-card">
+        <div class="form-row form-row-repo" style="align-items:flex-end">
+          <label class="form-grow">
+            Team
+            <select id="exitTeamSelect">
+              {% for t in teams %}
+              <option value="{{ t.id }}" {% if t.id == team_id %}selected{% endif %}>{{ t.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <button type="button" id="exitStartOpen" class="form-row-action">Start interview</button>
+        </div>
+        <p class="hint" style="margin-top:10px"><a href="/policy">Recording &amp; assessment policy</a></p>
+      </section>
+      <section class="surface group-card">
+        <h2 style="margin:0 0 10px;font-size:1rem">Sessions</h2>
+        {% if sessions %}
+        <ul class="consent-checklist">
+          {% for s in sessions %}
+          <li>
+            <a href="/teams/{{ team_id }}/exit?session={{ s.id }}">{{ s.status }}</a>
+            <span class="hint">
+              · {{ s.created_at or '' }}
+              {% if s.participant_names %} · {{ s.participant_names | join(', ') }}{% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="hint">No sessions yet for this team.</p>
+        {% endif %}
+      </section>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block modals %}
+<div id="exitStartModal" class="modal-backdrop" hidden>
+  <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="startInterviewTitle">
+    <div class="modal-header">
+      <h3 id="startInterviewTitle">Start interview</h3>
+      <button type="button" class="modal-close" id="exitStartClose" aria-label="Close">&times;</button>
+    </div>
+    <p class="hint" style="margin-bottom:12px">Pick the interviewee from your group members, then start.</p>
+    <form class="auth-form" id="exitStartForm">
+      <label>
+        Interviewee
+        <select id="exitIntervieweeName" required>
+          <option value="">Select a group member</option>
+          {% for name in interviewee_names %}
+          <option value="{{ name }}">{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <p id="exitStartMembersHint" class="hint" {% if interviewee_names %}hidden{% endif %}>Add members on the <a href="/group">Group</a> page before starting.</p>
+      <p id="exitStartSetupHint" class="hint" hidden>
+        Set a scenario and repository on the <a href="/group">Group</a> page, then wait until the repo index is ready.
+      </p>
+      <div class="live-actions">
+        <button type="submit" id="exitStartSubmit" {% if not interviewee_names %}disabled{% endif %}>Start interview</button>
+        <button type="button" class="ghost" id="exitStartCancel">Cancel</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div id="exitConsentModal" class="modal-backdrop" hidden>
+  <div class="modal-panel modal-panel-wide" role="dialog" aria-modal="true" aria-labelledby="exitConsentTitle">
+    <div class="modal-header">
+      <h3 id="exitConsentTitle">Consent</h3>
+      <button type="button" class="modal-close" id="exitConsentClose" aria-label="Close">&times;</button>
+    </div>
+    <p class="hint" id="exitConsentSummary" style="margin-top:0">{{ policy.consent.summary if policy else '' }}</p>
+    <ul class="consent-checklist" id="exitConsentBullets">
+      {% if policy %}
+      {% for b in policy.consent.bullets %}<li>{{ b }}</li>{% endfor %}
+      {% endif %}
+    </ul>
+    <label class="consent-check">
+      <input type="checkbox" id="exitConsentCheck" />
+      <span>I give consent for this exit interview and any recording.</span>
+    </label>
+    <div class="live-actions" style="margin-top:14px">
+      <button type="button" id="exitConsentStart" disabled>Start interview</button>
+      <button type="button" class="ghost" id="exitConsentCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block page_scripts %}
+<script src="/static/components/exit-voice.js?v=8"></script>
+<script src="/static/components/exit.js?v=37"></script>
+<script>
+  if (window.SellmExit) {
+    SellmExit.mountHub({
+      teamId: {{ (team_id or '') | tojson }},
+      serverRendered: true,
+    });
+  }
+  document.getElementById("exitTeamSelect")?.addEventListener("change", (e) => {
+    location.href = "/teams/" + encodeURIComponent(e.target.value) + "/exit";
+  });
+</script>
+{% endblock %}

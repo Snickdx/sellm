@@ -1,0 +1,68 @@
+<div id="settingsBackdrop" class="reflection-backdrop" aria-hidden="true">
+        <div class="settings-modal" role="dialog" aria-labelledby="settingsTitle">
+            <form id="settingsForm" style="display:contents;">
+                <div class="settings-modal-header">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <h3 id="settingsTitle" style="margin:0;">API Configuration</h3>
+                        <button type="button" id="settingsDismiss" aria-label="Close" style="background:none;border:none;font-size:22px;cursor:pointer;color:#6b7280;padding:0 4px;line-height:1;">&times;</button>
+                    </div>
+                    <p style="font-size:13px;color:#6b7280;margin-top:4px;">
+                        Bring your own API key anytime. When your shared token budget runs out, chat automatically switches to your key.
+                    </p>
+                    <p id="settingsQuotaHint" style="font-size:12px;color:#b45309;margin-top:6px;display:none;"></p>
+                </div>
+                <div class="settings-modal-body">
+                    <div id="settingsProvidersContainer" class="settings-grid"></div>
+                </div>
+                <div class="settings-modal-footer">
+                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button type="button" id="settingsCancel" style="border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;border:1px solid #d1d5db;background:#fff;color:#374151;">Cancel</button>
+                        <button type="submit" id="settingsSave" style="border-radius:10px;padding:8px 16px;font-size:13px;cursor:pointer;border:none;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;font-weight:600;">Save</button>
+                    </div>
+                    <div id="settingsStatus" class="feedback-note" style="margin-top:8px;"></div>
+                </div>
+            </form>
+        </div>
+    </div>
+<div id="newChatBackdrop" class="reflection-backdrop" aria-hidden="true">
+        <div class="new-chat-modal" role="dialog" aria-labelledby="newChatTitle">
+            <h3 id="newChatTitle">Start a new chat</h3>
+            <p>Pick a scenario for this interview. It stays locked for the chat; you can still switch personas.</p>
+            <div class="controls-field">
+                <label for="newChatScenarioSelect">Scenario</label>
+                <select id="newChatScenarioSelect" class="mode-select"></select>
+            </div>
+            <div class="new-chat-actions">
+                <button type="button" id="newChatCancel" class="new-chat-cancel">Cancel</button>
+                <button type="button" id="newChatStart" class="new-chat-start">Start chat</button>
+            </div>
+        </div>
+    </div>
+<div id="reflectionBackdrop" class="reflection-backdrop" aria-hidden="true">
+        <div class="reflection-modal" role="dialog" aria-labelledby="reflectionTitle">
+            <h3 id="reflectionTitle">Session reflection</h3>
+            <div class="reflection-workspace">
+                <div>
+                    <label>Reflection threads</label>
+                    <div id="reflectionThreadList" class="reflection-threads"></div>
+                </div>
+                <div class="reflection-main">
+                    <div id="reflectionChatMessages" class="reflection-chat-messages"></div>
+                    <div class="reflection-chat-input-row">
+                        <input id="reflectionChatInput" class="reflection-chat-input" type="text" placeholder="Ask to modify the draft, e.g. 'remove blocked phrase system shall'" />
+                        <button type="button" id="reflectionSendBtn" class="reflection-send-btn">Send</button>
+                    </div>
+                    <div>
+                        <div id="reflectionNotes" class="reflection-notes"></div>
+                        <label for="reflectionJson">Current tweak draft (editable JSON)</label>
+                        <textarea id="reflectionJson" spellcheck="false"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="reflection-actions">
+                <button type="button" id="reflectionApply" class="reflect-apply">Apply to tweak file</button>
+                <button type="button" id="reflectionCancel">Close</button>
+            </div>
+            <p id="reflectionStatus" class="feedback-note"></p>
+        </div>
+    </div>

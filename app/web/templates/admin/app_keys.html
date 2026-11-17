@@ -1,0 +1,20 @@
+{% extends "admin_base.html" %}
+{% block admin_heading %}App-wide keys{% endblock %}
+{% block admin_subheading %}Shared provider credentials{% endblock %}
+{% block admin_main %}
+<section class="list-pane" style="grid-column:1 / -1;padding:16px;max-width:560px">
+  {% if flash %}<p class="hint">{{ flash }}</p>{% endif %}
+  <form method="post" action="/admin/app-keys" class="auth-form">
+    {% for p in providers %}
+    <label>{{ p.label }}
+      <input name="{{ p.id }}" type="password" placeholder="{{ p.masked or '••••' }}" autocomplete="off" />
+    </label>
+    {% endfor %}
+    <p class="hint">Leave blank to keep existing. Submit empty with clear flags below to remove.</p>
+    {% for p in providers %}
+    <label><input type="checkbox" name="clear_{{ p.id }}" value="1" /> Clear {{ p.label }}</label>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Save keys</button>
+  </form>
+</section>
+{% endblock %}

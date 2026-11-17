@@ -33,6 +33,7 @@
   };
 
   let state = {
+    me: null,
     teamId: null,
     teams: [],
     team: null,
@@ -730,7 +731,7 @@
     if (!root) return;
     const sessions = state.sessions;
     const selected = sessions.find((s) => s.id === state.selectedPastId) || null;
-    const user = global.SellmRouter.getUser();
+    const user = state.me;
     const canDelete = global.SellmApi.canDeleteExitSession(user, selected?.created_by_id);
     const mobile = isMobileExit();
     if (!mobile) state.hubScreen = selected ? "detail" : "list";
@@ -844,7 +845,7 @@
       }`;
 
     $("exitTeamSelect")?.addEventListener("change", (e) => {
-      global.SellmRouter.navigate(`/teams/${e.target.value}/exit`);
+      location.href = `/teams/${e.target.value}/exit`;
     });
     root.querySelectorAll(".interview-hub-item").forEach((btn) => {
       btn.addEventListener("click", async () => {
@@ -1402,9 +1403,32 @@
     $("exitConsentStart")?.addEventListener("click", () => void onConfirmConsent());
   }
 
-  async function mount({ teamId } = {}) {
+  async function ensureMe() {
+    if (state.me) return state.me;
+    try {
+      state.me = await global.SellmApi.me();
+    } catch (_) {
+      state.me = null;
+    }
+    return state.me;
+  }
+
+  async function mountHub({ teamId, serverRendered } = {}) {
     bindModals();
     setError(null);
+    await ensureMe();
+    state.teamId = teamId || state.teamId;
+    if (serverRendered) {
+      $("exitStartOpen")?.addEventListener("click", () => openStartModal());
+      return;
+    }
+    return mount({ teamId, serverRendered: false });
+  }
+
+  async function mount({ teamId, sessionId, serverRendered } = {}) {
+    bindModals();
+    setError(null);
+    await ensureMe();
     try {
       if (!state.policy) {
         state.policy = await global.SellmApi.fetchPolicy().catch(() => null);
@@ -1417,13 +1441,13 @@
         const root = $("exitMain");
         if (root) {
           root.innerHTML =
-            '<p class="hint" style="padding:20px">No group yet. Claim a group from the landing page, then set scenario and repository on <a href="/group" data-nav="group">Group</a>.</p>';
+            '<p class="hint" style="padding:20px">No group yet. Claim a group from the landing page, then set scenario and repository on <a href="/group">Group</a>.</p>';
         }
         return;
       }
       const preferred = teamId && state.teams.some((t) => t.id === teamId) ? teamId : state.teams[0].id;
       if (teamId && preferred !== teamId) {
-        global.SellmRouter.navigate(`/teams/${preferred}/exit`, { replace: true });
+        location.replace(`/teams/${preferred}/exit`);
         return;
       }
       if (!teamId && state.teams.length) {
@@ -1448,6 +1472,21 @@
         state.report = null;
         state.probePrompt = null;
         state.hubScreen = "list";
+      }
+      if (sessionId) {
+        state.selectedPastId = sessionId;
+        try {
+          const detail = await global.SellmApi.fetchExitSession(sessionId);
+          state.session = detail;
+          if (isScored(detail.status) || isWrapping(detail.status)) {
+            state.tab = "hub";
+            state.report = await global.SellmApi.fetchExitReport(sessionId).catch(() => null);
+          } else if (detail.status && detail.status !== "scheduled" && detail.status !== "consent") {
+            state.tab = "live";
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Failed to load session");
+        }
       }
       await refreshHub(state.selectedPastId);
       render();
@@ -1480,5 +1519,5 @@
     }
   }
 
-  global.SellmExit = { mount, mountPolicy };
+  global.SellmExit = { mount, mountHub, mountPolicy };
 })(window);

@@ -45,7 +45,10 @@
     if (opts.body instanceof FormData) {
       delete headers["Content-Type"];
     }
-    const response = await fetch(path, Object.assign({}, opts, { headers }));
+    const response = await fetch(
+      path,
+      Object.assign({ credentials: "include" }, opts, { headers }),
+    );
     if (!response.ok) throw new Error(await parseError(response));
     if (response.status === 204) return null;
     const text = await response.text();
@@ -203,6 +206,7 @@
     },
     async fetchRecordingObjectUrl(sessionId) {
       const response = await fetch(`/api/exit-sessions/${sessionId}/recording`, {
+        credentials: "include",
         headers: authHeaders(),
       });
       if (!response.ok) {

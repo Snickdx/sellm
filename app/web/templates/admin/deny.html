@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Admin access required · sellm{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="/static/components/shell.css?v=2" />
+{% endblock %}
+{% block body %}
+<div class="deny-gate">
+  <div class="card">
+    <h2>Admin access required</h2>
+    <p>Signed in as {{ user.username if user else 'unknown' }}, but this account is not an admin.</p>
+    <div class="actions">
+      <a class="btn btn-secondary" href="/group">Back to course</a>
+      <form method="post" action="/logout" style="display:inline;margin:0">
+        <button type="submit" class="btn btn-primary">Sign out</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-"""Auth helpers used by the API layer (Bearer session → user)."""
+"""Auth helpers used by the API layer (Bearer or session cookie → user)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import Request
 
 from app.storage.conversation_store import ConversationStore, User
+from app.web.session_cookie import cookie_token
 
 
 class AuthService:
@@ -17,8 +18,10 @@ class AuthService:
     def token_from_request(request: Request) -> Optional[str]:
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
-            return auth[7:]
-        return None
+            token = auth[7:].strip()
+            if token:
+                return token
+        return cookie_token(request)
 
     def user_from_request(self, request: Request) -> Optional[User]:
         token = self.token_from_request(request)

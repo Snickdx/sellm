@@ -62,8 +62,31 @@
     else localStorage.removeItem("auth_token");
   }
 
+  const VIEW_PATHS = {
+    users: "/admin/users",
+    roster: "/admin/roster",
+    teams: "/admin/teams",
+    tokens: "/admin/tokens",
+    appkeys: "/admin/app-keys",
+    defaults: "/admin/defaults",
+  };
+
+  function viewFromPath(pathname) {
+    const p = (pathname || "").replace(/\/+$/, "") || "/";
+    if (p === "/admin" || p === "/admin/users") return "users";
+    if (p === "/admin/roster") return "roster";
+    if (p === "/admin/teams") return "teams";
+    if (p === "/admin/tokens") return "tokens";
+    if (p === "/admin/app-keys") return "appkeys";
+    if (p === "/admin/defaults") return "defaults";
+    return null;
+  }
+
+  const embedded = Boolean(adminShell?.dataset?.embedded);
+
   async function api(path, opts = {}) {
     const r = await fetch(path, {
+      credentials: "include",
       ...opts,
       headers: { ...authHeaders(Boolean(opts.body)), ...(opts.headers || {}) },
     });
@@ -100,7 +123,6 @@
   }
 
   async function checkAuth() {
-    if (!authToken) return false;
     try {
       const me = await api("/api/auth/me");
       currentUser = me.username;
@@ -174,9 +196,10 @@
       selectedRosterId = null;
     }
     syncViewTabs();
-    const url = new URL(location.href);
-    url.searchParams.set("view", view);
-    history.replaceState(null, "", url);
+    const dest = VIEW_PATHS[view] || "/admin/users";
+    if (location.pathname !== dest) {
+      history.replaceState(null, "", dest);
+    }
     closeNav();
     render();
   }
@@ -2155,6 +2178,29 @@
   }
 
   async function boot() {
+    const pathView = viewFromPath(location.pathname);
+    const dataView = adminShell?.dataset?.initialView;
+    const params = new URLSearchParams(window.location.search);
+    const queryView = params.get("view");
+    const initial = pathView || dataView || queryView;
+    if (initial && ["users", "roster", "teams", "tokens", "appkeys", "defaults"].includes(initial)) {
+      view = initial;
+    }
+
+    if (embedded) {
+      // Server already gated; still refresh /api/auth/me for username + role checks.
+      const ok = await checkAuth();
+      if (!ok || !isAdmin) {
+        location.href = ok ? "/admin/login" : "/admin/login";
+        return;
+      }
+      show(adminShell);
+      syncViewTabs();
+      await loadConfigChoices();
+      await render();
+      return;
+    }
+
     const ok = await checkAuth();
     if (!ok) {
       hide(adminShell);
@@ -2173,11 +2219,6 @@
     hide(loginGate);
     hide(denyGate);
     show(adminShell);
-    const params = new URLSearchParams(window.location.search);
-    const initial = params.get("view");
-    if (initial && ["users", "roster", "teams", "tokens", "appkeys", "defaults"].includes(initial)) {
-      view = initial;
-    }
     syncViewTabs();
     await loadConfigChoices();
     await render();
@@ -2187,8 +2228,12 @@
   document.getElementById("loginPassword")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") doLogin();
   });
-  document.getElementById("logoutBtn")?.addEventListener("click", logout);
   document.getElementById("denyLogout")?.addEventListener("click", logout);
+  // Only hijack logout when this page owns a dedicated admin logout control
+  // (shared shell uses a POST /logout form on #logoutBtn).
+  if (!embedded) {
+    document.getElementById("logoutBtn")?.addEventListener("click", logout);
+  }
   document.getElementById("userDetailModalClose")?.addEventListener("click", () => {
     selectedUserId = null;
     closeUserDetailModal();

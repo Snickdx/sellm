@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}sellm · Course{% endblock %}</title>
+    <meta name="application-name" content="sellm · Course" />
+    <meta name="description" content="{% block description %}Requirements gathering training and exit interviews for SWEN coursework.{% endblock %}" />
+    <meta name="theme-color" content="#667eea" />
+    <meta name="color-scheme" content="light" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="sellm" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    {% block styles %}
+    <link rel="stylesheet" href="/static/components/shell.css?v=2" />
+    {% endblock %}
+    {% block head_extra %}{% endblock %}
+</head>
+<body data-page="{{ page|default('') }}" data-unified-shell="1" {% if user %}data-authenticated="1"{% endif %} {% if is_admin %}data-admin="1"{% endif %}>
+    {% block body %}{% endblock %}
+    {% block scripts %}{% endblock %}
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          regs.forEach(function (r) { r.unregister(); });
+        });
+      }
+      if (window.caches && caches.keys) {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (k) { caches.delete(k); });
+        });
+      }
+    </script>
+</body>
+</html>
