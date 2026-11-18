@@ -1,0 +1,31 @@
+version: "1"
+notes: >-
+  Instructor-only oracle for research-plat (example package). Never send to
+  student LLM prompts or student API responses. Package is draft / off-platform.
+hidden_checks:
+  - id: EVAL-RP-001
+    competency: author_profile_create
+    description: Author profiles require name/email and enforce unique email.
+    related_fact_ids: [RP-REQ-001, RP-BR-001, RP-FEAT-001]
+
+  - id: EVAL-RP-002
+    competency: publication_with_coauthors
+    description: Publications require title, year, and at least one co-author profile.
+    related_fact_ids: [RP-REQ-002, RP-BR-002, RP-FEAT-002]
+
+  - id: EVAL-RP-003
+    competency: publication_search
+    description: Search filters by title, author, year, and/or venue.
+    related_fact_ids: [RP-REQ-003, RP-FEAT-003]
+
+  - id: EVAL-RP-004
+    competency: coauthorship_publication_tree
+    description: >-
+      Tree starts at an author, expands publications then transitive coauthors,
+      respects max depth, and does not re-expand visited publications.
+    related_fact_ids: [RP-REQ-004, RP-BR-003, RP-ASM-003, RP-ASM-004, RP-FEAT-004]
+
+  - id: EVAL-RP-005
+    competency: mvp_boundary
+    description: No PDF/ORCID/citation-metrics required in graded MVP.
+    related_fact_ids: [RP-REQ-005, RP-ASM-002]

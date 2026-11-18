@@ -1,0 +1,35 @@
+facts:
+- id: RP-BR-001
+  statement: An author email must be unique across author profiles.
+  category: business_rule
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  depends_on_ids:
+  - RP-REQ-001
+- id: RP-BR-002
+  statement: A publication must list at least one co-author who already has an author profile.
+  category: business_rule
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  depends_on_ids:
+  - RP-REQ-002
+- id: RP-BR-003
+  statement: Publication tree expansion must not re-open a publication node that was already visited
+    in the same tree build.
+  category: business_rule
+  status: clarified
+  origin: instructor
+  rationale: Prevents cycles in coauthorship graphs.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  depends_on_ids:
+  - RP-REQ-004

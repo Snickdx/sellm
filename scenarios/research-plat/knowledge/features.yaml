@@ -1,0 +1,35 @@
+facts:
+- id: RP-FEAT-001
+  statement: Create and update author profiles (name, affiliation, email).
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by: &id001
+  - research_admin
+  disclosure: when_relevant
+- id: RP-FEAT-002
+  statement: Add a publication with title, year, venue, and one or more co-authors.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: RP-FEAT-003
+  statement: Search publications by title fragment, author name, year, or venue.
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by: *id001
+  disclosure: when_relevant
+- id: RP-FEAT-004
+  statement: Build a recursive coauthorship publication tree starting from one author (Composite-pattern
+    seam).
+  category: feature
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by: *id001
+  disclosure: when_relevant

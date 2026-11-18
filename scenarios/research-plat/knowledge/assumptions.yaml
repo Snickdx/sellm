@@ -1,0 +1,64 @@
+facts:
+- id: RP-ASM-001
+  statement: The only student-facing chatbot persona for this example package is research_admin.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-RP-001
+  approved_by: instructor
+  approved_at: '2026-11-18T14:00:00Z'
+  rationale: Example package uses a single admin persona for interview demos.
+  known_by:
+  - research_admin
+  disclosure: never_student
+- id: RP-ASM-002
+  statement: Graded MVP covers author profiles, publications with co-authors, search, and coauthorship
+    publication trees; PDFs, citation metrics, and ORCID sync are out of scope.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-RP-002
+  approved_by: instructor
+  approved_at: '2026-11-18T14:00:00Z'
+  rationale: Instructor product-boundary decision for example starter.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+- id: RP-ASM-003
+  statement: Coauthorship is undirected for tree expansion — any listed co-author of a publication may
+    expand further publications.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-RP-003
+  approved_by: instructor
+  approved_at: '2026-11-18T14:00:00Z'
+  rationale: Simplifies Composite traversal for the graded exercise.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+- id: RP-ASM-004
+  statement: Default maximum tree depth is 3 hops from the root author unless the caller overrides.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-RP-004
+  approved_by: instructor
+  approved_at: '2026-11-18T14:00:00Z'
+  rationale: Bounds recursive expansion for demos and tests.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+- id: RP-ASM-005
+  statement: This package stays draft / example-only and is not loaded on the live student interview
+    platform until explicitly approved.
+  category: assumption
+  status: assumed
+  origin: instructor
+  decision_id: DEC-RP-005
+  approved_by: instructor
+  approved_at: '2026-11-18T14:00:00Z'
+  rationale: Instructor requested leave-off-platform for example use.
+  known_by:
+  - research_admin
+  disclosure: never_student

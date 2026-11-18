@@ -1,0 +1,37 @@
+facts:
+- id: RP-WF-001
+  statement: 'Create author → register publication with co-authors → confirm publication appears under
+    each co-author.'
+  category: use_case
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - RP-FEAT-001
+  - RP-FEAT-002
+- id: RP-WF-002
+  statement: 'Search publications by title/author/year/venue → open a result → inspect co-author list.'
+  category: use_case
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - RP-FEAT-003
+- id: RP-WF-003
+  statement: 'Select a root author → request publication tree → walk Composite children (publications
+    then co-authors'' publications) up to max depth.'
+  category: use_case
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - RP-FEAT-004

@@ -1,0 +1,23 @@
+facts:
+- id: RP-DATA-001
+  statement: Author profile stores id, display name, affiliation, email, and active flag.
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package.
+  known_by:
+  - research_admin
+  disclosure: when_asked
+  depends_on_ids:
+  - RP-REQ-001
+- id: RP-DATA-002
+  statement: Publication stores id, title, year, venue, and many-to-many links to author profiles (coauthors).
+  category: data
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package.
+  known_by:
+  - research_admin
+  disclosure: when_asked
+  depends_on_ids:
+  - RP-REQ-002

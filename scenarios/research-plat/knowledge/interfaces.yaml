@@ -1,0 +1,11 @@
+facts:
+- id: RP-IF-001
+  statement: JSON API under /api exposes author CRUD, publication create/list/search, and publication-tree
+    build for the starter app.
+  category: interface
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package.
+  known_by:
+  - research_admin
+  disclosure: when_asked

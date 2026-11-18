@@ -1,0 +1,15 @@
+facts:
+- id: RP-VER-001
+  statement: Coauthorship tree correctness is verified by tests that seed a small graph and assert depth,
+    cycle avoidance, and co-author expansion.
+  category: verification
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package. Linked FRs via depends_on_ids for VERIFIED_BY graph edges.
+  known_by:
+  - research_admin
+  depends_on_ids:
+  - RP-REQ-001
+  - RP-REQ-002
+  - RP-REQ-004
+  disclosure: when_asked

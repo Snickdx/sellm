@@ -1,0 +1,12 @@
+WEBVTT
+
+NOTE Synthetic instructor example only — not a real stakeholder interview.
+
+00:00:00.000 --> 00:00:06.000
+We need a research platform where faculty keep author profiles and register publications with co-authors.
+
+00:00:06.000 --> 00:00:12.000
+Search should find papers by title, author, year, or venue.
+
+00:00:12.000 --> 00:00:22.000
+The special discovery feature starts from one author, lists their publications, then recursively walks publications of co-authors — a coauthorship publication tree.

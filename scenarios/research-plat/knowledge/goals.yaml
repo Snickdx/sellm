@@ -1,0 +1,11 @@
+facts:
+- id: RP-GOAL-001
+  statement: Help faculty discover related research by navigating author profiles and transitive coauthorship
+    from publications.
+  category: goal
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by:
+  - research_admin
+  disclosure: when_relevant

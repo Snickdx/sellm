@@ -1,0 +1,16 @@
+slug: research-plat
+title: Research Platform
+version: 0.1.0
+status: draft
+brief: 'Example-only research publication platform (PubTree): faculty create author profiles, add
+  publications with co-authors, search publications, and explore a recursive publication tree of
+  transitive coauthorship (Composite pattern seam). Not approved for live student interview platform —
+  instructor demo / example package only. Chat persona: research_admin.'
+source_status: synthetic_example
+source_notes: >-
+  Instructor-authored example package (no live stakeholder VTT). Status is draft so the sellm
+  registry does not load it for students. Product boundary: author profiles, publications +
+  coauthors, search, and coauthorship publication tree. Out of scope: full-text PDFs, citation
+  metrics, journal submission workflows, ORCID sync. DEC-RP-001..005 prescribe roles and MVP.
+approved_by: null
+approved_at: null

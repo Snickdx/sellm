@@ -1,0 +1,101 @@
+facts:
+- id: RP-REQ-001
+  statement: Staff can create an author profile with display name, affiliation, and contact email before
+    linking publications.
+  category: functional
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  acceptance_criteria:
+  - Creating a profile without a display name is rejected.
+  - Each email uniquely identifies at most one author profile.
+  satisfies_ids:
+  - RP-FEAT-001
+  derives_from_ids:
+  - RP-GOAL-001
+- id: RP-REQ-002
+  statement: Staff can register a publication with a title, publication year, optional venue, and a non-empty
+    list of co-author profiles.
+  category: functional
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  acceptance_criteria:
+  - A publication must reference at least one existing author.
+  - Duplicate title+year+same author set is rejected or clearly flagged.
+  satisfies_ids:
+  - RP-FEAT-002
+  derives_from_ids:
+  - RP-GOAL-001
+  depends_on_ids:
+  - RP-REQ-001
+- id: RP-REQ-003
+  statement: Users can search publications by title substring, author name, year, and/or venue and receive
+    matching publication records with co-authors.
+  category: functional
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - RP-FEAT-003
+  derives_from_ids:
+  - RP-GOAL-001
+- id: RP-REQ-004
+  statement: From a starting author, the system builds a publication tree of that author's publications
+    and recursively expands publications of transitive co-authors (Composite-shaped traversal).
+  category: functional
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  acceptance_criteria:
+  - Tree roots at the chosen author.
+  - Each publication node lists its co-authors.
+  - Expansion continues through co-authors' other publications up to a configured depth.
+  - Already-visited publications are not re-expanded as new branches.
+  satisfies_ids:
+  - RP-FEAT-004
+  derives_from_ids:
+  - RP-GOAL-001
+  depends_on_ids:
+  - RP-REQ-001
+  - RP-REQ-002
+- id: RP-REQ-005
+  statement: Graded MVP does not require PDF upload, citation counts, or external ORCID synchronization.
+  category: functional
+  status: clarified
+  origin: instructor
+  rationale: Prescribed product boundary for example package.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  derives_from_ids:
+  - RP-GOAL-001
+- id: RP-REQ-006
+  statement: research_admin operates the platform as platform_admin for profile, publication, search,
+    and tree operations in the graded MVP.
+  category: functional
+  status: clarified
+  origin: instructor
+  rationale: Prescribed for example package; open for instructor verify/change.
+  known_by:
+  - research_admin
+  disclosure: when_relevant
+  satisfies_ids:
+  - RP-FEAT-001
+  - RP-FEAT-002
+  - RP-FEAT-003
+  - RP-FEAT-004
+  derives_from_ids:
+  - RP-GOAL-001

@@ -1,0 +1,50 @@
+open_questions:
+- id: GAP-RP-001
+  priority: important
+  prompt: Confirm VERIFIED_BY links from RP-VER-001 to RP-REQ-001/002/004 are correct for graph mode
+    when this package is later approved.
+  why_it_matters: Without these links Neo4j cannot emit VERIFIED_BY edges.
+  alternatives:
+  - Keep prescribed FR links
+  - Retarget VER depends_on_ids
+  - Defer VERIFIED_BY
+  recommended_default: Keep prescribed FR links
+  theme: srs_prescription
+  actions:
+  - verify_accept
+  - modify
+  - reject
+  - defer
+  status: open
+- id: GAP-RP-002
+  priority: important
+  prompt: When promoting research-plat from draft/example to a live interview scenario, should chat
+    stay research_admin-only or add a faculty_author end-user persona?
+  why_it_matters: Personas bound known_fact_ids and interview coverage.
+  alternatives:
+  - research_admin only (current)
+  - research_admin + faculty_author
+  - Defer until a real stakeholder VTT exists
+  recommended_default: Defer until a real stakeholder VTT exists
+  theme: srs_prescription
+  actions:
+  - accept
+  - modify
+  - reject
+  - defer
+  status: open
+- id: GAP-RP-003
+  priority: optional
+  prompt: Should default max tree depth stay at 3 or become configurable per request only?
+  why_it_matters: Affects RP-ASM-004 and starter API design.
+  alternatives:
+  - Default 3 with optional override (current)
+  - No default — require explicit depth
+  - Default 5
+  recommended_default: Default 3 with optional override (current)
+  theme: srs_prescription
+  actions:
+  - verify_accept
+  - modify
+  - defer
+  status: open
